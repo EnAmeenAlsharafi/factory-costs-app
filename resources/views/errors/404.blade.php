@@ -1,0 +1,6 @@
+@extends('errors.minimal')
+@section('title', 'الصفحة غير موجودة')
+@section('code', '404')
+@section('icon', 'fa-map-signs')
+@section('heading', 'لم نعثر على الصفحة')
+@section('message', 'قد يكون الرابط غير صحيح أو أن الصفحة نُقلت إلى عنوان آخر.')

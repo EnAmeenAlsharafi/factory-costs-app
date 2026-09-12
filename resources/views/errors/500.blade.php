@@ -1,0 +1,6 @@
+@extends('errors.minimal')
+@section('title', 'خطأ في النظام')
+@section('code', '500')
+@section('icon', 'fa-triangle-exclamation')
+@section('heading', 'تعذّر إكمال الطلب')
+@section('message', 'حدث خطأ غير متوقع. حاول مرة أخرى، وإن استمر تواصل مع مسؤول النظام.')

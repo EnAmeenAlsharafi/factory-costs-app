@@ -1,0 +1,6 @@
+@extends('errors.minimal')
+@section('title', 'غير مصرح')
+@section('code', '403')
+@section('icon', 'fa-lock')
+@section('heading', 'لا تملك صلاحية الوصول')
+@section('message', 'هذه الصفحة أو العملية غير متاحة لصلاحيات حسابك الحالية.')
