@@ -134,4 +134,36 @@ class ProductModelTest extends TestCase
         $responseActive->assertSee('MOD-000002');
         $responseActive->assertDontSee('MOD-000001');
     }
+
+    public function test_admin_can_create_and_update_product_model_with_image_url(): void
+    {
+        $imageUrl = 'https://images.unsplash.com/photo-1540518614846-7ede433c5173?w=800';
+
+        $responseStore = $this->actingAs($this->adminUser)
+            ->post(route('products.models.store'), [
+                'name_ar' => 'موديل مع رابط صورة',
+                'name_en' => 'Model With Image URL',
+                'image_source' => 'url',
+                'reference_image_url' => $imageUrl,
+                'is_active' => true,
+            ]);
+
+        $model = ProductModel::where('name_ar', 'موديل مع رابط صورة')->first();
+        $this->assertNotNull($model);
+        $this->assertEquals($imageUrl, $model->reference_image_path);
+        $this->assertEquals($imageUrl, $model->image_url);
+
+        // Test updating with a new URL
+        $newUrl = 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=800';
+        $responseUpdate = $this->actingAs($this->adminUser)
+            ->put(route('products.models.update', $model), [
+                'name_ar' => 'موديل مع رابط صورة محدث',
+                'image_source' => 'url',
+                'reference_image_url' => $newUrl,
+                'is_active' => true,
+            ]);
+
+        $this->assertEquals($newUrl, $model->fresh()->reference_image_path);
+        $this->assertEquals($newUrl, $model->fresh()->image_url);
+    }
 }

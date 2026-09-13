@@ -4,11 +4,14 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerOrderController;
 use App\Http\Controllers\CustomerProductAliasController;
+use App\Http\Controllers\CustomerReturnController;
 use App\Http\Controllers\CustomerTypeController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DeliveryOrderController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\DepartmentQueueController;
 use App\Http\Controllers\FabricColorController;
+use App\Http\Controllers\FinishedGoodsController;
 use App\Http\Controllers\InventoryAdjustmentController;
 use App\Http\Controllers\ManufacturingRecipeController;
 use App\Http\Controllers\ManufacturingTemplateController;
@@ -19,6 +22,7 @@ use App\Http\Controllers\MaterialReceiptController;
 use App\Http\Controllers\MaterialReturnController;
 use App\Http\Controllers\MaterialSupplierController;
 use App\Http\Controllers\MaterialUnitConversionController;
+use App\Http\Controllers\ProcurementPlanningController;
 use App\Http\Controllers\ProductConfigurationController;
 use App\Http\Controllers\ProductionBoardController;
 use App\Http\Controllers\ProductionMaterialRequestController;
@@ -29,6 +33,9 @@ use App\Http\Controllers\ProductionReworkController;
 use App\Http\Controllers\ProductionRoutingController;
 use App\Http\Controllers\ProductionWasteController;
 use App\Http\Controllers\ProductModelController;
+use App\Http\Controllers\PurchaseOrderController;
+use App\Http\Controllers\PurchaseRequestController;
+use App\Http\Controllers\PurchaseRfqController;
 use App\Http\Controllers\QualityIncidentController;
 use App\Http\Controllers\QuotationController;
 use App\Http\Controllers\RoleController;
@@ -37,6 +44,7 @@ use App\Http\Controllers\SemiFinishedComponentController;
 use App\Http\Controllers\StandardBedSizeController;
 use App\Http\Controllers\StockBalanceController;
 use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\SupplierQuotationController;
 use App\Http\Controllers\UnitOfMeasureController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -249,6 +257,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/configurations', [ProductConfigurationController::class, 'store'])->name('configurations.store');
         Route::put('/configurations/{configuration}', [ProductConfigurationController::class, 'update'])->name('configurations.update');
         Route::post('/configurations/{configuration}/toggle-status', [ProductConfigurationController::class, 'toggleStatus'])->name('configurations.toggle-status');
+        Route::delete('/configurations/{configuration}', [ProductConfigurationController::class, 'destroy'])->name('configurations.destroy');
 
         Route::post('/aliases', [CustomerProductAliasController::class, 'store'])->name('aliases.store');
         Route::put('/aliases/{alias}', [CustomerProductAliasController::class, 'update'])->name('aliases.update');
@@ -282,6 +291,76 @@ Route::middleware('auth')->group(function () {
         Route::put('/{recipe}/versions/{version}', [ManufacturingRecipeController::class, 'updateVersion'])->name('versions.update');
         Route::post('/{recipe}/versions/{version}/approve', [ManufacturingRecipeController::class, 'approve'])->name('versions.approve');
         Route::post('/{recipe}/versions/{version}/copy', [ManufacturingRecipeController::class, 'copyVersion'])->name('versions.copy');
+    });
+
+    // Stage 11: Finished Goods, Delivery & Installation, and Customer Returns
+    Route::prefix('finished-goods')->name('finished-goods.')->group(function () {
+        Route::get('/', [FinishedGoodsController::class, 'index'])->name('index');
+        Route::get('/receipts/create', [FinishedGoodsController::class, 'createReceipt'])->name('receipts.create');
+        Route::post('/receipts', [FinishedGoodsController::class, 'storeReceipt'])->name('receipts.store');
+        Route::get('/receipts/{receipt}', [FinishedGoodsController::class, 'showReceipt'])->name('receipts.show');
+        Route::post('/receipts/{receipt}/post', [FinishedGoodsController::class, 'postReceipt'])->name('receipts.post');
+    });
+
+    Route::prefix('delivery')->name('delivery.')->group(function () {
+        Route::get('/orders', [DeliveryOrderController::class, 'index'])->name('orders.index');
+        Route::get('/my-tasks', [DeliveryOrderController::class, 'myTasks'])->name('orders.my-tasks');
+        Route::get('/orders/create', [DeliveryOrderController::class, 'create'])->name('orders.create');
+        Route::post('/orders', [DeliveryOrderController::class, 'store'])->name('orders.store');
+        Route::get('/orders/{delivery}', [DeliveryOrderController::class, 'show'])->name('orders.show');
+        Route::post('/orders/{delivery}/assign', [DeliveryOrderController::class, 'assign'])->name('orders.assign');
+        Route::post('/orders/{delivery}/dispatch', [DeliveryOrderController::class, 'dispatch'])->name('orders.dispatch');
+        Route::post('/orders/{delivery}/complete', [DeliveryOrderController::class, 'complete'])->name('orders.complete');
+        Route::post('/orders/{delivery}/install', [DeliveryOrderController::class, 'install'])->name('orders.install');
+        Route::post('/orders/{delivery}/fail-or-reschedule', [DeliveryOrderController::class, 'failOrReschedule'])->name('orders.fail-or-reschedule');
+    });
+
+    Route::prefix('customer-returns')->name('customer-returns.')->group(function () {
+        Route::get('/', [CustomerReturnController::class, 'index'])->name('index');
+        Route::get('/create', [CustomerReturnController::class, 'create'])->name('create');
+        Route::post('/', [CustomerReturnController::class, 'store'])->name('store');
+        Route::get('/{customerReturn}', [CustomerReturnController::class, 'show'])->name('show');
+        Route::post('/{customerReturn}/receive', [CustomerReturnController::class, 'receive'])->name('receive');
+        Route::post('/{customerReturn}/link-quality', [CustomerReturnController::class, 'linkQuality'])->name('link-quality');
+    });
+
+    // Stage 12: Purchasing & Procurement Workflow
+    Route::prefix('purchasing')->name('purchasing.')->group(function () {
+        // Procurement Planning
+        Route::get('/planning', [ProcurementPlanningController::class, 'index'])->name('planning.index');
+        Route::post('/planning/bulk-request', [ProcurementPlanningController::class, 'createBulkRequest'])->name('planning.bulk-request');
+
+        // Purchase Requests
+        Route::get('/requests', [PurchaseRequestController::class, 'index'])->name('requests.index');
+        Route::get('/requests/create', [PurchaseRequestController::class, 'create'])->name('requests.create');
+        Route::post('/requests', [PurchaseRequestController::class, 'store'])->name('requests.store');
+        Route::get('/requests/{purchaseRequest}', [PurchaseRequestController::class, 'show'])->name('requests.show');
+        Route::post('/requests/{purchaseRequest}/review', [PurchaseRequestController::class, 'review'])->name('requests.review');
+
+        // RFQs
+        Route::get('/rfqs', [PurchaseRfqController::class, 'index'])->name('rfqs.index');
+        Route::get('/rfqs/create', [PurchaseRfqController::class, 'create'])->name('rfqs.create');
+        Route::post('/rfqs', [PurchaseRfqController::class, 'store'])->name('rfqs.store');
+        Route::get('/rfqs/{purchaseRfq}', [PurchaseRfqController::class, 'show'])->name('rfqs.show');
+
+        // Supplier Quotations & Matrix Comparison
+        Route::get('/quotations', [SupplierQuotationController::class, 'index'])->name('quotations.index');
+        Route::get('/quotations/create', [SupplierQuotationController::class, 'create'])->name('quotations.create');
+        Route::post('/quotations', [SupplierQuotationController::class, 'store'])->name('quotations.store');
+        Route::get('/quotations/compare', [SupplierQuotationController::class, 'compare'])->name('quotations.compare');
+        Route::get('/quotations/{supplierQuotation}', [SupplierQuotationController::class, 'show'])->name('quotations.show');
+        Route::post('/quotations/{supplierQuotation}/select', [SupplierQuotationController::class, 'select'])->name('quotations.select');
+
+        // Purchase Orders
+        Route::get('/orders', [PurchaseOrderController::class, 'index'])->name('orders.index');
+        Route::get('/orders/create', [PurchaseOrderController::class, 'create'])->name('orders.create');
+        Route::post('/orders', [PurchaseOrderController::class, 'store'])->name('orders.store');
+        Route::get('/orders/{purchaseOrder}', [PurchaseOrderController::class, 'show'])->name('orders.show');
+        Route::post('/orders/{purchaseOrder}/approve', [PurchaseOrderController::class, 'approve'])->name('orders.approve');
+        Route::post('/orders/{purchaseOrder}/close', [PurchaseOrderController::class, 'close'])->name('orders.close');
+        Route::post('/orders/{purchaseOrder}/cancel', [PurchaseOrderController::class, 'cancel'])->name('orders.cancel');
+        Route::post('/orders/{purchaseOrder}/receive-form', [PurchaseOrderController::class, 'receiveForm'])->name('orders.receive-form');
+        Route::get('/orders/{purchaseOrder}/print', [PurchaseOrderController::class, 'print'])->name('orders.print');
     });
 
     Route::prefix('catalog')->name('catalog.')->group(function () {

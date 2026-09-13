@@ -355,48 +355,55 @@ class InventoryService
     /**
      * Create a draft material receipt with lines.
      */
-    public function createReceipt(array $data, int $userId): MaterialReceipt
+    public function createReceipt(array $data, User|int $user): MaterialReceipt
     {
+        $userId = $user instanceof User ? $user->id : (int) $user;
+
         return DB::transaction(function () use ($data, $userId) {
             $receiptNumber = DocumentNumberService::generateReceiptNumber();
 
             $receipt = MaterialReceipt::create([
                 'receipt_number' => $receiptNumber,
                 'supplier_id' => $data['supplier_id'],
+                'purchase_order_id' => $data['purchase_order_id'] ?? null,
                 'warehouse_id' => $data['warehouse_id'],
                 'created_by_user_id' => $userId,
                 'received_by_user_id' => $userId,
                 'receipt_date' => $data['receipt_date'],
-                'supplier_reference' => $data['supplier_invoice_number'] ?? null,
-                'purchase_invoice_reference' => $data['supplier_invoice_number'] ?? null,
+                'supplier_reference' => $data['supplier_reference'] ?? $data['supplier_invoice_number'] ?? null,
+                'purchase_invoice_reference' => $data['purchase_invoice_reference'] ?? $data['supplier_invoice_number'] ?? null,
                 'notes' => $data['notes'] ?? null,
                 'status' => 'DRAFT',
             ]);
 
             $totalAmount = 0;
 
-            if (isset($data['items']) && is_array($data['items'])) {
-                foreach ($data['items'] as $item) {
+            $items = $data['items'] ?? $data['lines'] ?? [];
+            if (is_array($items)) {
+                foreach ($items as $item) {
                     $material = Material::findOrFail($item['material_id']);
-                    $unit = UnitOfMeasure::findOrFail($item['unit_id']);
-                    $conversionFactor = 1.0;
+                    $unitId = $item['unit_id'] ?? $item['purchase_unit_id'] ?? $material->purchase_unit_id ?? $material->base_unit_id;
+                    $unit = UnitOfMeasure::findOrFail($unitId);
+                    $conversionFactor = (float) ($item['conversion_factor'] ?? 1.0);
 
-                    if ($item['unit_id'] != $material->base_unit_id) {
+                    if (! isset($item['conversion_factor']) && $unitId != $material->base_unit_id) {
                         $conv = $material->unitConversions()
-                            ->where('from_unit_id', $item['unit_id'])
+                            ->where('from_unit_id', $unitId)
                             ->where('to_unit_id', $material->base_unit_id)
                             ->first();
                         $conversionFactor = $conv ? (float) $conv->conversion_factor : 1.0;
                     }
 
-                    $receivedQty = (float) $item['quantity'];
-                    $baseQty = $receivedQty * $conversionFactor;
-                    $unitCost = (float) $item['unit_cost'];
-                    $totalLineCost = $receivedQty * $unitCost;
-                    $unitCostBase = $baseQty > 0 ? ($totalLineCost / $baseQty) : $unitCost;
+                    $receivedQty = (float) ($item['quantity'] ?? $item['quantity_received'] ?? 0);
+                    $baseQty = round($receivedQty * $conversionFactor, 4);
+                    $unitCost = (float) ($item['unit_cost'] ?? $item['unit_cost_purchase'] ?? 0);
+                    $totalLineCost = round($receivedQty * $unitCost, 4);
+                    $unitCostBase = $baseQty > 0 ? round($totalLineCost / $baseQty, 4) : $unitCost;
 
                     $line = $receipt->lines()->create([
+                        'purchase_order_line_id' => $item['purchase_order_line_id'] ?? null,
                         'material_id' => $material->id,
+                        'fabric_color_id' => $item['fabric_color_id'] ?? null,
                         'purchase_unit_id' => $unit->id,
                         'base_unit_id' => $material->base_unit_id,
                         'quantity_received' => $receivedQty,
@@ -405,7 +412,8 @@ class InventoryService
                         'unit_cost_purchase' => $unitCost,
                         'unit_cost_base' => $unitCostBase,
                         'total_cost' => $totalLineCost,
-                        'lot_reference' => $item['lot_number'] ?? null,
+                        'lot_reference' => $item['lot_number'] ?? $item['lot_reference'] ?? null,
+                        'quality_note' => $item['quality_note'] ?? null,
                         'notes' => $item['notes'] ?? null,
                     ]);
 

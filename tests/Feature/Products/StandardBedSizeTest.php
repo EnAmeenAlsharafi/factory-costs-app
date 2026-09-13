@@ -79,4 +79,38 @@ class StandardBedSizeTest extends TestCase
         $response->assertRedirect();
         $this->assertFalse((bool) $size->fresh()->is_active);
     }
+
+    public function test_admin_can_update_standard_bed_size(): void
+    {
+        $size = StandardBedSize::where('code', 'SIZE-160X200')->first();
+
+        $response = $this->actingAs($this->adminUser)
+            ->put(route('products.sizes.update', $size), [
+                'code' => 'SIZE-160X200-UPDATED',
+                'name_ar' => 'مزدوج كوين معدل',
+                'width_cm' => 165.0,
+                'length_cm' => 205.0,
+                'sort_order' => 15,
+                'is_active' => true,
+            ]);
+
+        $response->assertRedirect(route('products.sizes.index'));
+
+        $this->assertDatabaseHas('standard_bed_sizes', [
+            'id' => $size->id,
+            'code' => 'SIZE-160X200-UPDATED',
+            'name_ar' => 'مزدوج كوين معدل',
+            'width_cm' => 165.0,
+            'length_cm' => 205.0,
+            'sort_order' => 15,
+        ]);
+    }
+
+    public function test_can_sort_standard_bed_sizes(): void
+    {
+        $response = $this->actingAs($this->adminUser)
+            ->get(route('products.sizes.index', ['sort' => 'width_cm', 'direction' => 'desc']));
+
+        $response->assertOk();
+    }
 }

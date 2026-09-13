@@ -116,4 +116,23 @@ class ProductConfigurationTest extends TestCase
 
         $this->assertEquals(1, $this->model->configurations()->count());
     }
+
+    public function test_admin_can_delete_unlinked_product_configuration(): void
+    {
+        $config = ProductConfiguration::create([
+            'configuration_code' => 'CFG-000099',
+            'product_model_id' => $this->model->id,
+            'width_cm' => 180.0,
+            'length_cm' => 200.0,
+            'has_storage' => false,
+        ]);
+
+        $response = $this->actingAs($this->adminUser)
+            ->delete(route('products.configurations.destroy', $config));
+
+        $response->assertRedirect(route('products.models.show', $this->model));
+        $this->assertDatabaseMissing('product_configurations', [
+            'id' => $config->id,
+        ]);
+    }
 }

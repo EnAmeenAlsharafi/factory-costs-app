@@ -46,6 +46,12 @@
                 @endcan
             @endif
 
+            @if($order->status === 'APPROVED_FOR_PRODUCTION' && auth()->user()->can('delivery.create'))
+                <a href="{{ route('delivery.orders.create', ['customer_order_id' => $order->id]) }}" class="btn btn-primary fw-bold">
+                    <i class="fas fa-truck-loading me-1"></i> إنشاء أمر توصيل وتركيب
+                </a>
+            @endif
+
             @if(in_array($order->status, ['DRAFT', 'PENDING_PRODUCTION_REVIEW', 'APPROVED_FOR_PRODUCTION']))
                 @can('orders.edit')
                     <a href="{{ route('sales.orders.edit', $order) }}" class="btn btn-outline-primary">
@@ -237,6 +243,67 @@
                             </td>
                         </tr>
                     </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {{-- Delivery Orders Section --}}
+    @php
+        $deliveries = \App\Models\DeliveryOrder::with(['assignedUser', 'lines.productionOrder'])->where('customer_order_id', $order->id)->latest()->get();
+    @endphp
+    <div class="card border-0 shadow-sm mb-4 rounded-3">
+        <div class="card-header bg-light py-3 d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0 fw-bold fs-6 text-dark">
+                <i class="fas fa-truck text-primary me-2"></i>أوامر التوصيل والتركيب الميداني ({{ $deliveries->count() }})
+            </h5>
+            @if($order->status === 'APPROVED_FOR_PRODUCTION' && auth()->user()->can('delivery.create'))
+                <a href="{{ route('delivery.orders.create', ['customer_order_id' => $order->id]) }}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-plus me-1"></i>أمر توصيل جديد
+                </a>
+            @endif
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 fs-7">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">رقم أمر التوصيل</th>
+                            <th>المسؤول / السائق</th>
+                            <th>العنوان المسجل</th>
+                            <th>تاريخ التوصيل المجدول</th>
+                            <th>الحالة</th>
+                            <th class="text-end pe-3">عرض</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($deliveries as $delivery)
+                            <tr>
+                                <td class="ps-3 fw-bold">
+                                    <a href="{{ route('delivery.orders.show', $delivery) }}" class="text-primary text-decoration-none">
+                                        {{ $delivery->delivery_number }}
+                                    </a>
+                                </td>
+                                <td>{{ $delivery->assignedUser->name ?? 'غير معين' }}</td>
+                                <td>{{ $delivery->city_snapshot }} - {{ $delivery->district_snapshot }}</td>
+                                <td>{{ $delivery->scheduled_delivery_date ? $delivery->scheduled_delivery_date->format('Y-m-d') : 'غير محدد' }}</td>
+                                <td>
+                                    <span class="badge bg-primary px-2 py-1">{{ $delivery->status }}</span>
+                                </td>
+                                <td class="text-end pe-3">
+                                    <a href="{{ route('delivery.orders.show', $delivery) }}" class="btn btn-sm btn-light rounded-circle shadow-sm">
+                                        <i class="fas fa-eye text-primary"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">
+                                    لا توجد أوامر توصيل صادرة لطلب المبيعات هذا بعد.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
                 </table>
             </div>
         </div>

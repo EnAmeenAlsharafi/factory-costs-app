@@ -150,6 +150,16 @@ class ProductionOrder extends Model
         return $this->hasMany(ProductionReworkAction::class);
     }
 
+    public function finishedGoodsReceipts(): HasMany
+    {
+        return $this->hasMany(FinishedGoodsReceipt::class);
+    }
+
+    public function finishedGoodsMovements(): HasMany
+    {
+        return $this->hasMany(FinishedGoodsMovement::class);
+    }
+
     public function getHasCustomerOrderChangedAttribute(): bool
     {
         return $this->customerOrder && $this->customerOrder->status === 'PENDING_PRODUCTION_REVIEW';

@@ -8,7 +8,16 @@ class ProductConfigurationRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('products.manage') ?? false;
+        return $this->user()?->can('products.manage') || $this->user()?->can('products.view');
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('standard_bed_size_id') && empty($this->input('standard_bed_size_id'))) {
+            $this->merge([
+                'standard_bed_size_id' => null,
+            ]);
+        }
     }
 
     public function rules(): array

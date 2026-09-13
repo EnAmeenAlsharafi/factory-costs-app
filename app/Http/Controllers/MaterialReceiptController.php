@@ -11,6 +11,7 @@ use App\Models\UnitOfMeasure;
 use App\Models\Warehouse;
 use App\Services\DocumentNumberService;
 use App\Services\InventoryService;
+use App\Services\PurchaseReceivingService;
 use Exception;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -142,9 +143,13 @@ class MaterialReceiptController extends Controller
         abort_if(! $request->user()->can('inventory.receive'), 403, 'غير مصرح لك باعتتماد إيصال استلام.');
 
         try {
-            $this->inventoryService->postReceipt($receipt, $request->user());
+            if ($receipt->purchase_order_id) {
+                app(PurchaseReceivingService::class)->postLinkedReceipt($receipt, $request->user());
+            } else {
+                $this->inventoryService->postReceipt($receipt, $request->user());
+            }
 
-            return back()->with('success', 'تم اعتماد إيصال الاستلام وتحديث حركة وحركات المخزون واللوتات بنجاح.');
+            return back()->with('success', 'تم اعتماد إيصال الاستلام وتحديث حركة وحركات المخزون واللوتات وأمر الشراء بنجاح.');
         } catch (Exception $e) {
             return back()->with('error', $e->getMessage());
         }

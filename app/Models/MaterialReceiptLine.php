@@ -13,6 +13,7 @@ class MaterialReceiptLine extends Model
 
     protected $fillable = [
         'material_receipt_id',
+        'purchase_order_line_id',
         'material_id',
         'fabric_color_id',
         'quantity_received',
@@ -41,6 +42,11 @@ class MaterialReceiptLine extends Model
     public function receipt(): BelongsTo
     {
         return $this->belongsTo(MaterialReceipt::class, 'material_receipt_id');
+    }
+
+    public function purchaseOrderLine(): BelongsTo
+    {
+        return $this->belongsTo(PurchaseOrderLine::class);
     }
 
     public function material(): BelongsTo

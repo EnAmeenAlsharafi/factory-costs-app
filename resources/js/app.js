@@ -6,6 +6,7 @@ window.Alpine = Alpine;
 Alpine.data('appShell', () => ({
     sidebarCollapsed: window.localStorage.getItem('sadir-sidebar-collapsed') === 'true',
     mobileSidebarOpen: false,
+    openSections: JSON.parse(window.localStorage.getItem('sadir-open-sections') || '{}'),
 
     init() {
         this.$watch('sidebarCollapsed', (value) => {
@@ -14,6 +15,19 @@ Alpine.data('appShell', () => ({
         this.$watch('mobileSidebarOpen', (value) => {
             document.body.classList.toggle('shell-drawer-open', value);
         });
+    },
+
+    isSectionOpen(key, defaultActive = false) {
+        if (this.openSections[key] !== undefined) {
+            return this.openSections[key];
+        }
+        return defaultActive;
+    },
+
+    toggleSection(key, defaultActive = false) {
+        const currentlyOpen = this.isSectionOpen(key, defaultActive);
+        this.openSections[key] = !currentlyOpen;
+        window.localStorage.setItem('sadir-open-sections', JSON.stringify(this.openSections));
     },
 
     openMobileSidebar() {

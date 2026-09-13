@@ -31,6 +31,12 @@
                 <i class="fas fa-dumpster me-1"></i> تسجيل هدر
             </a>
 
+            @if((float)$order->completed_quantity > 0 && auth()->user()->can('finished_goods.receive'))
+                <a href="{{ route('finished-goods.receipts.create', ['production_order_id' => $order->id]) }}" class="btn btn-outline-success">
+                    <i class="fas fa-boxes me-1"></i> تسليم للمخزن الجاهز
+                </a>
+            @endif
+
             @if(in_array($order->status, ['DRAFT', 'READY_FOR_RELEASE']) && auth()->user()->can('production.release'))
                 <a href="{{ route('production.orders.release.form', $order) }}" class="btn btn-success">
                     <i class="fas fa-play me-1"></i> إطلاق للورشة
@@ -137,6 +143,11 @@
         <li class="nav-item">
             <button class="nav-link fw-bold" id="cost-tab" data-bs-toggle="tab" data-bs-target="#cost-pane" type="button">
                 <i class="fas fa-calculator me-1"></i> ملخص تكلفة المواد والإستيعاب
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link fw-bold" id="fg-tab" data-bs-toggle="tab" data-bs-target="#fg-pane" type="button">
+                <i class="fas fa-boxes me-1"></i> تسليم المنتج الجاهز للمخزن ({{ $order->finishedGoodsReceipts->count() }})
             </button>
         </li>
     </ul>
@@ -490,6 +501,70 @@
                                 </tr>
                             </table>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 6: Finished Goods Handover -->
+        <div class="tab-pane fade" id="fg-pane">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light border-0 py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0 text-dark">
+                        <i class="fas fa-boxes text-success me-2"></i>سندات تسليم المنتجات الجاهزة للمخزن
+                    </h6>
+                    @if((float)$order->completed_quantity > 0 && auth()->user()->can('finished_goods.receive'))
+                    <a href="{{ route('finished-goods.receipts.create', ['production_order_id' => $order->id]) }}" class="btn btn-sm btn-success">
+                        <i class="fas fa-plus me-1"></i>إنشاء سند تسليم جديد
+                    </a>
+                    @endif
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light text-muted small">
+                                <tr>
+                                    <th class="ps-4">رقم سند التسليم</th>
+                                    <th>المخزن المستلم</th>
+                                    <th>الكمية المستلمة</th>
+                                    <th>تاريخ السند</th>
+                                    <th>حالة السند</th>
+                                    <th class="text-end pe-4">عرض</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($order->finishedGoodsReceipts as $receipt)
+                                <tr>
+                                    <td class="ps-4 fw-bold">
+                                        <a href="{{ route('finished-goods.receipts.show', $receipt) }}" class="text-success text-decoration-none">
+                                            {{ $receipt->receipt_number }}
+                                        </a>
+                                    </td>
+                                    <td>{{ $receipt->warehouse->name_ar ?? 'مخزن الجاهز' }}</td>
+                                    <td><span class="badge bg-success px-3 py-1 fs-6">{{ (float)$receipt->received_quantity }} قطعة</span></td>
+                                    <td>{{ $receipt->receipt_date ? $receipt->receipt_date->format('Y-m-d') : '' }}</td>
+                                    <td>
+                                        @if($receipt->status === 'POSTED')
+                                            <span class="badge bg-success">مرحل لمخزن الجاهز</span>
+                                        @else
+                                            <span class="badge bg-secondary">مسودة</span>
+                                        @endif
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <a href="{{ route('finished-goods.receipts.show', $receipt) }}" class="btn btn-sm btn-light rounded-circle shadow-sm">
+                                            <i class="fas fa-eye text-success"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                @empty
+                                <tr>
+                                    <td colspan="6" class="text-center py-4 text-muted">
+                                        لم يتم تسجيل أي سند تسليم للمنتجات الجاهزة بعد لأمر الإنتاج هذا.
+                                    </td>
+                                </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>

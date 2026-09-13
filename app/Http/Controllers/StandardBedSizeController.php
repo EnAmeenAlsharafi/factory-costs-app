@@ -14,9 +14,17 @@ class StandardBedSizeController extends Controller
     {
         abort_if(! $request->user()->can('products.view'), 403, 'غير مصرح لك بعرض المقاسات القياسية.');
 
-        $sizes = StandardBedSize::orderBy('sort_order')->orderBy('id')->get();
+        $sort = $request->query('sort', 'sort_order');
+        $direction = strtolower($request->query('direction', 'asc')) === 'desc' ? 'desc' : 'asc';
 
-        return view('products.sizes.index', compact('sizes'));
+        $allowedSorts = ['sort_order', 'code', 'name_ar', 'width_cm', 'length_cm', 'id'];
+        if (! in_array($sort, $allowedSorts, true)) {
+            $sort = 'sort_order';
+        }
+
+        $sizes = StandardBedSize::orderBy($sort, $direction)->orderBy('id')->get();
+
+        return view('products.sizes.index', compact('sizes', 'sort', 'direction'));
     }
 
     public function store(StandardBedSizeRequest $request): RedirectResponse

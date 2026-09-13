@@ -4,7 +4,11 @@ namespace App\Services;
 
 use App\Models\Customer;
 use App\Models\CustomerOrder;
+use App\Models\CustomerReturn;
+use App\Models\DeliveryOrder;
 use App\Models\DocumentSequence;
+use App\Models\FinishedGoodsMovement;
+use App\Models\FinishedGoodsReceipt;
 use App\Models\InventoryAdjustment;
 use App\Models\InventoryLot;
 use App\Models\InventoryMovement;
@@ -21,14 +25,82 @@ use App\Models\ProductionReworkAction;
 use App\Models\ProductionRouting;
 use App\Models\ProductionWasteRecord;
 use App\Models\ProductModel;
+use App\Models\PurchaseOrder;
+use App\Models\PurchaseRequest;
+use App\Models\PurchaseRfq;
 use App\Models\QualityIncident;
 use App\Models\Quotation;
 use App\Models\SemiFinishedComponent;
 use App\Models\Supplier;
+use App\Models\SupplierQuotation;
 use Illuminate\Support\Facades\DB;
 
 class DocumentNumberService
 {
+    /**
+     * Generate next sequential purchase request number (e.g. PRQ-2026-000001)
+     */
+    public static function generatePurchaseRequestNumber(): string
+    {
+        return static::generateYearlyCode(PurchaseRequest::class, 'request_number', 'PRQ');
+    }
+
+    /**
+     * Generate next sequential RFQ number (e.g. RFQ-2026-000001)
+     */
+    public static function generateRfqNumber(): string
+    {
+        return static::generateYearlyCode(PurchaseRfq::class, 'rfq_number', 'RFQ');
+    }
+
+    /**
+     * Generate next sequential supplier quotation number (e.g. SQT-2026-000001)
+     */
+    public static function generateSupplierQuotationNumber(): string
+    {
+        return static::generateYearlyCode(SupplierQuotation::class, 'supplier_quotation_number', 'SQT');
+    }
+
+    /**
+     * Generate next sequential purchase order number (e.g. PO-2026-000001)
+     */
+    public static function generatePurchaseOrderNumber(): string
+    {
+        return static::generateYearlyCode(PurchaseOrder::class, 'purchase_order_number', 'PO');
+    }
+
+    /**
+     * Generate next sequential finished goods receipt number (e.g. FGR-2026-000001)
+     */
+    public static function generateFinishedGoodsReceiptNumber(): string
+    {
+        return static::generateYearlyCode(FinishedGoodsReceipt::class, 'receipt_number', 'FGR');
+    }
+
+    /**
+     * Generate next sequential finished goods movement number (e.g. FGM-2026-000001)
+     */
+    public static function generateFinishedGoodsMovementNumber(): string
+    {
+        return static::generateYearlyCode(FinishedGoodsMovement::class, 'movement_number', 'FGM');
+    }
+
+    /**
+     * Generate next sequential delivery order number (e.g. DEL-2026-000001)
+     */
+    public static function generateDeliveryNumber(): string
+    {
+        return static::generateYearlyCode(DeliveryOrder::class, 'delivery_number', 'DEL');
+    }
+
+    /**
+     * Generate next sequential customer return number (e.g. CRN-2026-000001)
+     */
+    public static function generateCustomerReturnNumber(): string
+    {
+        return static::generateYearlyCode(CustomerReturn::class, 'return_number', 'CRN');
+    }
+
     /**
      * Generate next sequential material request number (e.g. PMR-2026-000001)
      */

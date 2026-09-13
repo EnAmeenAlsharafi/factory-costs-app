@@ -34,8 +34,8 @@ class WarehouseSeeder extends Seeder
             [
                 'name_ar' => 'مستودع المنتجات التامة',
                 'name_en' => 'Finished Goods Warehouse',
-                'description' => 'مستودع تخزين وتسليم المنتجات الجاهزة والطلبانيات (محجوز للمراحل القادمة).',
-                'is_active' => false,
+                'description' => 'مستودع تخزين وتسليم المنتجات الجاهزة والطلبانيات.',
+                'is_active' => true,
             ]
         );
     }

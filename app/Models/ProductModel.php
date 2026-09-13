@@ -44,4 +44,17 @@ class ProductModel extends Model
             ->where('is_active', true)
             ->first();
     }
+
+    public function getImageUrlAttribute(): ?string
+    {
+        if (! $this->reference_image_path) {
+            return null;
+        }
+
+        if (str_starts_with($this->reference_image_path, 'http://') || str_starts_with($this->reference_image_path, 'https://')) {
+            return $this->reference_image_path;
+        }
+
+        return asset('storage/'.$this->reference_image_path);
+    }
 }

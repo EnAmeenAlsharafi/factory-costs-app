@@ -57,6 +57,12 @@ class RoleAndPermissionSeeder extends Seeder
                 'description' => 'إنشاء عروض الأسعار، متابعة مبيعات الجملة والمعارض والعملاء المباشرين.',
                 'is_system' => true,
             ],
+            [
+                'name' => 'purchasing_user',
+                'display_name' => 'المشتريات',
+                'description' => 'إدارة طلبات الشراء، طلبات عروض الأسعار، ومتابعة أوامر الشراء والموردين.',
+                'is_system' => true,
+            ],
         ];
 
         $roles = [];
@@ -137,9 +143,17 @@ class RoleAndPermissionSeeder extends Seeder
             ['name' => 'costing.view', 'display_name' => 'عرض تقارير التكاليف وحساب الربحية', 'module' => 'costing'],
             ['name' => 'costing.manage', 'display_name' => 'إدارة معايير التكلفة والأسعار القياسية', 'module' => 'costing'],
 
-            // Delivery
-            ['name' => 'delivery.view', 'display_name' => 'عرض جدول وجاهزية التوصيل', 'module' => 'delivery'],
-            ['name' => 'delivery.update', 'display_name' => 'تحديث حالة خروج وإتمام التوصيل', 'module' => 'delivery'],
+            // Delivery & Installation & Finished Goods
+            ['name' => 'finished_goods.view', 'display_name' => 'عرض أرصدة وحركات المنتجات الجاهزة', 'module' => 'delivery'],
+            ['name' => 'finished_goods.receive', 'display_name' => 'تسليم واستلام المنتجات الجاهزة من الورشة', 'module' => 'delivery'],
+            ['name' => 'delivery.view', 'display_name' => 'عرض جدول وأوامر التوصيل والتركيب', 'module' => 'delivery'],
+            ['name' => 'delivery.create', 'display_name' => 'إنشاء أمر توصيل جديد', 'module' => 'delivery'],
+            ['name' => 'delivery.assign', 'display_name' => 'تعيين خروج فريق التوصيل والتركيب', 'module' => 'delivery'],
+            ['name' => 'delivery.dispatch', 'display_name' => 'اعتماد وتأكيد خروج الشحنة للتوصيل', 'module' => 'delivery'],
+            ['name' => 'delivery.complete', 'display_name' => 'تأكيد تسليم المنتجات للعميل', 'module' => 'delivery'],
+            ['name' => 'delivery.install', 'display_name' => 'تأكيد اكتمال التركيب والمعاينة', 'module' => 'delivery'],
+            ['name' => 'delivery.reschedule', 'display_name' => 'إعادة جدولة أو تسجيل تعثر التوصيل', 'module' => 'delivery'],
+            ['name' => 'delivery.manage_returns', 'display_name' => 'إدارة وتسجيل مرتجعات العملاء الميدانية', 'module' => 'delivery'],
 
             // Reports
             ['name' => 'reports.view', 'display_name' => 'عرض التقارير العامة', 'module' => 'reports'],
@@ -171,6 +185,16 @@ class RoleAndPermissionSeeder extends Seeder
             ['name' => 'manufacturing_templates.manage', 'display_name' => 'إدارة قوالب التصنيع', 'module' => 'manufacturing_templates'],
             ['name' => 'semi_finished_components.view', 'display_name' => 'عرض المكونات نصف المصنعة', 'module' => 'semi_finished_components'],
             ['name' => 'semi_finished_components.manage', 'display_name' => 'إدارة المكونات نصف المصنعة', 'module' => 'semi_finished_components'],
+
+            // Purchasing & Procurement
+            ['name' => 'purchasing.view', 'display_name' => 'عرض سجلات وحركات المشتريات', 'module' => 'purchasing'],
+            ['name' => 'purchasing.request', 'display_name' => 'إنشاء طلب شراء خامات', 'module' => 'purchasing'],
+            ['name' => 'purchasing.review_request', 'display_name' => 'مراجعة واعتماد طلبات الشراء', 'module' => 'purchasing'],
+            ['name' => 'purchasing.manage_rfq', 'display_name' => 'إدارة طلبات عروض الأسعار RFQ', 'module' => 'purchasing'],
+            ['name' => 'purchasing.manage_quotes', 'display_name' => 'إدخال وإدارة عروض أسعار الموردين', 'module' => 'purchasing'],
+            ['name' => 'purchasing.create_po', 'display_name' => 'إنشاء وتجهيز أمر الشراء', 'module' => 'purchasing'],
+            ['name' => 'purchasing.approve_po', 'display_name' => 'اعتماد أمر الشراء النهائي', 'module' => 'purchasing'],
+            ['name' => 'purchasing.cancel_po', 'display_name' => 'إلغاء أو إغلاق أمر الشراء', 'module' => 'purchasing'],
         ];
 
         $permissions = [];
@@ -206,6 +230,7 @@ class RoleAndPermissionSeeder extends Seeder
             'inventory.view',
             'materials.view',
             'products.view',
+            'products.manage',
             'suppliers.view',
             'costing.view',
             'reports.view',
@@ -222,6 +247,24 @@ class RoleAndPermissionSeeder extends Seeder
             'manufacturing_templates.manage',
             'semi_finished_components.view',
             'semi_finished_components.manage',
+            'finished_goods.view',
+            'finished_goods.receive',
+            'delivery.view',
+            'delivery.create',
+            'delivery.assign',
+            'delivery.dispatch',
+            'delivery.complete',
+            'delivery.install',
+            'delivery.reschedule',
+            'delivery.manage_returns',
+            'purchasing.view',
+            'purchasing.request',
+            'purchasing.review_request',
+            'purchasing.manage_rfq',
+            'purchasing.manage_quotes',
+            'purchasing.create_po',
+            'purchasing.approve_po',
+            'purchasing.cancel_po',
         ];
         $roles['production_manager']->permissions()->syncWithoutDetaching(
             collect($prodManagerPerms)->map(fn ($p) => $permissions[$p]->id)->toArray()
@@ -282,7 +325,11 @@ class RoleAndPermissionSeeder extends Seeder
         // Delivery / Installation User
         $deliveryUserPerms = [
             'delivery.view',
-            'delivery.update',
+            'delivery.dispatch',
+            'delivery.complete',
+            'delivery.install',
+            'delivery.reschedule',
+            'delivery.manage_returns',
             'orders.view',
         ];
         $roles['delivery_user']->permissions()->syncWithoutDetaching(
@@ -306,6 +353,21 @@ class RoleAndPermissionSeeder extends Seeder
         ];
         $roles['sales_user']->permissions()->syncWithoutDetaching(
             collect($salesUserPerms)->map(fn ($p) => $permissions[$p]->id)->toArray()
+        );
+
+        // Purchasing User
+        $purchasingUserPerms = [
+            'purchasing.view',
+            'purchasing.request',
+            'purchasing.manage_rfq',
+            'purchasing.manage_quotes',
+            'purchasing.create_po',
+            'materials.view',
+            'suppliers.view',
+            'inventory.view',
+        ];
+        $roles['purchasing_user']->permissions()->syncWithoutDetaching(
+            collect($purchasingUserPerms)->map(fn ($p) => $permissions[$p]->id)->toArray()
         );
 
         // System Administrator inherits all permissions in database and via Gate::before

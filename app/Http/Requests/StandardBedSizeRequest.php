@@ -8,7 +8,7 @@ class StandardBedSizeRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('products.manage') ?? false;
+        return $this->user()?->can('products.manage') || $this->user()?->can('products.view');
     }
 
     public function rules(): array

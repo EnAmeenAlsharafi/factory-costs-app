@@ -14,6 +14,7 @@ class MaterialReceipt extends Model
     protected $fillable = [
         'receipt_number',
         'supplier_id',
+        'purchase_order_id',
         'warehouse_id',
         'receipt_date',
         'supplier_reference',
@@ -33,6 +34,11 @@ class MaterialReceipt extends Model
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    public function purchaseOrder(): BelongsTo
+    {
+        return $this->belongsTo(PurchaseOrder::class);
     }
 
     public function warehouse(): BelongsTo

@@ -54,7 +54,6 @@ a, button, input, select, textarea { border-radius: .55rem; }
 .app-sidebar-column { flex: 0 0 auto; min-width: 0; }
 .app-main-column {
     position: relative;
-    z-index: var(--z-content);
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
@@ -102,7 +101,43 @@ a, button, input, select, textarea { border-radius: .55rem; }
     overflow-y: auto;
     overscroll-behavior: contain;
 }
-.sidebar-section-header { padding: 1rem .75rem .35rem; color: #94a3b8; font-size: .72rem; font-weight: 700; }
+.sidebar-section-header { padding: .75rem .75rem .25rem; color: #94a3b8; font-size: .72rem; font-weight: 700; }
+.sidebar-section-header-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-block-end: .25rem;
+    padding: .5rem .75rem;
+    color: #94a3b8;
+    background: transparent;
+    border: none;
+    font-size: .75rem;
+    font-weight: 700;
+    text-align: right;
+    cursor: pointer;
+    border-radius: .4rem;
+    transition: color .2s ease, background-color .2s ease;
+}
+.sidebar-section-header-btn:hover,
+.sidebar-section-header-btn:focus-visible {
+    color: #f1f5f9;
+    background: rgba(255, 255, 255, .07);
+}
+.sidebar-chevron-icon {
+    font-size: .7rem;
+    color: #64748b;
+    transition: transform .2s ease, color .2s ease;
+}
+.sidebar-section-header-btn:hover .sidebar-chevron-icon {
+    color: var(--factory-accent);
+}
+.rotate-180 {
+    transform: rotate(180deg);
+}
+.sidebar-sub-menu {
+    transition: all .2s ease;
+}
 .sidebar-nav-link {
     display: flex;
     align-items: center;
@@ -119,10 +154,12 @@ a, button, input, select, textarea { border-radius: .55rem; }
 .sidebar-icon { display: inline-grid; flex: 0 0 24px; width: 24px; place-items: center; }
 .sidebar-footer { flex: 0 0 auto; padding: .85rem 1rem; border-top: 1px solid rgba(255,255,255,.1); }
 .sidebar-wrapper.collapsed .sidebar-text,
-.sidebar-wrapper.collapsed .sidebar-section-header { display: none !important; }
+.sidebar-wrapper.collapsed .sidebar-section-header,
+.sidebar-wrapper.collapsed .sidebar-section-header-btn { display: none !important; }
 .sidebar-wrapper.collapsed .sidebar-brand { gap: .1rem; padding-inline: .25rem; }
 .sidebar-wrapper.collapsed .sidebar-brand-link { display: flex !important; }
 .sidebar-wrapper.collapsed .sidebar-nav-link { justify-content: center; padding-inline: .5rem; }
+.sidebar-wrapper.collapsed .sidebar-sub-menu { display: block !important; }
 
 .mobile-backdrop {
     position: fixed;

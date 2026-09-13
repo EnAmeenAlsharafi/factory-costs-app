@@ -17,8 +17,12 @@ class ProductService
         return DB::transaction(function () use ($data, $image) {
             $modelCode = DocumentNumberService::generateModelCode();
 
+            $imageSource = $data['image_source'] ?? 'file';
             $imagePath = null;
-            if ($image) {
+
+            if ($imageSource === 'url' && ! empty($data['reference_image_url'])) {
+                $imagePath = trim($data['reference_image_url']);
+            } elseif ($image) {
                 $imagePath = $image->store('product_models', 'public');
             }
 
@@ -38,8 +42,15 @@ class ProductService
     public function updateModel(ProductModel $model, array $data, ?UploadedFile $image = null): ProductModel
     {
         return DB::transaction(function () use ($model, $data, $image) {
-            if ($image) {
-                if ($model->reference_image_path && Storage::disk('public')->exists($model->reference_image_path)) {
+            $imageSource = $data['image_source'] ?? 'file';
+
+            if ($imageSource === 'url' && ! empty($data['reference_image_url'])) {
+                if ($model->reference_image_path && ! str_starts_with($model->reference_image_path, 'http://') && ! str_starts_with($model->reference_image_path, 'https://') && Storage::disk('public')->exists($model->reference_image_path)) {
+                    Storage::disk('public')->delete($model->reference_image_path);
+                }
+                $data['reference_image_path'] = trim($data['reference_image_url']);
+            } elseif ($imageSource === 'file' && $image) {
+                if ($model->reference_image_path && ! str_starts_with($model->reference_image_path, 'http://') && ! str_starts_with($model->reference_image_path, 'https://') && Storage::disk('public')->exists($model->reference_image_path)) {
                     Storage::disk('public')->delete($model->reference_image_path);
                 }
                 $data['reference_image_path'] = $image->store('product_models', 'public');

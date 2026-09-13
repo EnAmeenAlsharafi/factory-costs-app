@@ -136,7 +136,7 @@ class MaterialController extends Controller
             'unitConversions.toUnit',
         ]);
 
-        $allSuppliers = Supplier::where('is_active', true)->orderBy('name_ar')->get();
+        $allSuppliers = Supplier::where('is_active', true)->orderBy('name')->get();
         $allUnits = UnitOfMeasure::where('is_active', true)->orderBy('name_ar')->get();
 
         return view('materials.show', compact('material', 'allSuppliers', 'allUnits'));

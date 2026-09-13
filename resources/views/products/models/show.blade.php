@@ -43,8 +43,8 @@
         <div class="col-12 col-lg-4">
             <div class="card border-0 shadow-sm rounded-3 h-100">
                 <div class="card-body p-3 text-center d-flex flex-column justify-content-center align-items-center">
-                    @if($model->reference_image_path)
-                        <img src="{{ asset('storage/' . $model->reference_image_path) }}" alt="{{ $model->name_ar }}" class="img-fluid rounded border shadow-sm object-fit-cover w-100" style="max-height: 250px;">
+                    @if($model->image_url)
+                        <img src="{{ $model->image_url }}" alt="{{ $model->name_ar }}" class="img-fluid rounded border shadow-sm object-fit-cover w-100" style="max-height: 250px;" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'bg-light rounded border d-flex flex-column align-items-center justify-content-center text-muted p-5 w-100\' style=\'min-height: 200px;\'><i class=\'fas fa-bed display-3 mb-2\'></i><span class=\'fs-7\'>تعذر تحميل صورة الموديل</span></div>';">
                     @else
                         <div class="bg-light rounded border d-flex flex-column align-items-center justify-content-center text-muted p-5 w-100" style="min-height: 200px;">
                             <i class="fas fa-bed display-3 mb-2"></i>
@@ -147,12 +147,21 @@
                                 </td>
                                 @can('products.manage')
                                     <td class="text-center pe-3">
-                                        <form action="{{ route('products.configurations.toggle-status', $cfg) }}" method="POST" class="d-inline">
-                                            @csrf
-                                            <button type="submit" class="btn btn-sm {{ $cfg->is_active ? 'btn-outline-warning' : 'btn-outline-success' }}" title="{{ $cfg->is_active ? 'تعطيل' : 'تفعيل' }}">
-                                                <i class="fas {{ $cfg->is_active ? 'fa-ban' : 'fa-check' }}"></i>
-                                            </button>
-                                        </form>
+                                        <div class="d-inline-flex gap-1 align-items-center">
+                                            <form action="{{ route('products.configurations.toggle-status', $cfg) }}" method="POST" class="d-inline">
+                                                @csrf
+                                                <button type="submit" class="btn btn-sm {{ $cfg->is_active ? 'btn-outline-warning' : 'btn-outline-success' }}" title="{{ $cfg->is_active ? 'تعطيل' : 'تفعيل' }}">
+                                                    <i class="fas {{ $cfg->is_active ? 'fa-ban' : 'fa-check' }}"></i>
+                                                </button>
+                                            </form>
+                                            <form action="{{ route('products.configurations.destroy', $cfg) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من رغبتك في حذف هذا التكوين التصنيعي القياسي؟');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="حذف التكوين">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </form>
+                                        </div>
                                     </td>
                                 @endcan
                             </tr>
@@ -201,7 +210,7 @@
                         @forelse($model->aliases as $alias)
                             <tr>
                                 <td class="ps-3">
-                                    <span class="fw-bold text-dark">{{ $alias->customer->name_ar }}</span>
+                                    <span class="fw-bold text-dark">{{ $alias->customer->name ?? $alias->customer->name_ar }}</span>
                                     <small class="badge bg-light text-muted border ms-1">{{ $alias->customer->customer_code }}</small>
                                 </td>
                                 <td class="fw-bold text-primary fs-6">{{ $alias->customer_product_name }}</td>
@@ -291,7 +300,7 @@
 
                     <div class="form-check form-switch mb-3">
                         <input class="form-check-input" type="checkbox" name="has_storage" id="cfg_has_storage" value="1">
-                        <label class="form-check-input-label fw-semibold ms-2" for="cfg_has_storage">يتضمن سحارة / تخزين (Storage Box)</label>
+                        <label class="form-check-label fw-semibold ms-2" for="cfg_has_storage">يتضمن سحارة / تخزين (Storage Box)</label>
                     </div>
 
                     <div class="mb-3">
@@ -326,7 +335,7 @@
                         <select name="customer_id" id="alias_customer_id" class="form-select" required>
                             <option value="">-- اختر العميل --</option>
                             @foreach($customers as $customer)
-                                <option value="{{ $customer->id }}">{{ $customer->name_ar }} ({{ $customer->customer_code }})</option>
+                                <option value="{{ $customer->id }}">{{ $customer->name ?? $customer->name_ar }} ({{ $customer->customer_code }})</option>
                             @endforeach
                         </select>
                     </div>
@@ -343,7 +352,7 @@
 
                     <div class="form-check form-switch mb-3">
                         <input class="form-check-input" type="checkbox" name="is_default" id="alias_is_default" value="1">
-                        <label class="form-check-input-label fw-semibold ms-2" for="alias_is_default">تعيين كـ مسمى افتراضي لهذا الموديل عند اختيار العميل</label>
+                        <label class="form-check-label fw-semibold ms-2" for="alias_is_default">تعيين كـ مسمى افتراضي لهذا الموديل عند اختيار العميل</label>
                     </div>
                 </div>
                 <div class="modal-footer bg-light py-2">
@@ -358,13 +367,9 @@
 <script>
 function onStandardSizeSelect(selectEl) {
     const option = selectEl.options[selectEl.selectedIndex];
-    if (option && option.dataset) {
-        if (option.dataset.width) {
-            document.getElementById('cfg_width_cm').value = option.dataset.width;
-        }
-        if (option.dataset.length) {
-            document.getElementById('cfg_length_cm').value = option.dataset.length;
-        }
+    if (option && option.dataset && option.dataset.width && option.dataset.length) {
+        document.getElementById('cfg_width_cm').value = option.dataset.width;
+        document.getElementById('cfg_length_cm').value = option.dataset.length;
     }
 }
 </script>

@@ -83,11 +83,34 @@
                         <h5 class="card-title fw-bold mb-0 text-dark"><i class="fas fa-image text-primary me-2"></i>الصورة والإعدادات</h5>
                     </div>
                     <div class="card-body">
-                        <div class="mb-3">
-                            <label for="reference_image" class="form-label fw-semibold">الصورة المرجعية للموديل</label>
-                            <input type="file" name="reference_image" id="reference_image" class="form-control @error('reference_image') is-invalid @enderror" accept="image/jpeg,image/png,image/webp">
-                            <small class="text-muted d-block mt-1">أنواع مسموحة: JPG, PNG, WEBP (حجم أقصى 5 ميجابايت)</small>
-                            @error('reference_image') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        <div class="mb-3" x-data="{ imageSource: '{{ old('image_source', 'file') }}' }">
+                            <label class="form-label fw-semibold">الصورة المرجعية للموديل</label>
+                            <div class="d-flex gap-3 mb-2 p-2 bg-light rounded border">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="image_source" id="img_source_file" value="file" x-model="imageSource">
+                                    <label class="form-check-label fw-semibold fs-7" for="img_source_file">
+                                        <i class="fas fa-upload me-1 text-primary"></i> رفع صورة من الجهاز
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="image_source" id="img_source_url" value="url" x-model="imageSource">
+                                    <label class="form-check-label fw-semibold fs-7" for="img_source_url">
+                                        <i class="fas fa-link me-1 text-primary"></i> إضافة رابط صورة (URL)
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div x-show="imageSource === 'file'" class="mt-2">
+                                <input type="file" name="reference_image" id="reference_image" class="form-control @error('reference_image') is-invalid @enderror" accept="image/jpeg,image/png,image/webp">
+                                <small class="text-muted d-block mt-1">أنواع مسموحة: JPG, PNG, WEBP (حجم أقصى 5 ميجابايت)</small>
+                                @error('reference_image') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            </div>
+
+                            <div x-show="imageSource === 'url'" class="mt-2" x-cloak>
+                                <input type="url" name="reference_image_url" id="reference_image_url" class="form-control dir-ltr @error('reference_image_url') is-invalid @enderror" value="{{ old('reference_image_url') }}" placeholder="https://example.com/image.jpg">
+                                <small class="text-muted d-block mt-1">أدخل رابط الصورة الصريح والمباشر (مثل: https://...)</small>
+                                @error('reference_image_url') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            </div>
                         </div>
 
                         <div class="form-check form-switch mb-3">

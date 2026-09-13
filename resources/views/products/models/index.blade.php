@@ -75,8 +75,8 @@
                         @forelse($models as $model)
                             <tr>
                                 <td class="ps-3">
-                                    @if($model->reference_image_path)
-                                        <img src="{{ asset('storage/' . $model->reference_image_path) }}" alt="{{ $model->name_ar }}" class="rounded border object-fit-cover" width="48" height="48">
+                                    @if($model->image_url)
+                                        <img src="{{ $model->image_url }}" alt="{{ $model->name_ar }}" class="rounded border object-fit-cover" width="48" height="48">
                                     @else
                                         <div class="bg-light rounded border d-flex align-items-center justify-content-center text-muted" style="width:48px; height:48px;">
                                             <i class="fas fa-bed fs-5"></i>

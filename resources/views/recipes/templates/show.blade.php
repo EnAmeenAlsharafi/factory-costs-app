@@ -101,7 +101,7 @@
     </div>
 
     {{-- Modal: Create Recipe from Template --}}
-    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);" x-show="showRecipeModal" x-cloak>
+    <div class="modal fade show" tabindex="-1" style="background: rgba(0,0,0,0.5);" x-show="showRecipeModal" :class="{ 'd-block': showRecipeModal }" @click.self="showRecipeModal = false" @keydown.escape.window="showRecipeModal = false" x-cloak>
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
                 <form action="{{ route('recipes.templates.create-recipe', $template) }}" method="POST">

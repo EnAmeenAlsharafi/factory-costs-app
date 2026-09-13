@@ -138,7 +138,7 @@
     </div>
 
     {{-- Create Modal --}}
-    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);" x-show="showCreateModal" x-cloak>
+    <div class="modal fade show" tabindex="-1" style="background: rgba(0,0,0,0.5);" x-show="showCreateModal" :class="{ 'd-block': showCreateModal }" @click.self="showCreateModal = false" @keydown.escape.window="showCreateModal = false" x-cloak>
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
                 <form action="{{ route('recipes.components.store') }}" method="POST">
@@ -185,7 +185,7 @@
     </div>
 
     {{-- Edit Modal --}}
-    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);" x-show="showEditModal" x-cloak>
+    <div class="modal fade show" tabindex="-1" style="background: rgba(0,0,0,0.5);" x-show="showEditModal" :class="{ 'd-block': showEditModal }" @click.self="showEditModal = false" @keydown.escape.window="showEditModal = false" x-cloak>
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
                 <form :action="`/recipes/components/${editComponent.id}`" method="POST">

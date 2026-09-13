@@ -248,4 +248,15 @@ class MaterialTest extends TestCase
         $code2 = Material::generateNextCode();
         $this->assertNotEquals($code1, $code2);
     }
+
+    public function test_admin_can_view_material_show_page(): void
+    {
+        $admin = User::where('username', 'admin')->first();
+        $material = Material::factory()->create();
+
+        $response = $this->actingAs($admin)->get(route('materials.show', $material));
+
+        $response->assertOk();
+        $response->assertViewIs('materials.show');
+    }
 }

@@ -67,7 +67,7 @@ class ProductModelController extends Controller
         ]);
 
         $standardSizes = StandardBedSize::where('is_active', true)->orderBy('sort_order')->get();
-        $customers = Customer::where('is_active', true)->orderBy('name_ar')->get();
+        $customers = Customer::active()->orderBy('name')->get();
 
         return view('products.models.show', compact('model', 'standardSizes', 'customers'));
     }
