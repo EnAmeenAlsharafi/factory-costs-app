@@ -1,8 +1,11 @@
 <?php
 
+use App\Http\Controllers\Api\SearchApiController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\CustomerCreditProfileController;
 use App\Http\Controllers\CustomerOrderController;
+use App\Http\Controllers\CustomerPaymentController;
 use App\Http\Controllers\CustomerProductAliasController;
 use App\Http\Controllers\CustomerReturnController;
 use App\Http\Controllers\CustomerTypeController;
@@ -22,6 +25,8 @@ use App\Http\Controllers\MaterialReceiptController;
 use App\Http\Controllers\MaterialReturnController;
 use App\Http\Controllers\MaterialSupplierController;
 use App\Http\Controllers\MaterialUnitConversionController;
+use App\Http\Controllers\PaymentAllocationController;
+use App\Http\Controllers\PaymentControlOverrideController;
 use App\Http\Controllers\ProcurementPlanningController;
 use App\Http\Controllers\ProductConfigurationController;
 use App\Http\Controllers\ProductionBoardController;
@@ -38,6 +43,7 @@ use App\Http\Controllers\PurchaseRequestController;
 use App\Http\Controllers\PurchaseRfqController;
 use App\Http\Controllers\QualityIncidentController;
 use App\Http\Controllers\QuotationController;
+use App\Http\Controllers\ReceivablesReportController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SalesChannelController;
 use App\Http\Controllers\SemiFinishedComponentController;
@@ -187,6 +193,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/receipts/create', [MaterialReceiptController::class, 'create'])->name('receipts.create');
         Route::post('/receipts', [MaterialReceiptController::class, 'store'])->name('receipts.store');
         Route::get('/receipts/{receipt}', [MaterialReceiptController::class, 'show'])->name('receipts.show');
+        Route::get('/receipts/{receipt}/edit', [MaterialReceiptController::class, 'edit'])->name('receipts.edit');
+        Route::put('/receipts/{receipt}', [MaterialReceiptController::class, 'update'])->name('receipts.update');
         Route::post('/receipts/{receipt}/post', [MaterialReceiptController::class, 'post'])->name('receipts.post');
 
         Route::get('/issues', [MaterialIssueController::class, 'index'])->name('issues.index');
@@ -276,6 +284,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/templates/create', [ManufacturingTemplateController::class, 'create'])->name('templates.create');
         Route::post('/templates', [ManufacturingTemplateController::class, 'store'])->name('templates.store');
         Route::get('/templates/{template}', [ManufacturingTemplateController::class, 'show'])->name('templates.show');
+        Route::get('/templates/{template}/edit', [ManufacturingTemplateController::class, 'edit'])->name('templates.edit');
+        Route::put('/templates/{template}', [ManufacturingTemplateController::class, 'update'])->name('templates.update');
         Route::post('/templates/{template}/toggle-status', [ManufacturingTemplateController::class, 'toggleStatus'])->name('templates.toggle-status');
         Route::post('/templates/{template}/create-recipe', [ManufacturingRecipeController::class, 'createFromTemplate'])->name('templates.create-recipe');
 
@@ -379,4 +389,43 @@ Route::middleware('auth')->group(function () {
     Route::get('/settings', function () {
         return view('placeholders.module', ['title' => 'إعدادات النظام والقياسات (System Settings)']);
     })->name('settings.index');
+
+    // Stage 13: Customer Payments, Receivables, Credit & Overrides
+    Route::prefix('receivables')->name('receivables.')->group(function () {
+        Route::get('/dashboard', [ReceivablesReportController::class, 'dashboard'])->name('dashboard');
+
+        // Customer Payments
+        Route::get('/payments', [CustomerPaymentController::class, 'index'])->name('payments.index');
+        Route::get('/payments/create', [CustomerPaymentController::class, 'create'])->name('payments.create');
+        Route::post('/payments', [CustomerPaymentController::class, 'store'])->name('payments.store');
+        Route::get('/payments/{payment}', [CustomerPaymentController::class, 'show'])->name('payments.show');
+        Route::post('/payments/{payment}/confirm', [CustomerPaymentController::class, 'confirm'])->name('payments.confirm');
+        Route::post('/payments/{payment}/cancel', [CustomerPaymentController::class, 'cancel'])->name('payments.cancel');
+        Route::post('/payments/{payment}/reverse', [CustomerPaymentController::class, 'reverse'])->name('payments.reverse');
+        Route::get('/payments/{payment}/receipt', [CustomerPaymentController::class, 'receipt'])->name('payments.receipt');
+
+        // Payment Allocations
+        Route::post('/allocations', [PaymentAllocationController::class, 'store'])->name('allocations.store');
+        Route::delete('/allocations/{allocation}', [PaymentAllocationController::class, 'destroy'])->name('allocations.destroy');
+
+        // Customer Credit Profiles & Balances
+        Route::get('/customers', [ReceivablesReportController::class, 'balances'])->name('customers.index');
+        Route::get('/customers/{customer}', [ReceivablesReportController::class, 'statement'])->name('customers.show');
+        Route::put('/customers/{customer}/credit', [CustomerCreditProfileController::class, 'update'])->name('customers.credit.update');
+
+        // Credit Monitoring & Aging Reports
+        Route::get('/credit', [CustomerCreditProfileController::class, 'index'])->name('credit.index');
+        Route::get('/reports/aging', [ReceivablesReportController::class, 'aging'])->name('reports.aging');
+
+        // Payment Control Overrides
+        Route::post('/overrides', [PaymentControlOverrideController::class, 'store'])->name('overrides.store');
+    });
+
+    // Search API Endpoints (Typeahead Selectors)
+    Route::prefix('api/search')->name('api.search.')->group(function () {
+        Route::get('/product-models', [SearchApiController::class, 'productModels'])->name('product-models');
+        Route::get('/product-configurations', [SearchApiController::class, 'productConfigurations'])->name('product-configurations');
+        Route::get('/suppliers', [SearchApiController::class, 'suppliers'])->name('suppliers');
+        Route::get('/fabric-materials', [SearchApiController::class, 'fabricMaterials'])->name('fabric-materials');
+    });
 });

@@ -30,11 +30,22 @@ Stage 8 establishes the commercial-to-production intake workflow for the Sadir F
    - Supports lines with `custom_design = true` and `custom_design_name`.
    - Custom design lines do not require a pre-existing `ProductModel` or `ProductConfiguration`.
 
-4. **Post-Approval Change Audit Logging**:
+4. **Fabric Supplier, Material & Color Code Specifications**:
+   - For all bed models (`requires_fabric_selection = true`) or custom design lines requiring fabric, Customer Service MUST select:
+     - **Fabric Supplier** (`fabric_supplier_id`)
+     - **Fabric Material** (`fabric_material_id` - restricted to `FABRIC` category materials)
+     - **Fabric Color Number / Code** (`fabric_color_code` - e.g. `204`, `BEIGE-08`)
+   - Backend validation verifies `fabric_supplier_id` is linked to `fabric_material_id` in `material_supplier` mapping (`المورد المحدد غير مرتبط بنوع القماش المختار.`).
+   - Quote conversion to Customer Order preserves all three fabric parameters.
+   - Production Orders snapshot `fabric_supplier_id` and `fabric_color_code` to guarantee historical integrity even if master catalogs change later.
+   - Production Material Requirements automatically resolve generic BOM fabric items to the exact customer-selected `fabric_material_id` and color code snapshot.
+
+5. **Post-Approval Change Audit Logging**:
    - Editing an order after it has been `APPROVED_FOR_PRODUCTION` logs an entry in `customer_order_changes` with `occurred_after_production_approval = true`.
+   - Formats human-readable audit change descriptions (e.g. `Supplier A / Velvet / 204` -> `Supplier B / Velvet / 118`).
    - Resets order status back to `PENDING_PRODUCTION_REVIEW` to mandate re-inspection by Production Management before manufacturing.
 
-5. **Stage 8 Boundaries & Anti-Scope**:
+6. **Stage 8 Boundaries & Anti-Scope**:
    - Does **NOT** create Production Orders (reserved for Stage 9).
    - Does **NOT** execute WIP routing or work center dispatching.
    - Does **NOT** perform inventory reservation or issuing.
@@ -43,9 +54,9 @@ Stage 8 establishes the commercial-to-production intake workflow for the Sadir F
 ## 3. Database Schema Overview
 
 - **`quotations`**: Header for commercial quotes (`quotation_number`, `customer_id`, `sales_channel_id`, `status`, `total_amount`, `valid_until`).
-- **`quotation_lines`**: Itemized lines for quotes (`product_model_id`, `product_configuration_id`, `custom_design`, `requested_width_cm`, `requested_length_cm`, `unit_price`, `line_total`).
+- **`quotation_lines`**: Itemized lines for quotes (`product_model_id`, `product_configuration_id`, `custom_design`, `requested_width_cm`, `requested_length_cm`, `fabric_supplier_id`, `fabric_material_id`, `fabric_color_code`, `unit_price`, `line_total`).
 - **`customer_orders`**: Header for commercial orders (`order_number`, `quotation_id`, `customer_id`, `sales_channel_id`, `customer_reference`, `order_date`, `status`, `total_amount`, `production_approved_by_user_id`).
-- **`customer_order_lines`**: Itemized lines for orders (`requested_width_cm`, `requested_length_cm`, `reference_width_cm`, `reference_length_cm`, `recipe_version_id`, `quantity`, `unit_price`, `line_total`).
+- **`customer_order_lines`**: Itemized lines for orders (`requested_width_cm`, `requested_length_cm`, `reference_width_cm`, `reference_length_cm`, `fabric_supplier_id`, `fabric_material_id`, `fabric_color_id`, `fabric_color_code`, `recipe_version_id`, `quantity`, `unit_price`, `line_total`).
 - **`customer_order_changes`**: Audit log for header and line modifications (`field_name`, `old_value`, `new_value`, `requested_by_user_id`, `occurred_after_production_approval`).
 
 ## 4. Permissions Matrix

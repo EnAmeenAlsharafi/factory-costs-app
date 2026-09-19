@@ -3,7 +3,7 @@
 @section('title', 'تفاصيل القالب - ' . $template->template_code)
 
 @section('content')
-<div class="container-fluid px-4 py-4" x-data="{ showRecipeModal: false }">
+<div class="container-fluid px-4 py-4" x-data="{ showRecipeModal: {{ request('open_modal') ? 'true' : 'false' }} }">
 
     <div class="mb-3">
         <a href="{{ route('recipes.templates.index') }}" class="text-decoration-none text-muted fs-7">
@@ -27,6 +27,11 @@
                     <p class="text-muted mb-0 fs-7">{{ $template->description ?: 'لا يوجد وصف مدون' }}</p>
                 </div>
                 <div>
+                    @can('manufacturing_templates.manage')
+                        <a href="{{ route('recipes.templates.edit', $template) }}" class="btn btn-outline-warning px-3 fw-bold me-2">
+                            <i class="fas fa-edit me-1"></i> تعديل القالب
+                        </a>
+                    @endcan
                     @can('recipes.manage')
                         <button type="button" @click="showRecipeModal = true" class="btn btn-warning px-3 fw-bold">
                             <i class="fas fa-magic me-1"></i> إنشاء وصفة جديدة من هذا القالب
@@ -110,28 +115,47 @@
                         <h5 class="modal-title fw-bold"><i class="fas fa-magic me-1"></i> إنشاء وصفة جديدة من القالب</h5>
                         <button type="button" class="btn-close" @click="showRecipeModal = false"></button>
                     </div>
-                    <div class="modal-body" x-data="{ targetType: 'PRODUCT_CONFIGURATION' }">
+                    <div class="modal-body" x-data="{ targetType: 'PRODUCT_CONFIGURATION', selectedModelId: '' }">
+                        {{-- Template Summary --}}
+                        <div class="alert alert-light border shadow-sm mb-3 fs-7">
+                            <i class="fas fa-layer-group text-warning me-1"></i>
+                            <strong>القالب المصدر:</strong> {{ $template->template_code }} — {{ $template->name_ar }} ({{ $template->items->count() }} بند)
+                        </div>
+
                         <div class="mb-3">
-                            <label class="form-label fw-bold fs-7">نوع الهدف المصنع</label>
+                            <label class="form-label fw-bold fs-7">نوع الهدف المصنع <span class="text-danger">*</span></label>
                             <select name="target_type" class="form-select" x-model="targetType">
-                                <option value="PRODUCT_CONFIGURATION">تكوين منتج نهائي</option>
-                                <option value="SEMI_FINISHED_COMPONENT">مكون نصف مصنع</option>
+                                <option value="PRODUCT_CONFIGURATION">تكوين منتج نهائي (Product Configuration)</option>
+                                <option value="SEMI_FINISHED_COMPONENT">مكون نصف مصنع (Semi-Finished Component)</option>
                             </select>
                         </div>
 
                         <div class="mb-3" x-show="targetType === 'PRODUCT_CONFIGURATION'">
-                            <label class="form-label fw-bold fs-7">تكوين المنتج النهائي</label>
-                            <select name="product_configuration_id" class="form-select">
+                            <label class="form-label fw-bold fs-7">تصفية بالموديل (اختياري)</label>
+                            <select class="form-select mb-2" x-model="selectedModelId">
+                                <option value="">-- جميع الموديلات --</option>
+                                @php
+                                    $modelsInConfig = $configurations->pluck('productModel')->unique('id')->filter()->sortBy('name_ar');
+                                @endphp
+                                @foreach($modelsInConfig as $mod)
+                                    <option value="{{ $mod->id }}">{{ $mod->name_ar }} ({{ $mod->model_code }})</option>
+                                @endforeach
+                            </select>
+
+                            <label class="form-label fw-bold fs-7">تكوين المنتج النهائي المستهدف <span class="text-danger">*</span></label>
+                            <select name="product_configuration_id" class="form-select" :required="targetType === 'PRODUCT_CONFIGURATION'">
                                 <option value="">-- اختر التكوين المصنعي --</option>
                                 @foreach($configurations as $cfg)
-                                    <option value="{{ $cfg->id }}">{{ $cfg->productModel?->name_ar }} | {{ $cfg->width_cm }} × {{ $cfg->length_cm }} سم ({{ $cfg->has_storage ? 'سحارة' : 'بدون تخزين' }})</option>
+                                    <option value="{{ $cfg->id }}" data-model-id="{{ $cfg->product_model_id }}" x-show="!selectedModelId || selectedModelId == '{{ $cfg->product_model_id }}'">
+                                        {{ $cfg->configuration_code }} — {{ $cfg->productModel?->name_ar }} — {{ number_format($cfg->width_cm, 0) }}×{{ number_format($cfg->length_cm, 0) }} سم — {{ $cfg->has_storage ? 'سحارة' : 'بدون تخزين' }}
+                                    </option>
                                 @endforeach
                             </select>
                         </div>
 
                         <div class="mb-3" x-show="targetType === 'SEMI_FINISHED_COMPONENT'">
-                            <label class="form-label fw-bold fs-7">المكون نصف المصنع</label>
-                            <select name="semi_finished_component_id" class="form-select">
+                            <label class="form-label fw-bold fs-7">المكون نصف المصنع المستهدف <span class="text-danger">*</span></label>
+                            <select name="semi_finished_component_id" class="form-select" :required="targetType === 'SEMI_FINISHED_COMPONENT'">
                                 <option value="">-- اختر المكون نصف المصنع --</option>
                                 @foreach($components as $comp)
                                     <option value="{{ $comp->id }}">{{ $comp->name_ar }} ({{ $comp->component_code }})</option>
@@ -141,7 +165,7 @@
 
                         <div class="mb-3">
                             <label class="form-label fw-bold fs-7">اسم الوصفة الجديدة <span class="text-danger">*</span></label>
-                            <input type="text" name="name" class="form-control" value="وصفة مستنسخة من {{ $template->name_ar }}" required>
+                            <input type="text" name="name" class="form-control fw-bold" value="وصفة {{ $template->name_ar }}" required>
                         </div>
                     </div>
                     <div class="modal-footer bg-light">

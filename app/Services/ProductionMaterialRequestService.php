@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\InventoryLot;
+use App\Models\Material;
 use App\Models\MaterialIssue;
 use App\Models\ProductionMaterialRequest;
 use App\Models\ProductionMaterialRequestLine;
@@ -38,24 +39,42 @@ class ProductionMaterialRequestService
 
             $productionOrder->materialRequirements()->delete();
 
-            $recipeVersion->load('items.material', 'items.semiFinishedComponent', 'items.unit');
+            $recipeVersion->load('items.material.category', 'items.semiFinishedComponent', 'items.unit');
 
             $count = 0;
             foreach ($recipeVersion->items as $item) {
-                $reqQtyPerUnit = (float) $item->quantity_per_unit;
+                $reqQtyPerUnit = (float) ($item->quantity_per_unit ?? $item->quantity);
                 $wastePct = (float) $item->waste_percentage;
                 $plannedQtyPerUnit = $reqQtyPerUnit * (1 + ($wastePct / 100));
                 $totalPlannedQty = $plannedQtyPerUnit * $productionOrder->ordered_quantity;
 
+                $materialId = $item->material_id;
                 $materialName = $item->material?->name_ar
                     ?? $item->semiFinishedComponent?->name_ar
                     ?? $item->notes;
+
+                // Resolve fabric requirement to customer's order-specified fabric if item is fabric category or fabric material
+                if ($item->material && (strtoupper($item->material->category?->code ?? '') === 'FABRIC' || str_contains($item->material->name_ar, 'قماش'))) {
+                    if ($productionOrder->fabric_material_id) {
+                        $materialId = $productionOrder->fabric_material_id;
+                        $resolvedFabric = Material::find($productionOrder->fabric_material_id);
+                        if ($resolvedFabric) {
+                            $materialName = $resolvedFabric->name_ar;
+                            if ($productionOrder->fabric_color_code) {
+                                $materialName .= " (لون: {$productionOrder->fabric_color_code})";
+                            }
+                            if ($productionOrder->fabricSupplier) {
+                                $materialName .= " [المورد: {$productionOrder->fabricSupplier->name}]";
+                            }
+                        }
+                    }
+                }
 
                 ProductionMaterialRequirement::create([
                     'production_order_id' => $productionOrder->id,
                     'manufacturing_recipe_version_id' => $recipeVersion->id,
                     'manufacturing_recipe_item_id' => $item->id,
-                    'material_id' => $item->material_id,
+                    'material_id' => $materialId,
                     'semi_finished_component_id' => $item->semi_finished_component_id,
                     'required_quantity_per_unit' => $reqQtyPerUnit,
                     'waste_percentage' => $wastePct,
@@ -110,6 +129,7 @@ class ProductionMaterialRequestService
                         'production_material_requirement_id' => $req?->id,
                         'material_id' => $materialId,
                         'fabric_color_id' => $lineData['fabric_color_id'] ?? ($productionOrder->fabric_color_id ?? null),
+                        'fabric_color_code' => $lineData['fabric_color_code'] ?? ($productionOrder->fabric_color_code ?? null),
                         'requested_quantity' => $requestedQty,
                         'approved_quantity' => $lineData['approved_quantity'] ?? $requestedQty,
                         'issued_quantity' => 0,
@@ -205,7 +225,17 @@ class ProductionMaterialRequestService
                     throw new Exception('خامة اللوت المحدد لا تطابق خامة بند الطلب.');
                 }
 
-                if ($reqLine->fabric_color_id !== null && (int) $lot->fabric_color_id !== (int) $reqLine->fabric_color_id) {
+                if ($reqLine->fabric_color_id !== null && $lot->fabric_color_id !== null && (int) $lot->fabric_color_id !== (int) $reqLine->fabric_color_id) {
+                    throw new Exception('لون اللوت المحدد لا يطابق لون بند الطلب.');
+                }
+
+                $reqColor = $reqLine->fabric_color_code
+                    ?? $lockedRequest->productionOrder?->fabric_color_code
+                    ?? $reqLine->fabricColor?->color_code;
+                $lotColor = $lot->fabric_color_code
+                    ?? $lot->fabricColor?->color_code;
+
+                if (! empty($reqColor) && ! empty($lotColor) && $lotColor !== $reqColor) {
                     throw new Exception('لون اللوت المحدد لا يطابق لون بند الطلب.');
                 }
 

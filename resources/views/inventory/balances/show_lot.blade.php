@@ -61,6 +61,17 @@
                                 <span class="text-muted">افتتاحي / مباشر</span>
                             @endif
                         </div>
+                        @if($lot->fabric_color_code || $lot->fabricColor || (strtoupper($lot->material?->category?->code ?? '') === 'FABRIC' || str_contains($lot->material?->name_ar ?? '', 'قماش')))
+                            <div class="col-sm-6">
+                                <span class="text-muted d-block fs-7">رقم / كود اللون:</span>
+                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 fs-7 mt-1 fw-mono">
+                                    <i class="fas fa-palette me-1"></i>{{ $lot->fabric_color_code ?? $lot->fabricColor?->color_code ?? 'غير محدد' }}
+                                    @if($lot->fabricColor && $lot->fabricColor->color_name_ar)
+                                        ({{ $lot->fabricColor->color_name_ar }})
+                                    @endif
+                                </span>
+                            </div>
+                        @endif
                         <div class="col-sm-6">
                             <span class="text-muted d-block fs-7">الملاحظات:</span>
                             <span class="text-dark">{{ $lot->notes ?? '-' }}</span>

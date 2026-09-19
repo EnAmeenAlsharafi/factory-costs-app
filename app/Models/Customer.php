@@ -51,12 +51,45 @@ class Customer extends Model
         return $this->belongsTo(CustomerType::class);
     }
 
-    /**
-     * Default sales channel associated with this customer.
-     */
     public function defaultSalesChannel(): BelongsTo
     {
         return $this->belongsTo(SalesChannel::class, 'default_sales_channel_id');
+    }
+
+    public function orders()
+    {
+        return $this->hasMany(CustomerOrder::class);
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(CustomerPayment::class);
+    }
+
+    public function creditProfile()
+    {
+        return $this->hasOne(CustomerCreditProfile::class);
+    }
+
+    public function getUnallocatedCreditAttribute(): float
+    {
+        return (float) $this->payments()
+            ->where('status', 'CONFIRMED')
+            ->get()
+            ->sum('unallocated_amount');
+    }
+
+    public function getTotalOutstandingBalanceAttribute(): float
+    {
+        return (float) $this->orders()
+            ->whereNotIn('status', ['CANCELLED', 'REJECTED'])
+            ->get()
+            ->sum('outstanding_balance');
+    }
+
+    public function getCurrentCreditExposureAttribute(): float
+    {
+        return $this->total_outstanding_balance;
     }
 
     /**

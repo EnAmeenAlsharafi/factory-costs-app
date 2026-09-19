@@ -10,6 +10,7 @@ use App\Models\Material;
 use App\Models\ProductModel;
 use App\Models\Quotation;
 use App\Models\SalesChannel;
+use App\Models\Supplier;
 use App\Services\QuotationService;
 use Exception;
 use Illuminate\Http\RedirectResponse;
@@ -43,11 +44,12 @@ class QuotationController extends Controller
         $customers = Customer::where('is_active', true)->orderBy('name')->get();
         $salesChannels = SalesChannel::where('is_active', true)->get();
         $productModels = ProductModel::where('is_active', true)->with('configurations', 'aliases')->get();
-        $fabrics = Material::whereHas('category', fn ($c) => $c->where('code', 'FABRIC'))->with('fabricColors')->get();
+        $fabrics = Material::whereHas('category', fn ($c) => $c->where('code', 'FABRIC'))->with('fabricColors', 'suppliers')->get();
+        $suppliers = Supplier::where('is_active', true)->with('materials')->orderBy('name')->get();
         $colors = FabricColor::where('is_active', true)->get();
         $aliases = CustomerProductAlias::where('is_active', true)->get();
 
-        return view('sales.quotations.create', compact('customers', 'salesChannels', 'productModels', 'fabrics', 'colors', 'aliases'));
+        return view('sales.quotations.create', compact('customers', 'salesChannels', 'productModels', 'fabrics', 'suppliers', 'colors', 'aliases'));
     }
 
     public function store(QuotationRequest $request): RedirectResponse
@@ -78,6 +80,7 @@ class QuotationController extends Controller
             'lines.productModel',
             'lines.productConfiguration',
             'lines.customerProductAlias',
+            'lines.fabricSupplier',
             'lines.fabricMaterial',
             'lines.fabricColor',
             'customerOrder',
@@ -91,15 +94,21 @@ class QuotationController extends Controller
         abort_if(! $request->user()->can('quotations.update'), 403, 'غير مصرح لك بتعديل هذا العرض.');
         abort_if($quotation->status === 'CONVERTED', 403, 'لا يمكن تعديل عرض سعر تم تحويله لطلب عميل مسبقاً.');
 
-        $quotation->load('lines');
+        $quotation->load([
+            'lines.productModel',
+            'lines.productConfiguration',
+            'lines.fabricSupplier',
+            'lines.fabricMaterial',
+        ]);
         $customers = Customer::where('is_active', true)->orderBy('name')->get();
         $salesChannels = SalesChannel::where('is_active', true)->get();
         $productModels = ProductModel::where('is_active', true)->with('configurations', 'aliases')->get();
-        $fabrics = Material::whereHas('category', fn ($c) => $c->where('code', 'FABRIC'))->with('fabricColors')->get();
+        $fabrics = Material::whereHas('category', fn ($c) => $c->where('code', 'FABRIC'))->with('fabricColors', 'suppliers')->get();
+        $suppliers = Supplier::where('is_active', true)->with('materials')->orderBy('name')->get();
         $colors = FabricColor::where('is_active', true)->get();
         $aliases = CustomerProductAlias::where('is_active', true)->get();
 
-        return view('sales.quotations.edit', compact('quotation', 'customers', 'salesChannels', 'productModels', 'fabrics', 'colors', 'aliases'));
+        return view('sales.quotations.edit', compact('quotation', 'customers', 'salesChannels', 'productModels', 'fabrics', 'suppliers', 'colors', 'aliases'));
     }
 
     public function update(QuotationRequest $request, Quotation $quotation): RedirectResponse

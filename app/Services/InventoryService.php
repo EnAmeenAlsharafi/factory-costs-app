@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\FabricColor;
 use App\Models\InventoryAdjustment;
 use App\Models\InventoryLot;
 use App\Models\InventoryMovement;
@@ -36,8 +37,29 @@ class InventoryService
         return DB::transaction(function () use ($receipt, $userObj) {
             foreach ($receipt->lines as $line) {
                 // Enforce Fabric color policy
-                if ($line->material->category?->code === 'FABRIC' && ! $line->fabric_color_id) {
-                    throw new Exception("يلزم تحديد درجة اللون لمادة القماش: {$line->material->name_ar}");
+                $isFabric = strtoupper($line->material?->category?->code ?? '') === 'FABRIC';
+                $colorCode = ! empty($line->fabric_color_code) ? trim((string) $line->fabric_color_code) : null;
+                $colorId = $line->fabric_color_id;
+
+                if ($isFabric && empty($colorCode) && empty($colorId)) {
+                    throw new Exception("يلزم إدخال رقم أو كود اللون لمادة القماش: {$line->material->name_ar}");
+                }
+
+                // If color code is provided but not colorId, attempt to link matching FabricColor if one exists
+                if ($colorCode && ! $colorId) {
+                    $matched = FabricColor::where('material_id', $line->material_id)
+                        ->where(function ($q) use ($colorCode) {
+                            $q->where('color_code', $colorCode)
+                                ->orWhere('color_name_ar', $colorCode);
+                        })->first();
+                    if ($matched) {
+                        $colorId = $matched->id;
+                    }
+                }
+
+                // If colorId is provided but not colorCode, snapshot the color code from FabricColor
+                if ($colorId && empty($colorCode)) {
+                    $colorCode = FabricColor::find($colorId)?->color_code;
                 }
 
                 // Create Inventory Lot
@@ -45,7 +67,8 @@ class InventoryService
                 $lot = InventoryLot::create([
                     'lot_code' => $lotCode,
                     'material_id' => $line->material_id,
-                    'fabric_color_id' => $line->fabric_color_id,
+                    'fabric_color_id' => $colorId,
+                    'fabric_color_code' => $colorCode,
                     'supplier_id' => $receipt->supplier_id,
                     'warehouse_id' => $receipt->warehouse_id,
                     'receipt_line_id' => $line->id,
@@ -65,7 +88,8 @@ class InventoryService
                     'movement_number' => DocumentNumberService::generateMovementNumber(),
                     'movement_type' => 'RECEIPT',
                     'material_id' => $line->material_id,
-                    'fabric_color_id' => $line->fabric_color_id,
+                    'fabric_color_id' => $colorId,
+                    'fabric_color_code' => $colorCode,
                     'warehouse_id' => $receipt->warehouse_id,
                     'inventory_lot_id' => $lot->id,
                     'quantity' => $line->base_quantity,
@@ -404,6 +428,7 @@ class InventoryService
                         'purchase_order_line_id' => $item['purchase_order_line_id'] ?? null,
                         'material_id' => $material->id,
                         'fabric_color_id' => $item['fabric_color_id'] ?? null,
+                        'fabric_color_code' => isset($item['fabric_color_code']) && trim((string) $item['fabric_color_code']) !== '' ? trim((string) $item['fabric_color_code']) : null,
                         'purchase_unit_id' => $unit->id,
                         'base_unit_id' => $material->base_unit_id,
                         'quantity_received' => $receivedQty,

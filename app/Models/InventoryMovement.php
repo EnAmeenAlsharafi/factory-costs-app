@@ -16,6 +16,7 @@ class InventoryMovement extends Model
         'movement_type',
         'material_id',
         'fabric_color_id',
+        'fabric_color_code',
         'warehouse_id',
         'inventory_lot_id',
         'quantity',

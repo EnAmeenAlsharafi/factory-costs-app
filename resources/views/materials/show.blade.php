@@ -323,7 +323,7 @@
                                     <select name="supplier_id" class="form-select form-select-sm" required>
                                         <option value="">-- اختر المورد --</option>
                                         @foreach ($allSuppliers as $sup)
-                                            <option value="{{ $sup->id }}">{{ $sup->name_ar }} ({{ $sup->supplier_code ?? $sup->code }})</option>
+                                            <option value="{{ $sup->id }}">{{ $sup->name }} ({{ $sup->supplier_code ?? $sup->code }}){{ $sup->commercial_name && $sup->commercial_name !== $sup->name ? ' - ' . $sup->commercial_name : '' }}</option>
                                         @endforeach
                                     </select>
                                 </div>

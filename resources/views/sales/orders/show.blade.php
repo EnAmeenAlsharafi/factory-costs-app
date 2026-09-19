@@ -146,6 +146,176 @@
         </div>
     @endif
 
+    {{-- Receivables & Payment Control Card (Stage 13) --}}
+    @php
+        $eligibilityService = app(\App\Services\OrderPaymentEligibilityService::class);
+        $prodEligibility = $eligibilityService->checkProductionEligibility($order);
+        $delEligibility = $eligibilityService->checkDeliveryEligibility($order);
+    @endphp
+    <div class="card border-0 shadow-sm mb-4 rounded-3">
+        <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <h5 class="card-title mb-0 fw-bold fs-6 text-dark">
+                <i class="fas fa-money-bill-wave text-success me-2"></i> الدفعات والتحصيل ومتابعة المستحقات (Payment & Receivables Status)
+            </h5>
+            <div class="d-flex gap-2">
+                @can('receivables.payment.create')
+                    <a href="{{ route('receivables.payments.create', ['order_id' => $order->id]) }}" class="btn btn-sm btn-warning fw-bold">
+                        <i class="fas fa-plus-circle me-1"></i> تسجيل دفعة للطلب
+                    </a>
+                @endcan
+                @can('receivables.override_payment_control')
+                    <button type="button" class="btn btn-sm btn-outline-danger fw-bold" data-bs-toggle="modal" data-bs-target="#overrideModal">
+                        <i class="fas fa-shield-alt me-1"></i> اعتماد استثناء سداد/ائتمان
+                    </button>
+                @endcan
+            </div>
+        </div>
+        <div class="card-body p-3">
+            <div class="row g-3 mb-3">
+                <div class="col-12 col-md-3">
+                    <div class="p-2 border rounded bg-light">
+                        <small class="text-muted d-block fw-bold">شروط السداد المعتمدة:</small>
+                        <span class="badge bg-secondary px-2 py-1 mt-1">
+                            @switch($order->payment_terms_type)
+                                @case('FULL_BEFORE_PRODUCTION') سداد كامل قبل الإنتاج @break
+                                @case('DEPOSIT_AND_BALANCE') عربون + المتبقي عند التسليم @break
+                                @case('CASH_ON_DELIVERY') الدفع عند الاستلام (COD) @break
+                                @case('CREDIT') بيع آجل (Credit Order) @break
+                                @default {{ $order->payment_terms_type ?? 'سداد قبل الإنتاج' }}
+                            @endswitch
+                        </span>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-3">
+                    <div class="p-2 border rounded bg-light">
+                        <small class="text-muted d-block fw-bold">المسدد المؤكد / المطلوب:</small>
+                        <div class="fw-bold text-success mt-1">{{ number_format($order->confirmed_paid_amount, 2) }} / {{ number_format($order->total_amount, 2) }} ر.س</div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-3">
+                    <div class="p-2 border rounded bg-light">
+                        <small class="text-muted d-block fw-bold">المتبقي القائم (Outstanding):</small>
+                        <div class="fw-bold text-danger mt-1">{{ number_format($order->outstanding_balance, 2) }} ر.س</div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-3">
+                    <div class="p-2 border rounded bg-light">
+                        <small class="text-muted d-block fw-bold">حالة السداد التشغيلية:</small>
+                        <span class="badge {{ $order->payment_status === 'PAID' ? 'bg-success' : ($order->payment_status === 'OVERDUE' ? 'bg-danger' : 'bg-warning text-dark') }} px-2 py-1 mt-1">
+                            @switch($order->payment_status)
+                                @case('PAID') مدفوع بالكامل @break
+                                @case('DEPOSIT_PENDING') ينتظر العربون @break
+                                @case('PARTIALLY_PAID') مدفوع جزئياً @break
+                                @case('OVERDUE') متأخر عن الاستحقاق @break
+                                @case('CREDIT') آجل ضمن الحد @break
+                                @default غير مدفوع
+                            @endswitch
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Eligibility Badges --}}
+            <div class="row g-2 mb-3">
+                <div class="col-12 col-md-6">
+                    <div class="p-2 rounded border {{ $prodEligibility['eligible'] ? 'bg-success bg-opacity-10 border-success' : 'bg-danger bg-opacity-10 border-danger' }}">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <span class="fw-bold small text-dark"><i class="fas fa-industry me-1"></i> حالة السداد للإنتاج:</span>
+                            <span class="badge {{ $prodEligibility['eligible'] ? 'bg-success' : 'bg-danger' }}">
+                                {{ $prodEligibility['eligible'] ? 'مسموح للإنتاج' : 'غير مسموح' }}
+                            </span>
+                        </div>
+                        <div class="small text-muted mt-1">{{ $prodEligibility['reason'] }}</div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <div class="p-2 rounded border {{ $delEligibility['eligible'] ? 'bg-success bg-opacity-10 border-success' : 'bg-danger bg-opacity-10 border-danger' }}">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <span class="fw-bold small text-dark"><i class="fas fa-truck me-1"></i> حالة السداد للتسليم:</span>
+                            <span class="badge {{ $delEligibility['eligible'] ? 'bg-success' : 'bg-danger' }}">
+                                {{ $delEligibility['eligible'] ? 'مسموح بالتسليم' : 'غير مسموح' }}
+                            </span>
+                        </div>
+                        <div class="small text-muted mt-1">{{ $delEligibility['reason'] }}</div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Linked Allocations Table --}}
+            @if ($order->allocations->isNotEmpty())
+                <h6 class="fw-bold text-dark mb-2 small"><i class="fas fa-link me-1"></i> الدفعات المخصصة لهذا الطلب:</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered align-middle mb-0 fs-8">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>رقم الدفعة</th>
+                                <th>تاريخ الدفعة</th>
+                                <th>طريقة الدفع</th>
+                                <th>نوع التخصيص</th>
+                                <th class="text-end">المبلغ المخصص</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($order->allocations as $alloc)
+                                <tr>
+                                    <td class="font-monospace fw-bold">
+                                        <a href="{{ route('receivables.payments.show', $alloc->payment) }}" class="text-decoration-none">
+                                            {{ $alloc->payment->payment_number ?? '-' }}
+                                        </a>
+                                    </td>
+                                    <td>{{ $alloc->payment?->payment_date?->format('Y-m-d') }}</td>
+                                    <td>{{ $alloc->payment?->payment_method }}</td>
+                                    <td>{{ $alloc->allocation_type }}</td>
+                                    <td class="text-end fw-bold text-success">{{ number_format($alloc->allocated_amount, 2) }} ر.س</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
+        </div>
+    </div>
+
+    {{-- Override Modal --}}
+    @can('receivables.override_payment_control')
+        <div class="modal fade" id="overrideModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form method="POST" action="{{ route('receivables.overrides.store') }}">
+                        @csrf
+                        <input type="hidden" name="customer_order_id" value="{{ $order->id }}">
+                        <div class="modal-header bg-danger text-white">
+                            <h5 class="modal-title fw-bold"><i class="fas fa-shield-alt me-2"></i> اعتماد استثناء سداد / ائتمان</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small">مرحلة الاستثناء الإداري <span class="text-danger">*</span></label>
+                                <select name="override_stage" class="form-select" required>
+                                    <option value="PRODUCTION_RELEASE">السماح بإطلاق الإنتاج بالرغم من نقص السداد/تجاوز الائتمان</option>
+                                    <option value="DELIVERY_DISPATCH">السماح بتسليم المنتج قبل تصفية المتبقي</option>
+                                    <option value="CREDIT_LIMIT">تجاوز السقف الائتماني للعميل</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small">مبرر الاستثناء المعتمد <span class="text-danger">*</span></label>
+                                <textarea name="reason" rows="3" class="form-control" placeholder="اكتب المبرر والمسؤول صاحب التوجيه..." required></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                            <button type="submit" class="btn btn-danger fw-bold">اعتماد وتأكيد الاستثناء</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endcan
+
     {{-- Order Lines Table --}}
     <div class="card border-0 shadow-sm mb-4 rounded-3">
         <div class="card-header bg-light py-3">
@@ -177,6 +347,19 @@
                                     @else
                                         <div class="fw-bold text-dark">{{ $line->productModel?->name_ar ?? 'موديل غير محدد' }}</div>
                                         <small class="text-muted">كود: {{ $line->productModel?->model_code }}</small>
+                                    @endif
+
+                                    @if($line->fabricMaterial || $line->fabricSupplier || $line->fabric_color_code)
+                                        <div class="mt-2 p-2 bg-light rounded border border-warning-subtle fs-8">
+                                            <strong class="text-dark d-block mb-1"><i class="fas fa-palette text-warning me-1"></i> مواصفات القماش:</strong>
+                                            <div class="d-flex flex-wrap gap-2 text-dark">
+                                                <span><strong>المورد:</strong> {{ $line->fabricSupplier?->name ?? 'غير محدد' }}</span>
+                                                <span>•</span>
+                                                <span><strong>نوع القماش:</strong> {{ $line->fabricMaterial?->name_ar ?? 'غير محدد' }}</span>
+                                                <span>•</span>
+                                                <span><strong>رقم/كود اللون:</strong> <code class="text-dark bg-white px-1 border rounded fw-bold">{{ $line->fabric_color_code ?? 'غير محدد' }}</code></span>
+                                            </div>
+                                        </div>
                                     @endif
 
                                     @if($line->notes)
@@ -213,7 +396,7 @@
                                 <td class="text-center fw-bold text-dark fs-6">
                                     {{ $line->quantity }}
                                     @php
-                                        $alreadyReleased = $line->productionOrders->where('status', '!=', 'CANCELLED')->sum('released_quantity');
+                                        $alreadyReleased = $line->productionOrders ? $line->productionOrders->where('status', '!=', 'CANCELLED')->sum('released_quantity') : 0;
                                     @endphp
                                     @if($alreadyReleased > 0)
                                         <small class="d-block text-success fw-normal fs-8">مُطلق للإنتاج: {{ $alreadyReleased }}</small>

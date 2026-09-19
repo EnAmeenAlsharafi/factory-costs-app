@@ -63,6 +63,12 @@ class RoleAndPermissionSeeder extends Seeder
                 'description' => 'إدارة طلبات الشراء، طلبات عروض الأسعار، ومتابعة أوامر الشراء والموردين.',
                 'is_system' => true,
             ],
+            [
+                'name' => 'receivables_user',
+                'display_name' => 'مسؤول التحصيل والدفعات',
+                'description' => 'إدارة دفعات العملاء، تأكيد وعكس الدفعات، التخصيص، والتحقق من حدود الائتمان والأرصدة.',
+                'is_system' => true,
+            ],
         ];
 
         $roles = [];
@@ -195,6 +201,16 @@ class RoleAndPermissionSeeder extends Seeder
             ['name' => 'purchasing.create_po', 'display_name' => 'إنشاء وتجهيز أمر الشراء', 'module' => 'purchasing'],
             ['name' => 'purchasing.approve_po', 'display_name' => 'اعتماد أمر الشراء النهائي', 'module' => 'purchasing'],
             ['name' => 'purchasing.cancel_po', 'display_name' => 'إلغاء أو إغلاق أمر الشراء', 'module' => 'purchasing'],
+
+            // Receivables & Customer Payments
+            ['name' => 'receivables.view', 'display_name' => 'عرض سجل الدفعات والأرصدة والتقارير المالية التشغيلية', 'module' => 'receivables'],
+            ['name' => 'receivables.payment.create', 'display_name' => 'تسجيل دفعة عميل جديدة', 'module' => 'receivables'],
+            ['name' => 'receivables.payment.confirm', 'display_name' => 'تأكيد واعتماد دفعات العملاء', 'module' => 'receivables'],
+            ['name' => 'receivables.payment.reverse', 'display_name' => 'عكس وإلغاء الاعتماد للدفعات المؤكدة', 'module' => 'receivables'],
+            ['name' => 'receivables.allocate', 'display_name' => 'تخصيص الدفعات على طلبات العملاء', 'module' => 'receivables'],
+            ['name' => 'receivables.credit.view', 'display_name' => 'عرض حد وملف الائتمان للعملاء', 'module' => 'receivables'],
+            ['name' => 'receivables.credit.manage', 'display_name' => 'إدارة وتحديث حدود الائتمان للعملاء', 'module' => 'receivables'],
+            ['name' => 'receivables.override_payment_control', 'display_name' => 'اعتماد وتجاوز قيود السداد والائتمان للإنتاج والتسليم', 'module' => 'receivables'],
         ];
 
         $permissions = [];
@@ -368,6 +384,24 @@ class RoleAndPermissionSeeder extends Seeder
         ];
         $roles['purchasing_user']->permissions()->syncWithoutDetaching(
             collect($purchasingUserPerms)->map(fn ($p) => $permissions[$p]->id)->toArray()
+        );
+
+        // Receivables User
+        $receivablesUserPerms = [
+            'receivables.view',
+            'receivables.payment.create',
+            'receivables.payment.confirm',
+            'receivables.payment.reverse',
+            'receivables.allocate',
+            'receivables.credit.view',
+            'receivables.credit.manage',
+            'receivables.override_payment_control',
+            'customers.view',
+            'orders.view',
+            'reports.view',
+        ];
+        $roles['receivables_user']->permissions()->syncWithoutDetaching(
+            collect($receivablesUserPerms)->map(fn ($p) => $permissions[$p]->id)->toArray()
         );
 
         // System Administrator inherits all permissions in database and via Gate::before

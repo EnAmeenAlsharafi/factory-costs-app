@@ -48,11 +48,25 @@
                         @else
                             <span class="text-muted">-</span>
                         @endif
-                        | تاريخ الإنشاء: {{ $delivery->created_at->format('Y-m-d H:i') }}
-                    </p>
                 </div>
+            </div>
+        </div>
+    </div>
 
-                <!-- Workflow Action Buttons -->
+    @if ($delivery->customerOrder)
+        @php
+            $delEligibility = app(\App\Services\OrderPaymentEligibilityService::class)->checkDeliveryEligibility($delivery->customerOrder);
+        @endphp
+        <div class="alert {{ $delEligibility['eligible'] ? 'alert-success' : 'alert-danger' }} border-0 shadow-sm mb-4 d-flex align-items-center justify-content-between">
+            <div>
+                <h6 class="fw-bold mb-1"><i class="fas fa-credit-card me-2"></i> حالة السداد للتسليم الميداني:</h6>
+                <span class="small">{{ $delEligibility['reason'] }}</span>
+            </div>
+            <span class="badge {{ $delEligibility['eligible'] ? 'bg-success' : 'bg-danger' }} fs-6 px-3 py-2">
+                {{ $delEligibility['eligible'] ? 'مسموح بالتسليم' : 'تسليم موقوف' }}
+            </span>
+        </div>
+    @endif
                 <div class="d-flex flex-wrap gap-2">
                     @can('delivery.assign')
                     <button type="button" class="btn btn-outline-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#assignModal">

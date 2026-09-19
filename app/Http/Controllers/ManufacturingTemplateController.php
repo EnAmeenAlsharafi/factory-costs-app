@@ -88,6 +88,62 @@ class ManufacturingTemplateController extends Controller
         return view('recipes.templates.show', compact('template', 'configurations', 'components'));
     }
 
+    public function edit(Request $request, ManufacturingTemplate $template): View
+    {
+        abort_if(! $request->user()->can('manufacturing_templates.manage'), 403, 'غير مصرح لك بتعديل قالب التصنيع.');
+
+        $template->load('items.material', 'items.semiFinishedComponent', 'items.unit');
+        $materials = Material::where('is_active', true)->orderBy('name_ar')->get();
+        $components = SemiFinishedComponent::where('is_active', true)->get();
+        $units = UnitOfMeasure::orderBy('name_ar')->get();
+
+        $initialItems = $template->items->map(function ($item) {
+            return [
+                'item_type' => $item->item_type,
+                'material_id' => $item->material_id ?? '',
+                'semi_finished_component_id' => $item->semi_finished_component_id ?? '',
+                'quantity' => (float) $item->quantity,
+                'unit_id' => $item->unit_id ?? '',
+                'waste_percentage' => (float) $item->waste_percentage,
+                'notes' => $item->notes ?? '',
+            ];
+        })->values()->toArray();
+
+        return view('recipes.templates.edit', compact('template', 'materials', 'components', 'units', 'initialItems'));
+    }
+
+    public function update(ManufacturingTemplateRequest $request, ManufacturingTemplate $template): RedirectResponse
+    {
+        try {
+            $template->update([
+                'name_ar' => $request->validated('name_ar'),
+                'name_en' => $request->validated('name_en'),
+                'description' => $request->validated('description'),
+                'is_active' => $request->boolean('is_active', true),
+            ]);
+
+            $template->items()->delete();
+
+            foreach ($request->validated('items') as $index => $itemData) {
+                $template->items()->create([
+                    'item_type' => $itemData['item_type'],
+                    'material_id' => $itemData['item_type'] === 'MATERIAL' ? $itemData['material_id'] : null,
+                    'semi_finished_component_id' => $itemData['item_type'] === 'SEMI_FINISHED_COMPONENT' ? $itemData['semi_finished_component_id'] : null,
+                    'quantity' => $itemData['quantity'],
+                    'unit_id' => $itemData['unit_id'],
+                    'waste_percentage' => $itemData['waste_percentage'] ?? 0.00,
+                    'notes' => $itemData['notes'] ?? null,
+                    'sort_order' => $index + 1,
+                ]);
+            }
+
+            return redirect()->route('recipes.templates.index')
+                ->with('success', 'تم تحديث قالب التصنيع بنجاح.');
+        } catch (Exception $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
+    }
+
     public function toggleStatus(Request $request, ManufacturingTemplate $template): RedirectResponse
     {
         abort_if(! $request->user()->can('manufacturing_templates.manage'), 403, 'غير مصرح لك بتغيير حالة القالب.');

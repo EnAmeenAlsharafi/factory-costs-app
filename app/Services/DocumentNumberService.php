@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Customer;
 use App\Models\CustomerOrder;
+use App\Models\CustomerPayment;
 use App\Models\CustomerReturn;
 use App\Models\DeliveryOrder;
 use App\Models\DocumentSequence;
@@ -99,6 +100,14 @@ class DocumentNumberService
     public static function generateCustomerReturnNumber(): string
     {
         return static::generateYearlyCode(CustomerReturn::class, 'return_number', 'CRN');
+    }
+
+    /**
+     * Generate next sequential customer payment number (e.g. PAY-2026-000001)
+     */
+    public static function generateCustomerPaymentNumber(): string
+    {
+        return static::generateYearlyCode(CustomerPayment::class, 'payment_number', 'PAY');
     }
 
     /**

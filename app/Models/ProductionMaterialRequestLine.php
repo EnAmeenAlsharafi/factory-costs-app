@@ -14,6 +14,7 @@ class ProductionMaterialRequestLine extends Model
         'production_material_requirement_id',
         'material_id',
         'fabric_color_id',
+        'fabric_color_code',
         'requested_quantity',
         'approved_quantity',
         'issued_quantity',

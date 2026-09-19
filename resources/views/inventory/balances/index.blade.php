@@ -217,6 +217,13 @@
                                         <td>
                                             <div class="fw-bold text-dark">{{ $lot->material->name_ar }}</div>
                                             <small class="text-muted fw-mono">{{ $lot->material->code }}</small>
+                                            @if($lot->fabric_color_code || $lot->fabricColor)
+                                                <div class="mt-1">
+                                                    <span class="badge bg-light text-dark border fs-8">
+                                                        <i class="fas fa-palette me-1 text-secondary"></i>لون: <strong>{{ $lot->fabric_color_code ?? $lot->fabricColor?->color_code }}</strong>
+                                                    </span>
+                                                </div>
+                                            @endif
                                         </td>
                                         <td><span class="badge bg-info bg-opacity-10 text-dark border-0">{{ $lot->warehouse->name_ar }}</span></td>
                                         <td>{{ $lot->received_date->format('Y-m-d') }}</td>

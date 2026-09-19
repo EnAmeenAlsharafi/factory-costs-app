@@ -32,7 +32,10 @@
         <div class="d-flex gap-2">
             @if($receipt->status === 'DRAFT')
                 @can('inventory.receive')
-                    <form action="{{ route('inventory.receipts.post', $receipt) }}" method="POST" onsubmit="return confirm('هل أنت تأكد من ترحيل سند الاستلام؟ سيتم زيادة رصيد المخزون فوراً وإنشاء الدفعات.');">
+                    <a href="{{ route('inventory.receipts.edit', $receipt) }}" class="btn btn-outline-primary">
+                        <i class="fas fa-edit me-1"></i> تعديل المسودة
+                    </a>
+                    <form action="{{ route('inventory.receipts.post', $receipt) }}" method="POST" onsubmit="return confirm('هل أنت متأكد من ترحيل سند الاستلام؟ سيتم زيادة رصيد المخزون فوراً وإنشاء الدفعات.');">
                         @csrf
                         <button type="submit" class="btn btn-success">
                             <i class="fas fa-check-circle me-1"></i> ترحيل السند للمخزون (Post)
@@ -48,6 +51,22 @@
 
     <!-- Alert Banner for Draft -->
     @if($receipt->status === 'DRAFT')
+        @php
+            $missingFabricColor = $receipt->lines->contains(function ($line) {
+                $isFabric = strtoupper($line->material?->category?->code ?? '') === 'FABRIC';
+                return $isFabric && empty($line->fabric_color_code) && empty($line->fabric_color_id);
+            });
+        @endphp
+
+        @if($missingFabricColor)
+            <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center mb-4">
+                <i class="fas fa-exclamation-triangle fs-4 me-3 text-danger"></i>
+                <div>
+                    <strong>تحذير:</strong> يوجد بند قماش بدون رقم لون. يلزم تحديد رقم أو كود اللون قبل التمكن من ترحيل السند للمخزون.
+                </div>
+            </div>
+        @endif
+
         <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center mb-4">
             <i class="fas fa-exclamation-circle fs-4 me-3 text-warning"></i>
             <div>
@@ -159,6 +178,16 @@
                                 <td>
                                     <div class="fw-bold text-dark">{{ $line->material->name_ar }}</div>
                                     <small class="text-muted fw-mono">{{ $line->material->code }}</small>
+                                    @if($line->fabric_color_code || $line->fabricColor)
+                                        <div class="mt-1">
+                                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 fs-8">
+                                                <i class="fas fa-palette me-1"></i>رقم / كود اللون: <strong class="fw-mono">{{ $line->fabric_color_code ?? $line->fabricColor?->color_code }}</strong>
+                                                @if($line->fabricColor && $line->fabricColor->color_name_ar)
+                                                    ({{ $line->fabricColor->color_name_ar }})
+                                                @endif
+                                            </span>
+                                        </div>
+                                    @endif
                                 </td>
                                 <td class="text-center fw-mono fw-bold">{{ number_format($line->received_quantity, 4) }}</td>
                                 <td><span class="badge bg-light text-dark border">{{ $line->purchaseUnit->name_ar }}</span></td>

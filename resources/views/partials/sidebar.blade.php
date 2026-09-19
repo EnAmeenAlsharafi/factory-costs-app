@@ -433,6 +433,59 @@
                 </div>
             @endif
 
+            <!-- Section 8.5: Receivables & Customer Payments -->
+            @php
+                $isReceivablesActive = request()->routeIs('receivables.*');
+            @endphp
+            @if (auth()->user() && auth()->user()->can('receivables.view'))
+                <div class="sidebar-section">
+                    <button type="button"
+                            @click="toggleSection('receivables', {{ $isReceivablesActive ? 'true' : 'false' }})"
+                            class="sidebar-section-header-btn"
+                            :aria-expanded="isSectionOpen('receivables', {{ $isReceivablesActive ? 'true' : 'false' }})"
+                            title="طي أو توسيع قسم الدفعات والتحصيل">
+                        <span class="sidebar-text">الدفعات والتحصيل</span>
+                        <span class="sidebar-chevron-icon" x-show="!sidebarCollapsed">
+                            <i class="fas fa-chevron-down" :class="{'rotate-180': !isSectionOpen('receivables', {{ $isReceivablesActive ? 'true' : 'false' }})}"></i>
+                        </span>
+                    </button>
+                    <ul class="nav flex-column gap-1 sidebar-sub-menu ps-0"
+                        x-show="sidebarCollapsed || isSectionOpen('receivables', {{ $isReceivablesActive ? 'true' : 'false' }})"
+                        x-transition>
+                        <li class="nav-item">
+                            <a href="{{ route('receivables.dashboard') }}" class="sidebar-nav-link {{ request()->routeIs('receivables.dashboard') ? 'active' : '' }}" title="لوحة التحصيل">
+                                <span class="sidebar-icon"><i class="fas fa-chart-line"></i></span>
+                                <span class="sidebar-text">لوحة التحصيل</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('receivables.payments.index') }}" class="sidebar-nav-link {{ request()->routeIs('receivables.payments.*') ? 'active' : '' }}" title="سجل الدفعات">
+                                <span class="sidebar-icon"><i class="fas fa-money-bill-wave"></i></span>
+                                <span class="sidebar-text">دفعات العملاء</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('receivables.customers.index') }}" class="sidebar-nav-link {{ request()->routeIs('receivables.customers.*') ? 'active' : '' }}" title="أرصدة العملاء">
+                                <span class="sidebar-icon"><i class="fas fa-users-slash"></i></span>
+                                <span class="sidebar-text">أرصدة العملاء</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('receivables.credit.index') }}" class="sidebar-nav-link {{ request()->routeIs('receivables.credit.*') ? 'active' : '' }}" title="إدارة الائتمان">
+                                <span class="sidebar-icon"><i class="fas fa-credit-card"></i></span>
+                                <span class="sidebar-text">إدارة الائتمان</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('receivables.reports.aging') }}" class="sidebar-nav-link {{ request()->routeIs('receivables.reports.*') ? 'active' : '' }}" title="أعمار الديون والمتأخرات">
+                                <span class="sidebar-icon"><i class="fas fa-history"></i></span>
+                                <span class="sidebar-text">أعمار الديون والمتأخرات</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            @endif
+
             <!-- Section 9: Inventory Operations -->
             @php
                 $isInventoryActive = request()->routeIs('inventory.balances.*') || request()->routeIs('inventory.lots.*') || request()->routeIs('inventory.receipts.*') || request()->routeIs('inventory.issues.*') || request()->routeIs('inventory.returns.*') || request()->routeIs('inventory.adjustments.*');

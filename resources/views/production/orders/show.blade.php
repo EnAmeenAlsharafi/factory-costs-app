@@ -189,13 +189,19 @@
                                     </td>
                                 </tr>
                                 <tr>
-                                    <td class="text-muted">قماش وتصنيف:</td>
+                                    <td class="text-muted">مورد القماش:</td>
+                                    <td><strong class="text-dark">{{ $order->fabricSupplier?->name ?? 'غير محدد' }}</strong></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">نوع القماش:</td>
                                     <td>{{ $order->fabricMaterial?->name_ar ?? 'غير محدد' }}</td>
                                 </tr>
                                 <tr>
-                                    <td class="text-muted">لون القماش:</td>
+                                    <td class="text-muted">رقم / كود اللون:</td>
                                     <td>
-                                        @if($order->fabricColor)
+                                        @if($order->fabric_color_code)
+                                            <code class="text-dark bg-light px-2 py-1 border rounded fw-bold fs-7">{{ $order->fabric_color_code }}</code>
+                                        @elseif($order->fabricColor)
                                             <span class="badge bg-light text-dark border"><i class="fas fa-circle me-1" style="color: {{ $order->fabricColor->hex_code ?? '#ccc' }};"></i>{{ $order->fabricColor->color_name_ar }}</span>
                                         @else
                                             غير محدد

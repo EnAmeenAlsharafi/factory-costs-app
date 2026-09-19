@@ -18,6 +18,11 @@ class PurchaseReceivingService
     /**
      * Create a Stage 5 Draft MaterialReceipt pre-filled from an approved Purchase Order.
      */
+    public function createReceiptFromPurchaseOrder(PurchaseOrder $po, User $user, array $input = []): MaterialReceipt
+    {
+        return $this->createDraftReceiptFromPO($po, $user, $input);
+    }
+
     public function createDraftReceiptFromPO(PurchaseOrder $po, User $user, array $input = []): MaterialReceipt
     {
         if (! in_array($po->status, ['APPROVED', 'SENT', 'PARTIALLY_RECEIVED'], true)) {
@@ -50,10 +55,13 @@ class PurchaseReceivingService
                     ? (float) $input['lines'][$poLine->id]['unit_cost_purchase']
                     : (float) $poLine->unit_price;
 
+                $poColorCode = $poLine->fabric_color_code ?? $poLine->fabricColor?->color_code;
+
                 $receiptLines[] = [
                     'purchase_order_line_id' => $poLine->id,
                     'material_id' => $poLine->material_id,
                     'fabric_color_id' => $poLine->fabric_color_id,
+                    'fabric_color_code' => $poColorCode,
                     'quantity_received' => $qtyToReceive,
                     'purchase_unit_id' => $poLine->purchase_unit_id,
                     'conversion_factor' => $factor,
@@ -88,7 +96,7 @@ class PurchaseReceivingService
     public function postLinkedReceipt(MaterialReceipt $receipt, User $user): MaterialReceipt
     {
         return DB::transaction(function () use ($receipt, $user) {
-            $receipt->load(['lines.purchaseOrderLine', 'purchaseOrder']);
+            $receipt->load(['lines.purchaseOrderLine.fabricColor', 'purchaseOrder']);
 
             // 1. Transactional ceiling enforcement and fabric color matching
             if ($receipt->purchase_order_id && $receipt->purchaseOrder) {
@@ -111,7 +119,12 @@ class PurchaseReceivingService
                         if ($poLine->material_id !== $receiptLine->material_id) {
                             throw new Exception('مادة بند الاستلام لا تطابق المادة المحددة بأمر الشراء.');
                         }
-                        if ($poLine->fabric_color_id !== $receiptLine->fabric_color_id) {
+                        if ($poLine->fabric_color_id && $receiptLine->fabric_color_id && $poLine->fabric_color_id !== $receiptLine->fabric_color_id) {
+                            throw new Exception('لون القماش المحدد بسند الاستلام لا يطابق لون القماش بأمر الشراء.');
+                        }
+                        $poColor = $poLine->fabric_color_code ?? $poLine->fabricColor?->color_code;
+                        $rcptColor = $receiptLine->fabric_color_code ?? $receiptLine->fabricColor?->color_code;
+                        if (! empty($poColor) && ! empty($rcptColor) && $poColor !== $rcptColor) {
                             throw new Exception('لون القماش المحدد بسند الاستلام لا يطابق لون القماش بأمر الشراء.');
                         }
 

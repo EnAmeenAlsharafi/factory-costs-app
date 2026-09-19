@@ -57,7 +57,7 @@
                         <select name="product_configuration_id" class="form-select" x-model="productConfigId" @change="onConfigChange()">
                             <option value="">-- اختر التكوين المصنعي --</option>
                             @foreach($configurations as $cfg)
-                                <option value="{{ $cfg->id }}" data-name="وصفة سرير {{ $cfg->productModel?->name_ar }} {{ $cfg->width_cm }}×{{ $cfg->length_cm }} {{ $cfg->has_storage ? 'سحارة' : 'بدون تخزين' }}">
+                                <option value="{{ $cfg->id }}" data-name="وصفة {{ $cfg->productModel?->name_ar }} {{ $cfg->width_cm }}×{{ $cfg->length_cm }} {{ $cfg->has_storage ? 'سحارة' : 'بدون تخزين' }}">
                                     {{ $cfg->productModel?->name_ar }} | {{ $cfg->width_cm }} × {{ $cfg->length_cm }} سم - {{ $cfg->has_storage ? 'سحارة' : 'بدون تخزين' }} ({{ $cfg->configuration_code }})
                                 </option>
                             @endforeach

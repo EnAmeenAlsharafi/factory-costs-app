@@ -8,7 +8,9 @@ use App\Models\ManufacturingRecipeItem;
 use App\Models\ManufacturingRecipeVersion;
 use App\Models\ManufacturingTemplate;
 use App\Models\Material;
+use App\Models\MaterialUnitConversion;
 use App\Models\UnitConversion;
+use App\Models\UnitOfMeasure;
 use App\Models\User;
 use Exception;
 use Illuminate\Support\Facades\DB;
@@ -23,11 +25,29 @@ class RecipeService
     public function createRecipe(array $recipeData, array $itemsData): ManufacturingRecipe
     {
         return DB::transaction(function () use ($recipeData, $itemsData) {
+            $targetType = $recipeData['target_type'] ?? 'PRODUCT_CONFIGURATION';
+
+            if ($targetType === 'PRODUCT_CONFIGURATION' && ! empty($recipeData['product_configuration_id'])) {
+                $existing = ManufacturingRecipe::where('target_type', 'PRODUCT_CONFIGURATION')
+                    ->where('product_configuration_id', $recipeData['product_configuration_id'])
+                    ->first();
+                if ($existing) {
+                    throw new Exception('توجد بالفعل وصفة تصنيع معرفة لهذا التكوين المصنعي ['.$existing->recipe_code.']. يرجى الانتقال للوصفة الحالية وتحديث إصداراتها.');
+                }
+            } elseif ($targetType === 'SEMI_FINISHED_COMPONENT' && ! empty($recipeData['semi_finished_component_id'])) {
+                $existing = ManufacturingRecipe::where('target_type', 'SEMI_FINISHED_COMPONENT')
+                    ->where('semi_finished_component_id', $recipeData['semi_finished_component_id'])
+                    ->first();
+                if ($existing) {
+                    throw new Exception('توجد بالفعل وصفة تصنيع معرفة لهذا المكون نصف المصنع ['.$existing->recipe_code.']. يرجى الانتقال للوصفة الحالية وتحديث إصداراتها.');
+                }
+            }
+
             $recipeCode = $this->documentNumberService->generateRecipeCode();
 
             $recipe = ManufacturingRecipe::create([
                 'recipe_code' => $recipeCode,
-                'target_type' => $recipeData['target_type'] ?? 'PRODUCT_CONFIGURATION',
+                'target_type' => $targetType,
                 'product_configuration_id' => $recipeData['product_configuration_id'] ?? null,
                 'semi_finished_component_id' => $recipeData['semi_finished_component_id'] ?? null,
                 'name' => $recipeData['name'],
@@ -179,9 +199,9 @@ class RecipeService
             if ($item->item_type === 'MATERIAL' && $item->material_id) {
                 // Check latest lot unit cost in base unit
                 $latestLotCost = InventoryLot::where('material_id', $item->material_id)
-                    ->whereNotNull('unit_cost_base')
+                    ->whereNotNull('unit_cost')
                     ->latest('id')
-                    ->value('unit_cost_base');
+                    ->value('unit_cost');
 
                 if ($latestLotCost !== null && (float) $latestLotCost > 0) {
                     $unitCost = (float) $latestLotCost;
@@ -296,15 +316,54 @@ class RecipeService
             return false;
         }
 
+        if (! $unitId) {
+            return false;
+        }
+
         if ($material->base_unit_id == $unitId || $material->purchase_unit_id == $unitId) {
             return true;
         }
 
-        // Check if there is a unit conversion defined
-        return UnitConversion::where(function ($q) use ($material, $unitId) {
+        // Check material-specific unit conversions
+        $materialConversionExists = MaterialUnitConversion::where('material_id', $materialId)
+            ->where(function ($q) use ($material, $unitId) {
+                $q->where('from_unit_id', $material->base_unit_id)->where('to_unit_id', $unitId);
+            })->orWhere(function ($q) use ($material, $unitId) {
+                $q->where('from_unit_id', $unitId)->where('to_unit_id', $material->base_unit_id);
+            })->exists();
+
+        if ($materialConversionExists) {
+            return true;
+        }
+
+        // Check global unit conversions
+        $globalConversionExists = UnitConversion::where(function ($q) use ($material, $unitId) {
             $q->where('from_unit_id', $material->base_unit_id)->where('to_unit_id', $unitId);
         })->orWhere(function ($q) use ($material, $unitId) {
             $q->where('from_unit_id', $unitId)->where('to_unit_id', $material->base_unit_id);
         })->exists();
+
+        if ($globalConversionExists) {
+            return true;
+        }
+
+        $baseUnit = UnitOfMeasure::find($material->base_unit_id);
+        $targetUnit = UnitOfMeasure::find($unitId);
+
+        if (! $baseUnit || ! $targetUnit || ! $targetUnit->is_active) {
+            return false;
+        }
+
+        // Reject incompatible physical dimension types (e.g. length vs weight, volume vs weight) without conversion
+        $incompatibleTypes = ['length', 'weight', 'volume'];
+        if (
+            in_array($baseUnit->unit_type, $incompatibleTypes) &&
+            in_array($targetUnit->unit_type, $incompatibleTypes) &&
+            $baseUnit->unit_type !== $targetUnit->unit_type
+        ) {
+            return false;
+        }
+
+        return true;
     }
 }

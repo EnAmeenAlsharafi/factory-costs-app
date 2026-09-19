@@ -105,13 +105,14 @@
                     <table class="table table-bordered align-middle mb-0">
                         <thead class="bg-light">
                             <tr>
-                                <th style="width: 25%;">المادة الخام <span class="text-danger">*</span></th>
-                                <th style="width: 12%;">الكمية <span class="text-danger">*</span></th>
-                                <th style="width: 15%;">وحدة القياس <span class="text-danger">*</span></th>
-                                <th style="width: 13%;">سعر الوحدة (ر.س) <span class="text-danger">*</span></th>
-                                <th style="width: 15%;">رقم الدفعة (Lot)</th>
-                                <th style="width: 15%;">الإجمالي</th>
-                                <th style="width: 5%;" class="text-center">حذف</th>
+                                <th style="width: 22%;">المادة الخام <span class="text-danger">*</span></th>
+                                <th style="width: 14%;">رقم / كود اللون</th>
+                                <th style="width: 11%;">الكمية <span class="text-danger">*</span></th>
+                                <th style="width: 13%;">وحدة القياس <span class="text-danger">*</span></th>
+                                <th style="width: 12%;">سعر الوحدة (ر.س) <span class="text-danger">*</span></th>
+                                <th style="width: 13%;">رقم الدفعة (Lot)</th>
+                                <th style="width: 11%;">الإجمالي</th>
+                                <th style="width: 4%;" class="text-center">حذف</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -121,11 +122,34 @@
                                         <select :name="`items[${index}][material_id]`" x-model="line.material_id" @change="onMaterialChange(index)" class="form-select form-select-sm" required>
                                             <option value="">-- اختر المادة --</option>
                                             @foreach($materials as $mat)
-                                                <option value="{{ $mat->id }}" data-base-unit="{{ $mat->base_unit_id }}" data-purchase-unit="{{ $mat->purchase_unit_id ?? $mat->base_unit_id }}">
+                                                <option value="{{ $mat->id }}" 
+                                                        data-base-unit="{{ $mat->base_unit_id }}" 
+                                                        data-purchase-unit="{{ $mat->purchase_unit_id ?? $mat->base_unit_id }}"
+                                                        data-is-fabric="{{ (strtoupper($mat->category?->code ?? '') === 'FABRIC') ? '1' : '0' }}"
+                                                        data-colors="{{ json_encode($mat->fabricColors->pluck('color_code')->toArray()) }}">
                                                     {{ $mat->name_ar }} ({{ $mat->code }})
                                                 </option>
                                             @endforeach
                                         </select>
+                                    </td>
+                                    <td>
+                                        <div x-show="line.is_fabric">
+                                            <input type="text" 
+                                                   :name="`items[${index}][fabric_color_code]`" 
+                                                   x-model="line.fabric_color_code" 
+                                                   :list="`colors-list-${index}`"
+                                                   class="form-control form-control-sm fw-mono border-primary" 
+                                                   placeholder="مثال: 204" 
+                                                   :required="line.is_fabric">
+                                            <datalist :id="`colors-list-${index}`">
+                                                <template x-for="col in line.available_colors" :key="col">
+                                                    <option :value="col"></option>
+                                                </template>
+                                            </datalist>
+                                        </div>
+                                        <div x-show="!line.is_fabric" class="text-center text-muted fs-7">
+                                            <span class="badge bg-light text-muted border-0">—</span>
+                                        </div>
                                     </td>
                                     <td>
                                         <input type="number" step="0.0001" :name="`items[${index}][quantity]`" x-model.number="line.quantity" class="form-control form-control-sm fw-mono text-center" min="0.0001" required>
@@ -157,7 +181,7 @@
                         </tbody>
                         <tfoot class="bg-light">
                             <tr>
-                                <td colspan="5" class="text-end fw-bold">إجمالي المبلغ:</td>
+                                <td colspan="6" class="text-end fw-bold">إجمالي المبلغ:</td>
                                 <td class="text-end fw-mono fw-bold text-primary fs-6">
                                     <span x-text="formatNumber(calculateTotal())"></span> ر.س
                                 </td>
@@ -186,10 +210,10 @@
 function materialReceiptForm() {
     return {
         lines: [
-            { material_id: '', quantity: 1, unit_id: '', unit_cost: 0, lot_reference: '' }
+            { material_id: '', fabric_color_code: '', is_fabric: false, available_colors: [], quantity: 1, unit_id: '', unit_cost: 0, lot_reference: '' }
         ],
         addLine() {
-            this.lines.push({ material_id: '', quantity: 1, unit_id: '', unit_cost: 0, lot_reference: '' });
+            this.lines.push({ material_id: '', fabric_color_code: '', is_fabric: false, available_colors: [], quantity: 1, unit_id: '', unit_cost: 0, lot_reference: '' });
         },
         removeLine(index) {
             if (this.lines.length > 1) {
@@ -204,6 +228,20 @@ function materialReceiptForm() {
                 if (purchaseUnit) {
                     this.lines[index].unit_id = purchaseUnit;
                 }
+                const isFabric = selectedOption.dataset.isFabric === '1';
+                this.lines[index].is_fabric = isFabric;
+                try {
+                    this.lines[index].available_colors = JSON.parse(selectedOption.dataset.colors || '[]');
+                } catch (e) {
+                    this.lines[index].available_colors = [];
+                }
+                if (!isFabric) {
+                    this.lines[index].fabric_color_code = '';
+                }
+            } else {
+                this.lines[index].is_fabric = false;
+                this.lines[index].available_colors = [];
+                this.lines[index].fabric_color_code = '';
             }
         },
         calculateTotal() {

@@ -122,4 +122,106 @@ class ManufacturingTemplateTest extends TestCase
         // 3. Recipe item quantity must remain 4.00 (Independent copy)
         $this->assertEquals(4.0000, $v1->items()->first()->fresh()->quantity);
     }
+
+    public function test_can_render_edit_template_page(): void
+    {
+        $response = $this->actingAs($this->adminUser)
+            ->get(route('recipes.templates.edit', $this->template));
+
+        $response->assertOk();
+        $response->assertViewIs('recipes.templates.edit');
+        $response->assertViewHas('template');
+    }
+
+    public function test_can_update_manufacturing_template(): void
+    {
+        $payload = [
+            'name_ar' => 'قالب معدل بالكامل',
+            'name_en' => 'Updated Template',
+            'description' => 'وصف القالب بعد التعديل',
+            'is_active' => '1',
+            'items' => [
+                [
+                    'item_type' => 'MATERIAL',
+                    'material_id' => $this->woodMaterial->id,
+                    'quantity' => 8.5,
+                    'unit_id' => $this->boardUnit->id,
+                    'waste_percentage' => 7.5,
+                    'notes' => 'تعديل البند الأول',
+                ],
+            ],
+        ];
+
+        $response = $this->actingAs($this->adminUser)
+            ->put(route('recipes.templates.update', $this->template), $payload);
+
+        $response->assertRedirect(route('recipes.templates.index'));
+        $this->assertDatabaseHas('manufacturing_templates', [
+            'id' => $this->template->id,
+            'name_ar' => 'قالب معدل بالكامل',
+            'description' => 'وصف القالب بعد التعديل',
+        ]);
+
+        $this->assertDatabaseHas('manufacturing_template_items', [
+            'manufacturing_template_id' => $this->template->id,
+            'material_id' => $this->woodMaterial->id,
+            'quantity' => 8.5,
+            'waste_percentage' => 7.5,
+        ]);
+    }
+
+    public function test_recipe_created_from_template_appears_in_bom_index(): void
+    {
+        $this->actingAs($this->adminUser)
+            ->post(route('recipes.templates.create-recipe', $this->template), [
+                'target_type' => 'PRODUCT_CONFIGURATION',
+                'product_configuration_id' => $this->configuration->id,
+                'name' => 'وصفة للمعاينة في الفهرس',
+            ]);
+
+        $response = $this->actingAs($this->adminUser)->get(route('recipes.index'));
+
+        $response->assertOk();
+        $response->assertSee('وصفة للمعاينة في الفهرس');
+        $response->assertSee('نموذج قالب');
+    }
+
+    public function test_create_recipe_from_template_with_invalid_target_fails(): void
+    {
+        $response = $this->actingAs($this->adminUser)
+            ->post(route('recipes.templates.create-recipe', $this->template), [
+                'target_type' => 'PRODUCT_CONFIGURATION',
+                'product_configuration_id' => 99999,
+                'name' => 'وصفة بهدف غير صحيح',
+            ]);
+
+        $response->assertSessionHasErrors('product_configuration_id');
+        $this->assertDatabaseMissing('manufacturing_recipes', [
+            'name' => 'وصفة بهدف غير صحيح',
+        ]);
+    }
+
+    public function test_duplicate_recipe_protection_prevents_duplicate_recipes_for_same_target(): void
+    {
+        // First creation succeeds
+        $this->actingAs($this->adminUser)
+            ->post(route('recipes.templates.create-recipe', $this->template), [
+                'target_type' => 'PRODUCT_CONFIGURATION',
+                'product_configuration_id' => $this->configuration->id,
+                'name' => 'الوصفة الأولى',
+            ]);
+
+        // Second creation for same configuration must fail with duplicate warning message
+        $response = $this->actingAs($this->adminUser)
+            ->post(route('recipes.templates.create-recipe', $this->template), [
+                'target_type' => 'PRODUCT_CONFIGURATION',
+                'product_configuration_id' => $this->configuration->id,
+                'name' => 'الوصفة الثانية المكررة',
+            ]);
+
+        $response->assertSessionHas('error');
+        $this->assertDatabaseMissing('manufacturing_recipes', [
+            'name' => 'الوصفة الثانية المكررة',
+        ]);
+    }
 }

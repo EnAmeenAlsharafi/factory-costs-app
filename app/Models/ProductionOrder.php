@@ -27,8 +27,10 @@ class ProductionOrder extends Model
         'reference_width_cm',
         'reference_length_cm',
         'has_storage',
+        'fabric_supplier_id',
         'fabric_material_id',
         'fabric_color_id',
+        'fabric_color_code',
         'ordered_quantity',
         'released_quantity',
         'completed_quantity',
@@ -93,6 +95,11 @@ class ProductionOrder extends Model
     public function routing(): BelongsTo
     {
         return $this->belongsTo(ProductionRouting::class, 'production_routing_id');
+    }
+
+    public function fabricSupplier(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class, 'fabric_supplier_id');
     }
 
     public function fabricMaterial(): BelongsTo

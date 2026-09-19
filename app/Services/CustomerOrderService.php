@@ -32,6 +32,11 @@ class CustomerOrderService
                 'requested_delivery_date' => $data['requested_delivery_date'] ?? null,
                 'priority' => $data['priority'] ?? 'NORMAL',
                 'status' => 'DRAFT',
+                'payment_terms_type' => $data['payment_terms_type'] ?? 'FULL_BEFORE_PRODUCTION',
+                'deposit_required_amount' => $data['deposit_required_amount'] ?? null,
+                'deposit_required_percent' => $data['deposit_required_percent'] ?? null,
+                'payment_due_date' => $data['payment_due_date'] ?? null,
+                'credit_days' => $data['credit_days'] ?? null,
                 'commercial_notes' => $data['commercial_notes'] ?? null,
                 'production_notes' => $data['production_notes'] ?? null,
                 'created_by_user_id' => $creator->id,
@@ -72,6 +77,11 @@ class CustomerOrderService
                 'order_date' => $data['order_date'] ?? $order->order_date,
                 'requested_delivery_date' => $data['requested_delivery_date'] ?? $order->requested_delivery_date,
                 'priority' => $data['priority'] ?? $order->priority,
+                'payment_terms_type' => $data['payment_terms_type'] ?? $order->payment_terms_type,
+                'deposit_required_amount' => array_key_exists('deposit_required_amount', $data) ? $data['deposit_required_amount'] : $order->deposit_required_amount,
+                'deposit_required_percent' => array_key_exists('deposit_required_percent', $data) ? $data['deposit_required_percent'] : $order->deposit_required_percent,
+                'payment_due_date' => array_key_exists('payment_due_date', $data) ? $data['payment_due_date'] : $order->payment_due_date,
+                'credit_days' => array_key_exists('credit_days', $data) ? $data['credit_days'] : $order->credit_days,
                 'commercial_notes' => $data['commercial_notes'] ?? $order->commercial_notes,
                 'production_notes' => $data['production_notes'] ?? $order->production_notes,
             ]);
@@ -98,8 +108,11 @@ class CustomerOrderService
                     'reference_width_cm' => $line['reference_width_cm'] ?? $line['requested_width_cm'],
                     'reference_length_cm' => $line['reference_length_cm'] ?? $line['requested_length_cm'],
                     'has_storage' => ! empty($line['has_storage']),
+                    'fabric_supplier_id' => $line['fabric_supplier_id'] ?? null,
                     'fabric_material_id' => $line['fabric_material_id'] ?? null,
                     'fabric_color_id' => $line['fabric_color_id'] ?? null,
+                    'fabric_color_code' => $line['fabric_color_code'] ?? null,
+                    'fabric_notes' => $line['fabric_notes'] ?? null,
                     'quantity' => $qty,
                     'unit_price' => $unitPrice,
                     'discount_amount' => $discount,
@@ -114,8 +127,25 @@ class CustomerOrderService
                     if ((float) $old->requested_width_cm != (float) $newLine->requested_width_cm || (float) $old->requested_length_cm != (float) $newLine->requested_length_cm) {
                         $this->recordOrderChange($order, $newLine->id, 'dimensions', "{$old->requested_width_cm}x{$old->requested_length_cm}", "{$newLine->requested_width_cm}x{$newLine->requested_length_cm}", $updater, $wasApproved);
                     }
-                    if ($old->fabric_material_id != $newLine->fabric_material_id || $old->fabric_color_id != $newLine->fabric_color_id) {
-                        $this->recordOrderChange($order, $newLine->id, 'fabric_and_color', "Material {$old->fabric_material_id} Color {$old->fabric_color_id}", "Material {$newLine->fabric_material_id} Color {$newLine->fabric_color_id}", $updater, $wasApproved);
+                    if ($old->fabric_supplier_id != $newLine->fabric_supplier_id || $old->fabric_material_id != $newLine->fabric_material_id || $old->fabric_color_code != $newLine->fabric_color_code) {
+                        $oldSupplier = $old->fabricSupplier?->name ?? 'غير محدد';
+                        $oldMaterial = $old->fabricMaterial?->name_ar ?? 'غير محدد';
+                        $oldColor = $old->fabric_color_code ?? 'غير محدد';
+
+                        $newSupplier = $newLine->fabricSupplier?->name ?? 'غير محدد';
+                        $newMaterial = $newLine->fabricMaterial?->name_ar ?? 'غير محدد';
+                        $newColor = $newLine->fabric_color_code ?? 'غير محدد';
+
+                        $this->recordOrderChange(
+                            $order,
+                            $newLine->id,
+                            'fabric_and_color',
+                            "{$oldSupplier} / {$oldMaterial} / {$oldColor}",
+                            "{$newSupplier} / {$newMaterial} / {$newColor}",
+                            $updater,
+                            $wasApproved,
+                            'تعديل مواصفات القماش (المورد / النوع / اللون)'
+                        );
                     }
                     if ((float) $old->quantity != (float) $newLine->quantity) {
                         $this->recordOrderChange($order, $newLine->id, 'quantity', (string) $old->quantity, (string) $newLine->quantity, $updater, $wasApproved);
@@ -126,6 +156,7 @@ class CustomerOrderService
             }
 
             $order->recalculateTotals();
+            app(PaymentAllocationService::class)->handleOrderPriceReduction($order);
 
             // If changes occurred after production approval, reset status for re-review
             if ($wasApproved) {
@@ -155,13 +186,18 @@ class CustomerOrderService
         return $order;
     }
 
-    public function cancelOrder(CustomerOrder $order): CustomerOrder
+    public function cancelOrder(CustomerOrder $order, ?User $user = null, ?string $reason = null): CustomerOrder
     {
-        $order->update([
-            'status' => 'CANCELLED',
-        ]);
+        return DB::transaction(function () use ($order, $user, $reason) {
+            $order->update([
+                'status' => 'CANCELLED',
+                'commercial_notes' => trim(($order->commercial_notes ?? '').' [تم إلغاء الطلب: '.($reason ?: 'بدون سبب مذكور').']'),
+            ]);
 
-        return $order;
+            app(PaymentAllocationService::class)->handleOrderCancellation($order, $user ?? auth()->user() ?? $order->createdBy);
+
+            return $order;
+        });
     }
 
     /**
@@ -239,8 +275,11 @@ class CustomerOrderService
                 'reference_width_cm' => $line['reference_width_cm'] ?? $line['requested_width_cm'],
                 'reference_length_cm' => $line['reference_length_cm'] ?? $line['requested_length_cm'],
                 'has_storage' => ! empty($line['has_storage']),
+                'fabric_supplier_id' => $line['fabric_supplier_id'] ?? null,
                 'fabric_material_id' => $line['fabric_material_id'] ?? null,
                 'fabric_color_id' => $line['fabric_color_id'] ?? null,
+                'fabric_color_code' => $line['fabric_color_code'] ?? null,
+                'fabric_notes' => $line['fabric_notes'] ?? null,
                 'quantity' => $qty,
                 'unit_price' => $unitPrice,
                 'discount_amount' => $discount,

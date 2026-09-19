@@ -144,17 +144,7 @@
 <script>
 function recipeEditForm() {
     return {
-        items: @json($version->items->map(function($i) {
-            return [
-                'item_type' => $i->item_type,
-                'material_id' => $i->material_id ? (string) $i->material_id : '',
-                'semi_finished_component_id' => $i->semi_finished_component_id ? (string) $i->semi_finished_component_id : '',
-                'quantity' => (float) $i->quantity,
-                'unit_id' => (string) $i->unit_id,
-                'waste_percentage' => (float) $i->waste_percentage,
-                'notes' => $i->notes ?? '',
-            ];
-        })),
+        items: @json(old('items', $initialItems)),
         addRow(type = 'MATERIAL') {
             this.items.push({
                 item_type: type,

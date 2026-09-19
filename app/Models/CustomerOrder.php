@@ -23,6 +23,11 @@ class CustomerOrder extends Model
         'requested_delivery_date',
         'priority',
         'status',
+        'payment_terms_type',
+        'deposit_required_amount',
+        'deposit_required_percent',
+        'payment_due_date',
+        'credit_days',
         'subtotal',
         'discount_total',
         'total_amount',
@@ -40,6 +45,10 @@ class CustomerOrder extends Model
         return [
             'order_date' => 'date',
             'requested_delivery_date' => 'date',
+            'payment_due_date' => 'date',
+            'credit_days' => 'integer',
+            'deposit_required_amount' => 'decimal:2',
+            'deposit_required_percent' => 'decimal:2',
             'subtotal' => 'decimal:2',
             'discount_total' => 'decimal:2',
             'total_amount' => 'decimal:2',
@@ -86,6 +95,88 @@ class CustomerOrder extends Model
     public function changes(): HasMany
     {
         return $this->hasMany(CustomerOrderChange::class)->latest('id');
+    }
+
+    public function allocations(): HasMany
+    {
+        return $this->hasMany(CustomerPaymentAllocation::class);
+    }
+
+    public function paymentOverrides(): HasMany
+    {
+        return $this->hasMany(PaymentControlOverride::class)->latest('id');
+    }
+
+    public function getConfirmedPaidAmountAttribute(): float
+    {
+        return (float) $this->allocations()
+            ->whereHas('payment', function ($q) {
+                $q->where('status', 'CONFIRMED');
+            })
+            ->sum('allocated_amount');
+    }
+
+    public function getOutstandingBalanceAttribute(): float
+    {
+        return max(0.00, (float) $this->total_amount - $this->confirmed_paid_amount);
+    }
+
+    public function getRequiredDepositAmountAttribute(): float
+    {
+        if ($this->deposit_required_amount !== null && (float) $this->deposit_required_amount > 0) {
+            return (float) $this->deposit_required_amount;
+        }
+
+        if ($this->deposit_required_percent !== null && (float) $this->deposit_required_percent > 0) {
+            return round((float) $this->total_amount * ((float) $this->deposit_required_percent / 100), 2);
+        }
+
+        return 0.00;
+    }
+
+    public function getIsDepositSatisfiedAttribute(): bool
+    {
+        $required = $this->required_deposit_amount;
+
+        if ($required <= 0) {
+            return true;
+        }
+
+        return $this->confirmed_paid_amount >= $required;
+    }
+
+    public function getPaymentStatusAttribute(): string
+    {
+        $total = (float) $this->total_amount;
+        $paid = $this->confirmed_paid_amount;
+        $outstanding = $this->outstanding_balance;
+        $requiredDeposit = $this->required_deposit_amount;
+
+        if ($this->status === 'CANCELLED' || $this->status === 'REJECTED') {
+            return 'CANCELLED';
+        }
+
+        if ($paid >= $total && $total > 0) {
+            return 'PAID';
+        }
+
+        if ($this->payment_due_date && $this->payment_due_date->isPast() && $outstanding > 0) {
+            return 'OVERDUE';
+        }
+
+        if ($requiredDeposit > 0 && $paid < $requiredDeposit) {
+            return 'DEPOSIT_PENDING';
+        }
+
+        if ($paid > 0 && $outstanding > 0) {
+            return 'PARTIALLY_PAID';
+        }
+
+        if ($this->payment_terms_type === 'CREDIT' && $outstanding > 0) {
+            return 'CREDIT';
+        }
+
+        return 'UNPAID';
     }
 
     public function recalculateTotals(): void

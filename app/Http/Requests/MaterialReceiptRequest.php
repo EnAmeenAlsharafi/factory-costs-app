@@ -37,6 +37,7 @@ class MaterialReceiptRequest extends FormRequest
                 return [
                     'material_id' => $materialId,
                     'fabric_color_id' => $item['fabric_color_id'] ?? null,
+                    'fabric_color_code' => isset($item['fabric_color_code']) && trim((string) $item['fabric_color_code']) !== '' ? trim((string) $item['fabric_color_code']) : null,
                     'quantity_received' => $item['quantity_received'] ?? ($item['quantity'] ?? null),
                     'purchase_unit_id' => $unitId,
                     'conversion_factor' => $conversionFactor,
@@ -64,6 +65,7 @@ class MaterialReceiptRequest extends FormRequest
             'lines' => ['required', 'array', 'min:1'],
             'lines.*.material_id' => ['required', 'exists:materials,id'],
             'lines.*.fabric_color_id' => ['nullable', 'exists:fabric_colors,id'],
+            'lines.*.fabric_color_code' => ['nullable', 'string', 'max:100'],
             'lines.*.quantity_received' => ['required', 'numeric', 'gt:0'],
             'lines.*.purchase_unit_id' => ['required', 'exists:units_of_measure,id'],
             'lines.*.conversion_factor' => ['required', 'numeric', 'gt:0'],
@@ -83,6 +85,7 @@ class MaterialReceiptRequest extends FormRequest
             'receipt_date' => 'تاريخ الاستلام',
             'lines' => 'بنود الإيصال',
             'lines.*.material_id' => 'المادة الخام',
+            'lines.*.fabric_color_code' => 'رقم / كود اللون',
             'lines.*.quantity_received' => 'الكمية المستلمة',
             'lines.*.purchase_unit_id' => 'وحدة الشراء',
             'lines.*.unit_cost_purchase' => 'سعر شراء الوحدة',

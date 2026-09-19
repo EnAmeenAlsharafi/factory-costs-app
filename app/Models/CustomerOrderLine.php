@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CustomerOrderLine extends Model
 {
@@ -22,8 +23,11 @@ class CustomerOrderLine extends Model
         'reference_width_cm',
         'reference_length_cm',
         'has_storage',
+        'fabric_supplier_id',
         'fabric_material_id',
         'fabric_color_id',
+        'fabric_color_code',
+        'fabric_notes',
         'quantity',
         'unit_price',
         'discount_amount',
@@ -68,6 +72,11 @@ class CustomerOrderLine extends Model
         return $this->belongsTo(CustomerProductAlias::class);
     }
 
+    public function fabricSupplier(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class, 'fabric_supplier_id');
+    }
+
     public function fabricMaterial(): BelongsTo
     {
         return $this->belongsTo(Material::class, 'fabric_material_id');
@@ -76,6 +85,24 @@ class CustomerOrderLine extends Model
     public function fabricColor(): BelongsTo
     {
         return $this->belongsTo(FabricColor::class, 'fabric_color_id');
+    }
+
+    public function productionOrders(): HasMany
+    {
+        return $this->hasMany(ProductionOrder::class);
+    }
+
+    public function getRecipeVersionAttribute(): ?ManufacturingRecipeVersion
+    {
+        if (! $this->product_configuration_id) {
+            return null;
+        }
+
+        $recipe = ManufacturingRecipe::where('product_configuration_id', $this->product_configuration_id)
+            ->with(['currentApprovedVersion.recipe'])
+            ->first();
+
+        return $recipe?->currentApprovedVersion;
     }
 
     /**

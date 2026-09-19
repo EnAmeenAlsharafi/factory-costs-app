@@ -22,8 +22,10 @@ class QuotationLine extends Model
         'reference_width_cm',
         'reference_length_cm',
         'has_storage',
+        'fabric_supplier_id',
         'fabric_material_id',
         'fabric_color_id',
+        'fabric_color_code',
         'quantity',
         'unit_price',
         'discount_amount',
@@ -66,6 +68,11 @@ class QuotationLine extends Model
     public function customerProductAlias(): BelongsTo
     {
         return $this->belongsTo(CustomerProductAlias::class);
+    }
+
+    public function fabricSupplier(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class, 'fabric_supplier_id');
     }
 
     public function fabricMaterial(): BelongsTo

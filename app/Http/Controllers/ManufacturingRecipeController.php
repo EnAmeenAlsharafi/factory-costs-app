@@ -113,7 +113,19 @@ class ManufacturingRecipeController extends Controller
         $components = SemiFinishedComponent::where('is_active', true)->get();
         $units = UnitOfMeasure::orderBy('name_ar')->get();
 
-        return view('recipes.edit', compact('recipe', 'version', 'materials', 'components', 'units'));
+        $initialItems = $version->items->map(function ($i) {
+            return [
+                'item_type' => $i->item_type,
+                'material_id' => $i->material_id ? (string) $i->material_id : '',
+                'semi_finished_component_id' => $i->semi_finished_component_id ? (string) $i->semi_finished_component_id : '',
+                'quantity' => (float) $i->quantity,
+                'unit_id' => (string) $i->unit_id,
+                'waste_percentage' => (float) $i->waste_percentage,
+                'notes' => $i->notes ?? '',
+            ];
+        })->values()->toArray();
+
+        return view('recipes.edit', compact('recipe', 'version', 'materials', 'components', 'units', 'initialItems'));
     }
 
     public function updateVersion(Request $request, ManufacturingRecipe $recipe, ManufacturingRecipeVersion $version): RedirectResponse

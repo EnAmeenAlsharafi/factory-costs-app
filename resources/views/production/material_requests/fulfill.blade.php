@@ -40,7 +40,14 @@
                             @foreach($materialRequest->lines as $line)
                                 @php
                                     $remainingToIssue = max(0, ($line->approved_quantity ?? $line->requested_quantity) - $line->issued_quantity);
+                                    $reqColorCode = $line->fabric_color_code ?? $materialRequest->productionOrder?->fabric_color_code ?? $line->fabricColor?->color_code;
                                     $lineLots = $lots->where('material_id', $line->material_id);
+                                    if (! empty($reqColorCode)) {
+                                        $lineLots = $lineLots->filter(function($lot) use ($reqColorCode) {
+                                            $lotColor = $lot->fabric_color_code ?? $lot->fabricColor?->color_code;
+                                            return empty($lotColor) || $lotColor === $reqColorCode;
+                                        });
+                                    }
                                 @endphp
 
                                 @if($remainingToIssue > 0)
@@ -49,15 +56,24 @@
                                             <td>
                                                 <input type="hidden" name="fulfillments[{{ $fulfillmentIndex }}][request_line_id]" value="{{ $line->id }}">
                                                 <div class="fw-bold">{{ $line->material?->name_ar }}</div>
-                                                <small class="text-muted">{{ $line->request_reason }}</small>
+                                                @if($reqColorCode)
+                                                    <span class="badge bg-primary bg-opacity-10 text-primary border fs-8"><i class="fas fa-palette me-1"></i>لون مطلوب: {{ $reqColorCode }}</span>
+                                                @endif
+                                                <small class="text-muted d-block">{{ $line->request_reason }}</small>
                                             </td>
                                             <td class="fw-bold text-primary">{{ (float)$remainingToIssue }} {{ $line->baseUnit?->name_ar }}</td>
                                             <td>
                                                 <input type="hidden" name="fulfillments[{{ $fulfillmentIndex }}][inventory_lot_id]" value="{{ $lot->id }}">
                                                 <span class="badge bg-light text-dark border font-monospace fs-7"><i class="fas fa-box me-1"></i>{{ $lot->lot_code }}</span>
-                                                @if($lot->fabricColor)
-                                                    <span class="badge bg-light text-dark border ms-1">{{ $lot->fabricColor->color_name_ar }}</span>
+                                                @if($lot->fabric_color_code || $lot->fabricColor)
+                                                    <span class="badge bg-info bg-opacity-10 text-dark border ms-1">
+                                                        <i class="fas fa-palette me-1"></i>لون: <strong>{{ $lot->fabric_color_code ?? $lot->fabricColor?->color_code }}</strong>
+                                                        @if($lot->fabricColor && $lot->fabricColor->color_name_ar) ({{ $lot->fabricColor->color_name_ar }}) @endif
+                                                    </span>
                                                 @endif
+                                                @can('costing.view')
+                                                    <small class="text-muted d-block fs-8 mt-1">تكلفة: {{ number_format($lot->unit_cost, 2) }} ر.س</small>
+                                                @endcan
                                             </td>
                                             <td><span class="badge bg-success fs-7">{{ (float)$lot->remaining_quantity }} {{ $lot->baseUnit?->name_ar }}</span></td>
                                             <td>

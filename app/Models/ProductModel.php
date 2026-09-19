@@ -18,11 +18,13 @@ class ProductModel extends Model
         'reference_image_path',
         'design_notes',
         'is_custom_template',
+        'requires_fabric_selection',
         'is_active',
     ];
 
     protected $casts = [
         'is_custom_template' => 'boolean',
+        'requires_fabric_selection' => 'boolean',
         'is_active' => 'boolean',
     ];
 

@@ -95,6 +95,7 @@ class MaterialReceiptController extends Controller
                     'material_receipt_id' => $receipt->id,
                     'material_id' => $material->id,
                     'fabric_color_id' => $lineData['fabric_color_id'] ?? null,
+                    'fabric_color_code' => $lineData['fabric_color_code'] ?? null,
                     'quantity_received' => $qtyReceived,
                     'purchase_unit_id' => $lineData['purchase_unit_id'],
                     'conversion_factor' => $conversionFactor,
@@ -127,6 +128,91 @@ class MaterialReceiptController extends Controller
 
         return redirect()->route('inventory.receipts.show', $receipt)
             ->with('success', 'تم حفظ إيصال الاستلام كمسودة بنجاح.');
+    }
+
+    public function edit(Request $request, MaterialReceipt $receipt): View
+    {
+        abort_if(! $request->user()->can('inventory.receive'), 403, 'غير مصرح لك بتعديل إيصال استلام.');
+        abort_if(! $receipt->isDraft(), 400, 'لا يمكن تعديل إيصال استلام تم ترحيله.');
+
+        $receipt->load(['lines.material.category', 'lines.purchaseUnit', 'lines.baseUnit', 'lines.fabricColor']);
+        $suppliers = Supplier::where('is_active', true)->orderBy('name')->get();
+        $warehouses = Warehouse::where('is_active', true)->orderBy('name_ar')->get();
+        $materials = Material::with(['category', 'baseUnit', 'purchaseUnit', 'fabricColors'])->where('is_active', true)->orderBy('name_ar')->get();
+        $units = UnitOfMeasure::where('is_active', true)->orderBy('name_ar')->get();
+
+        return view('inventory.receipts.edit', compact('receipt', 'suppliers', 'warehouses', 'materials', 'units'));
+    }
+
+    public function update(MaterialReceiptRequest $request, MaterialReceipt $receipt): RedirectResponse
+    {
+        abort_if(! $request->user()->can('inventory.receive'), 403, 'غير مصرح لك بتعديل إيصال استلام.');
+        abort_if(! $receipt->isDraft(), 400, 'لا يمكن تعديل إيصال استلام تم ترحيله.');
+
+        $validated = $request->validated();
+
+        DB::transaction(function () use ($receipt, $validated) {
+            $receipt->update([
+                'supplier_id' => $validated['supplier_id'],
+                'warehouse_id' => $validated['warehouse_id'],
+                'receipt_date' => $validated['receipt_date'],
+                'supplier_reference' => $validated['supplier_reference'] ?? null,
+                'purchase_invoice_reference' => $validated['purchase_invoice_reference'] ?? null,
+                'notes' => $validated['notes'] ?? null,
+            ]);
+
+            // Recreate lines
+            $receipt->lines()->delete();
+
+            foreach ($validated['lines'] as $lineData) {
+                $material = Material::findOrFail($lineData['material_id']);
+                $conversionFactor = (float) ($lineData['conversion_factor'] ?? 1);
+                $qtyReceived = (float) $lineData['quantity_received'];
+                $baseQty = $qtyReceived * $conversionFactor;
+
+                $unitCostPurchase = (float) ($lineData['unit_cost_purchase'] ?? 0);
+                $totalCost = round($qtyReceived * $unitCostPurchase, 4);
+                $unitCostBase = $baseQty > 0 ? round($totalCost / $baseQty, 6) : 0;
+
+                MaterialReceiptLine::create([
+                    'material_receipt_id' => $receipt->id,
+                    'material_id' => $material->id,
+                    'fabric_color_id' => $lineData['fabric_color_id'] ?? null,
+                    'fabric_color_code' => $lineData['fabric_color_code'] ?? null,
+                    'quantity_received' => $qtyReceived,
+                    'purchase_unit_id' => $lineData['purchase_unit_id'],
+                    'conversion_factor' => $conversionFactor,
+                    'base_quantity' => $baseQty,
+                    'base_unit_id' => $material->base_unit_id,
+                    'unit_cost_purchase' => $unitCostPurchase,
+                    'total_cost' => $totalCost,
+                    'unit_cost_base' => $unitCostBase,
+                    'supplier_material_code' => $lineData['supplier_material_code'] ?? null,
+                    'quality_note' => $lineData['quality_note'] ?? null,
+                    'lot_reference' => $lineData['lot_reference'] ?? null,
+                    'notes' => $lineData['notes'] ?? null,
+                ]);
+            }
+        });
+
+        if ($request->has('post_immediately') || $request->input('action') === 'post') {
+            try {
+                if ($receipt->purchase_order_id) {
+                    app(PurchaseReceivingService::class)->postLinkedReceipt($receipt, $request->user());
+                } else {
+                    $this->inventoryService->postReceipt($receipt, $request->user());
+                }
+
+                return redirect()->route('inventory.receipts.show', $receipt)
+                    ->with('success', 'تم تعديل وترحيل إيصال الاستلام وإنشاء اللوتات بنجاح.');
+            } catch (Exception $e) {
+                return redirect()->route('inventory.receipts.show', $receipt)
+                    ->with('error', 'تم تعديل الإيصال كمسودة ولكن تعذر الترحيل: '.$e->getMessage());
+            }
+        }
+
+        return redirect()->route('inventory.receipts.show', $receipt)
+            ->with('success', 'تم تعديل إيصال الاستلام كمسودة بنجاح.');
     }
 
     public function show(Request $request, MaterialReceipt $receipt): View

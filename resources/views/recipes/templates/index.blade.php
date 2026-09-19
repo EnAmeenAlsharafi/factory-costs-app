@@ -73,9 +73,19 @@
                                     @endif
                                 </td>
                                 <td class="pe-3 text-end">
-                                    <a href="{{ route('recipes.templates.show', $tpl) }}" class="btn btn-sm btn-outline-primary me-1">
-                                        <i class="fas fa-eye me-1"></i> عرض البنود / إنشاء وصفة
+                                    <a href="{{ route('recipes.templates.show', $tpl) }}" class="btn btn-sm btn-outline-secondary me-1">
+                                        <i class="fas fa-eye me-1"></i> عرض البنود
                                     </a>
+                                    @can('recipes.manage')
+                                        <a href="{{ route('recipes.templates.show', [$tpl, 'open_modal' => 1]) }}" class="btn btn-sm btn-warning me-1 fw-bold">
+                                            <i class="fas fa-magic me-1"></i> إنشاء وصفة
+                                        </a>
+                                    @endcan
+                                    @can('manufacturing_templates.manage')
+                                        <a href="{{ route('recipes.templates.edit', $tpl) }}" class="btn btn-sm btn-outline-warning me-1">
+                                            <i class="fas fa-edit me-1"></i> تعديل
+                                        </a>
+                                    @endcan
                                 </td>
                             </tr>
                         @empty

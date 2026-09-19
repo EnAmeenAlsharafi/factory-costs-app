@@ -16,6 +16,7 @@ class MaterialReceiptLine extends Model
         'purchase_order_line_id',
         'material_id',
         'fabric_color_id',
+        'fabric_color_code',
         'quantity_received',
         'purchase_unit_id',
         'conversion_factor',

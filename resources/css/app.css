@@ -330,3 +330,55 @@ code { max-width: 100%; overflow-wrap: anywhere; }
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+/* Searchable Typeahead Autocomplete Styles */
+.typeahead-container {
+    position: relative;
+    width: 100%;
+}
+.typeahead-dropdown {
+    position: fixed;
+    z-index: 1070;
+    max-height: 280px;
+    overflow-y: auto;
+    background: #ffffff;
+    border: 1px solid var(--factory-border, #cbd5e1);
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.18);
+    margin-top: 2px;
+    padding: 6px 0;
+}
+.typeahead-item {
+    padding: 8px 14px;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+.typeahead-item:hover, .typeahead-item.active {
+    background-color: #f1f5f9;
+    color: #0f172a;
+}
+.typeahead-item .code-badge {
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 0.8rem;
+    color: #475569;
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 2px 6px;
+    border-radius: 4px;
+    direction: ltr;
+    unicode-bidi: isolate;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.fabric-spec-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+

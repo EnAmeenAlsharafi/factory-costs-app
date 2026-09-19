@@ -3,7 +3,9 @@
 namespace Database\Seeders;
 
 use App\Models\Department;
+use App\Models\Material;
 use App\Models\Role;
+use App\Models\Supplier;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -55,6 +57,25 @@ class DevelopmentSeeder extends Seeder
                     'is_active' => $userData['is_active'],
                 ],
             );
+        }
+
+        // Seed Fabric Supplier and link fabrics in development (local only)
+        if (! app()->environment('testing')) {
+            $fabricSupplier = Supplier::firstOrCreate(
+                ['supplier_code' => 'SUP-000010'],
+                [
+                    'name' => 'شركة الراجحي للأقمشة والمنسوجات',
+                    'commercial_name' => 'الراجحي للأقمشة',
+                    'contact_person' => 'عبدالله الراجحي',
+                    'phone' => '0551122334',
+                    'is_active' => true,
+                ]
+            );
+
+            $fabrics = Material::whereHas('category', fn ($c) => $c->where('code', 'FABRIC'))->get();
+            if ($fabrics->isNotEmpty()) {
+                $fabricSupplier->materials()->syncWithoutDetaching($fabrics->pluck('id'));
+            }
         }
     }
 }

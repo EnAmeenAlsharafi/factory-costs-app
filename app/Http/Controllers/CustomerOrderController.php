@@ -10,6 +10,7 @@ use App\Models\FabricColor;
 use App\Models\Material;
 use App\Models\ProductModel;
 use App\Models\SalesChannel;
+use App\Models\Supplier;
 use App\Services\CustomerOrderService;
 use Exception;
 use Illuminate\Http\RedirectResponse;
@@ -43,11 +44,12 @@ class CustomerOrderController extends Controller
         $customers = Customer::where('is_active', true)->orderBy('name')->get();
         $salesChannels = SalesChannel::where('is_active', true)->get();
         $productModels = ProductModel::where('is_active', true)->with('configurations', 'aliases')->get();
-        $fabrics = Material::whereHas('category', fn ($c) => $c->where('code', 'FABRIC'))->with('fabricColors')->get();
+        $fabrics = Material::whereHas('category', fn ($c) => $c->where('code', 'FABRIC'))->with('fabricColors', 'suppliers')->get();
+        $suppliers = Supplier::where('is_active', true)->with('materials')->orderBy('name')->get();
         $colors = FabricColor::where('is_active', true)->get();
         $aliases = CustomerProductAlias::where('is_active', true)->get();
 
-        return view('sales.orders.create', compact('customers', 'salesChannels', 'productModels', 'fabrics', 'colors', 'aliases'));
+        return view('sales.orders.create', compact('customers', 'salesChannels', 'productModels', 'fabrics', 'suppliers', 'colors', 'aliases'));
     }
 
     public function store(CustomerOrderRequest $request): RedirectResponse
@@ -79,8 +81,10 @@ class CustomerOrderController extends Controller
             'lines.productModel',
             'lines.productConfiguration',
             'lines.customerProductAlias',
+            'lines.fabricSupplier',
             'lines.fabricMaterial',
             'lines.fabricColor',
+            'lines.productionOrders',
             'changes.requestedBy',
             'changes.approvedBy',
         ]);
@@ -92,15 +96,21 @@ class CustomerOrderController extends Controller
     {
         abort_if(! $request->user()->can('orders.update'), 403, 'غير مصرح لك بتعديل هذا الطلب.');
 
-        $order->load('lines');
+        $order->load([
+            'lines.productModel',
+            'lines.productConfiguration',
+            'lines.fabricSupplier',
+            'lines.fabricMaterial',
+        ]);
         $customers = Customer::where('is_active', true)->orderBy('name')->get();
         $salesChannels = SalesChannel::where('is_active', true)->get();
         $productModels = ProductModel::where('is_active', true)->with('configurations', 'aliases')->get();
-        $fabrics = Material::whereHas('category', fn ($c) => $c->where('code', 'FABRIC'))->with('fabricColors')->get();
+        $fabrics = Material::whereHas('category', fn ($c) => $c->where('code', 'FABRIC'))->with('fabricColors', 'suppliers')->get();
+        $suppliers = Supplier::where('is_active', true)->with('materials')->orderBy('name')->get();
         $colors = FabricColor::where('is_active', true)->get();
         $aliases = CustomerProductAlias::where('is_active', true)->get();
 
-        return view('sales.orders.edit', compact('order', 'customers', 'salesChannels', 'productModels', 'fabrics', 'colors', 'aliases'));
+        return view('sales.orders.edit', compact('order', 'customers', 'salesChannels', 'productModels', 'fabrics', 'suppliers', 'colors', 'aliases'));
     }
 
     public function update(CustomerOrderRequest $request, CustomerOrder $order): RedirectResponse
