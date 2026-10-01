@@ -216,14 +216,13 @@
                 </div>
 
                 <!-- Remember Me -->
-                <div class="d-flex justify-content-between align-items-center mb-4 fs-7">
+                <div class="mb-4 fs-7">
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" name="remember" id="remember" {{ old('remember') ? 'checked' : '' }}>
                         <label class="form-check-label text-secondary" for="remember">
                             تذكرني على هذا الجهاز
                         </label>
                     </div>
-                    <span class="text-muted fs-8"><i class="fas fa-shield-alt text-success me-1"></i>نظام داخلي محمي</span>
                 </div>
 
                 <!-- Submit Button -->
