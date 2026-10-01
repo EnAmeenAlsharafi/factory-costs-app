@@ -12,8 +12,10 @@ use App\Models\ProductionOrder;
 use App\Models\UnitOfMeasure;
 use App\Models\Warehouse;
 use App\Services\ProductionMaterialRequestService;
+use Exception;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class ProductionMaterialRequestController extends Controller
@@ -136,9 +138,11 @@ class ProductionMaterialRequestController extends Controller
         abort_if(! $request->user()->can('inventory.issue'), 403);
 
         $materialRequest->load([
-            'productionOrder',
+            'productionOrder.productModel',
+            'productionOrder.fabricSupplier',
             'warehouse',
             'lines.material.baseUnit',
+            'lines.baseUnit',
             'lines.fabricColor',
         ]);
 
@@ -148,8 +152,9 @@ class ProductionMaterialRequestController extends Controller
             ->where('warehouse_id', $materialRequest->warehouse_id)
             ->where('remaining_quantity', '>', 0)
             ->where('status', 'ACTIVE')
-            ->with(['material.baseUnit', 'fabricColor', 'supplier'])
+            ->with(['material.baseUnit', 'baseUnit', 'fabricColor', 'supplier', 'receiptLine.receipt'])
             ->orderBy('received_date', 'asc') // FIFO order
+            ->orderBy('id')
             ->get();
 
         return view('production.material_requests.fulfill', compact('materialRequest', 'lots'));
@@ -167,7 +172,14 @@ class ProductionMaterialRequestController extends Controller
             'fulfillments.*.notes' => 'nullable|string|max:500',
         ]);
 
-        $issue = $this->requestService->fulfillRequest($materialRequest, $request->user(), $request->input('fulfillments'));
+        try {
+            $issue = $this->requestService->fulfillRequest($materialRequest, $request->user(), array_values($request->input('fulfillments')));
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (Exception $e) {
+            // Business-rule violations (over-issue, wrong lot/colour, stale status) return to the form with a readable message.
+            return back()->withInput()->with('error', $e->getMessage());
+        }
 
         return redirect()->route('production.material-requests.show', $materialRequest)
             ->with('success', "تم صرف المواد بنجاح وبناء سند الصرف رقم {$issue->issue_number}.");

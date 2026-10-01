@@ -6,13 +6,17 @@ use App\Models\Customer;
 use App\Models\CustomerOrder;
 use App\Models\CustomerOrderLine;
 use App\Models\CustomerType;
+use App\Models\FinishedGoodsMovement;
+use App\Models\FinishedGoodsReceipt;
 use App\Models\ProductionOrder;
 use App\Models\ProductModel;
 use App\Models\Role;
 use App\Models\SalesChannel;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Services\FinishedGoodsService;
 use Database\Seeders\RoleAndPermissionSeeder;
+use Exception;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -138,7 +142,30 @@ class FinishedGoodsReceiptTest extends TestCase
         $response->assertSessionHas('error');
         $this->assertDatabaseMissing('finished_goods_receipts', [
             'production_order_id' => $this->productionOrder->id,
-            'received_quantity' => 10,
+            'quantity' => 10,
         ]);
+    }
+
+    public function test_finished_goods_receipt_posting_is_idempotent_with_stale_requests(): void
+    {
+        $service = app(FinishedGoodsService::class);
+        $receipt = $service->createReceipt($this->productionOrder, $this->user, [
+            'warehouse_id' => $this->warehouse->id,
+            'received_quantity' => 3,
+            'receipt_date' => now()->toDateString(),
+        ]);
+        $staleReceipt = FinishedGoodsReceipt::findOrFail($receipt->id);
+
+        $service->postReceipt($receipt, $this->user);
+
+        try {
+            $service->postReceipt($staleReceipt, $this->user);
+            $this->fail('A stale second finished-goods posting attempt must be rejected.');
+        } catch (Exception $exception) {
+            $this->assertStringContainsString('المسودة', $exception->getMessage());
+        }
+
+        $this->assertSame(1, FinishedGoodsMovement::where('finished_goods_receipt_id', $receipt->id)->count());
+        $this->assertSame('POSTED', $receipt->fresh()->status);
     }
 }

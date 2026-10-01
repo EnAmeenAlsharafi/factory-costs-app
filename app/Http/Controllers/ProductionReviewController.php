@@ -6,6 +6,7 @@ use App\Http\Requests\ProductionReviewRequest;
 use App\Models\CustomerOrder;
 use App\Models\ManufacturingRecipeVersion;
 use App\Services\CustomerOrderService;
+use App\Services\OrderPaymentEligibilityService;
 use Exception;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,6 +26,7 @@ class ProductionReviewController extends Controller
             'lines.productModel',
             'lines.productConfiguration',
             'lines.customerProductAlias',
+            'lines.fabricSupplier',
             'lines.fabricMaterial',
             'lines.fabricColor',
         ]);
@@ -33,7 +35,14 @@ class ProductionReviewController extends Controller
             ->with('recipe')
             ->get();
 
-        return view('sales.orders.review', compact('order', 'recipeVersions'));
+        // Payment gate as seen by the reviewer: eligibility always, the commercial reason only for receivables staff.
+        $eligibility = app(OrderPaymentEligibilityService::class)->checkProductionEligibility($order);
+        $productionGate = [
+            'eligible' => (bool) $eligibility['eligible'],
+            'detail' => $request->user()->can('receivables.view') ? $eligibility['reason'] : null,
+        ];
+
+        return view('sales.orders.review', compact('order', 'recipeVersions', 'productionGate'));
     }
 
     public function approveForProduction(ProductionReviewRequest $request, CustomerOrder $order): RedirectResponse

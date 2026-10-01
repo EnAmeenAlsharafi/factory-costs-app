@@ -13,14 +13,22 @@ class CustomerCreditService
 {
     public function getCustomerCreditProfile(Customer $customer): CustomerCreditProfile
     {
-        return $customer->creditProfile ?: CustomerCreditProfile::create([
-            'customer_id' => $customer->id,
+        if ($customer->creditProfile) {
+            return $customer->creditProfile;
+        }
+
+        // Idempotent: several Customer instances of the same customer (e.g. one per order while evaluating
+        // eligibility for many orders) must not each try to insert a profile (customer_id is unique).
+        $profile = CustomerCreditProfile::firstOrCreate(['customer_id' => $customer->id], [
             'credit_enabled' => (bool) $customer->is_credit_customer,
             'credit_limit' => (float) ($customer->credit_limit ?? 0.00),
             'credit_days' => 30,
             'warning_threshold_percent' => 80.00,
             'hold_when_exceeded' => true,
         ]);
+        $customer->setRelation('creditProfile', $profile);
+
+        return $profile;
     }
 
     public function updateCreditProfile(Customer $customer, array $data, User $user): CustomerCreditProfile

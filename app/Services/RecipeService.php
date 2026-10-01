@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\CustomerOrderLine;
 use App\Models\InventoryLot;
 use App\Models\ManufacturingRecipe;
 use App\Models\ManufacturingRecipeItem;
@@ -9,6 +10,8 @@ use App\Models\ManufacturingRecipeVersion;
 use App\Models\ManufacturingTemplate;
 use App\Models\Material;
 use App\Models\MaterialUnitConversion;
+use App\Models\ProductionMaterialRequirement;
+use App\Models\ProductionOrder;
 use App\Models\UnitConversion;
 use App\Models\UnitOfMeasure;
 use App\Models\User;
@@ -65,6 +68,110 @@ class RecipeService
             $this->syncItems($version, $itemsData);
 
             return $recipe;
+        });
+    }
+
+    /**
+     * Update an existing manufacturing recipe's metadata.
+     */
+    public function updateRecipe(ManufacturingRecipe $recipe, array $data): ManufacturingRecipe
+    {
+        return DB::transaction(function () use ($recipe, $data) {
+            $targetType = $data['target_type'] ?? $recipe->target_type;
+            $productConfigId = ! empty($data['product_configuration_id']) ? (int) $data['product_configuration_id'] : null;
+            $componentId = ! empty($data['semi_finished_component_id']) ? (int) $data['semi_finished_component_id'] : null;
+
+            // Check if recipe has been used in production orders or customer orders
+            $versionIds = $recipe->versions()->pluck('id');
+            $hasProduction = ProductionOrder::whereIn('manufacturing_recipe_version_id', $versionIds)->exists()
+                || ProductionMaterialRequirement::whereIn('manufacturing_recipe_version_id', $versionIds)->exists()
+                || CustomerOrderLine::whereIn('approved_recipe_version_id', $versionIds)->exists();
+
+            if ($hasProduction) {
+                if ($targetType !== $recipe->target_type || $productConfigId != $recipe->product_configuration_id || $componentId != $recipe->semi_finished_component_id) {
+                    throw new Exception('لا يمكن تغيير الهدف المصنعي أو الموديل/المكون لهذه الوصفة لأنها مرتبطة بأوامر تصنيع أو طلبات عملاء سابقة. يمكنك تعديل الاسم والوصف وحالة التنشيط فقط.');
+                }
+            }
+
+            // Check uniqueness if target changed
+            if ($targetType === 'PRODUCT_CONFIGURATION' && $productConfigId) {
+                $existing = ManufacturingRecipe::where('target_type', 'PRODUCT_CONFIGURATION')
+                    ->where('product_configuration_id', $productConfigId)
+                    ->where('id', '!=', $recipe->id)
+                    ->first();
+                if ($existing) {
+                    throw new Exception('توجد بالفعل وصفة تصنيع أخرى معرفة لهذا التكوين المصنعي ['.$existing->recipe_code.'].');
+                }
+            } elseif ($targetType === 'SEMI_FINISHED_COMPONENT' && $componentId) {
+                $existing = ManufacturingRecipe::where('target_type', 'SEMI_FINISHED_COMPONENT')
+                    ->where('semi_finished_component_id', $componentId)
+                    ->where('id', '!=', $recipe->id)
+                    ->first();
+                if ($existing) {
+                    throw new Exception('توجد بالفعل وصفة تصنيع أخرى معرفة لهذا المكون نصف المصنع ['.$existing->recipe_code.'].');
+                }
+            }
+
+            $recipe->update([
+                'name' => $data['name'],
+                'description' => $data['description'] ?? null,
+                'target_type' => $targetType,
+                'product_configuration_id' => $targetType === 'PRODUCT_CONFIGURATION' ? $productConfigId : null,
+                'semi_finished_component_id' => $targetType === 'SEMI_FINISHED_COMPONENT' ? $componentId : null,
+                'is_active' => isset($data['is_active']) ? (bool) $data['is_active'] : $recipe->is_active,
+            ]);
+
+            return $recipe;
+        });
+    }
+
+    /**
+     * Delete an existing manufacturing recipe if not used in production or orders.
+     */
+    public function deleteRecipe(ManufacturingRecipe $recipe): void
+    {
+        DB::transaction(function () use ($recipe) {
+            $versionIds = $recipe->versions()->pluck('id');
+
+            $inProduction = ProductionOrder::whereIn('manufacturing_recipe_version_id', $versionIds)->exists();
+            $inReqs = ProductionMaterialRequirement::whereIn('manufacturing_recipe_version_id', $versionIds)->exists();
+            $inOrders = CustomerOrderLine::whereIn('approved_recipe_version_id', $versionIds)->exists();
+
+            if ($inProduction || $inReqs || $inOrders) {
+                throw new Exception('لا يمكن حذف وصفة التصنيع ['.$recipe->recipe_code.'] لأنها مرتبطة بسجلات تشغيلية قائمة (أوامر إنتاج أو متطلبات صرف أو طلبات عملاء). يمكنك تعطيل الوصفة (إلغاء التنشيط) بدلاً من حذفها.');
+            }
+
+            foreach ($recipe->versions as $version) {
+                $version->items()->delete();
+                $version->delete();
+            }
+
+            $recipe->delete();
+        });
+    }
+
+    /**
+     * Delete a single recipe version if not used and not the only version.
+     */
+    public function deleteVersion(ManufacturingRecipeVersion $version): void
+    {
+        DB::transaction(function () use ($version) {
+            $recipe = $version->recipe;
+
+            if ($recipe->versions()->count() <= 1) {
+                throw new Exception('لا يمكن حذف الإصدار الوحيد للوصفة. إذا كنت ترغب في إزالة الوصفة بالكامل، يمكنك حذف الوصفة نفسها.');
+            }
+
+            $inProduction = ProductionOrder::where('manufacturing_recipe_version_id', $version->id)->exists();
+            $inReqs = ProductionMaterialRequirement::where('manufacturing_recipe_version_id', $version->id)->exists();
+            $inOrders = CustomerOrderLine::where('approved_recipe_version_id', $version->id)->exists();
+
+            if ($inProduction || $inReqs || $inOrders) {
+                throw new Exception('لا يمكن حذف الإصدار (V'.$version->version_number.') لأنه مرتبط بأوامر تصنيع أو طلبات عملاء منفذة.');
+            }
+
+            $version->items()->delete();
+            $version->delete();
         });
     }
 

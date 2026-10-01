@@ -53,7 +53,25 @@
                     </p>
                 </div>
 
-                <div class="d-flex gap-2">
+                <div class="d-flex flex-wrap gap-2">
+                    {{-- Edit Recipe Data Button --}}
+                    @can('recipes.manage')
+                        <a href="{{ route('recipes.edit', $recipe) }}" class="btn btn-outline-secondary fw-semibold">
+                            <i class="fas fa-edit me-1"></i> تعديل بيانات الوصفة
+                        </a>
+                    @endcan
+
+                    {{-- Delete Recipe Button --}}
+                    @can('recipes.manage')
+                        <form action="{{ route('recipes.destroy', $recipe) }}" method="POST" class="d-inline" onsubmit="return confirm('تحذير: هل أنت متأكد تماماً من حذف وصفة التصنيع ({{ $recipe->recipe_code }}) بالكامل وجميع إصداراتها؟\nلا يمكن التراجع عن هذا الإجراء.');">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-outline-danger fw-semibold" title="حذف الوصفة بالكامل">
+                                <i class="fas fa-trash-alt me-1"></i> حذف الوصفة
+                            </button>
+                        </form>
+                    @endcan
+
                     @if($selectedVersion)
                         {{-- Copy Version Button --}}
                         @can('recipes.manage')
@@ -69,9 +87,22 @@
                         @if($selectedVersion->status === 'DRAFT')
                             @can('recipes.manage')
                                 <a href="{{ route('recipes.versions.edit', [$recipe, $selectedVersion]) }}" class="btn btn-outline-warning fw-semibold">
-                                    <i class="fas fa-edit me-1"></i> تعديل المسودة (V{{ $selectedVersion->version_number }})
+                                    <i class="fas fa-tools me-1"></i> تعديل مكونات المسودة (V{{ $selectedVersion->version_number }})
                                 </a>
                             @endcan
+
+                            {{-- Delete Draft Version Button --}}
+                            @if($recipe->versions->count() > 1)
+                                @can('recipes.manage')
+                                    <form action="{{ route('recipes.versions.destroy', [$recipe, $selectedVersion]) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف هذه المسودة (V{{ $selectedVersion->version_number }})؟');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-outline-danger fw-semibold" title="حذف هذا الإصدار">
+                                            <i class="fas fa-trash me-1"></i> حذف المسودة
+                                        </button>
+                                    </form>
+                                @endcan
+                            @endif
 
                             {{-- Approve Version Button --}}
                             @can('recipes.approve')

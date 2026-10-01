@@ -12,6 +12,10 @@ class FabricMaterialSpec extends Model
 
     protected $fillable = [
         'material_id',
+        'supplier_id',
+        'catalog_number',
+        'catalog_name',
+        'catalog_image_path',
         'fabric_type',
         'pattern_type',
         'width_cm',
@@ -29,5 +33,10 @@ class FabricMaterialSpec extends Model
     public function material(): BelongsTo
     {
         return $this->belongsTo(Material::class);
+    }
+
+    public function supplier(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class);
     }
 }

@@ -1,23 +1,66 @@
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import Alpine from 'alpinejs';
+import { registerReportFilters } from './report-ui';
 
 window.Alpine = Alpine;
+registerReportFilters(Alpine);
+
+const MOBILE_QUERY = window.matchMedia('(max-width: 767.98px)');
+const isMobileViewport = () => MOBILE_QUERY.matches;
+
+function readStoredJson(key, fallback) {
+    try {
+        return JSON.parse(window.localStorage.getItem(key) || '') ?? fallback;
+    } catch (e) {
+        return fallback;
+    }
+}
+
+function writeStored(key, value) {
+    try {
+        window.localStorage.setItem(key, value);
+    } catch (e) {
+        // Storage may be unavailable (private mode); navigation still works without persistence.
+    }
+}
 
 Alpine.data('appShell', () => ({
-    sidebarCollapsed: window.localStorage.getItem('sadir-sidebar-collapsed') === 'true',
+    sidebarCollapsed: readStoredJson('sadir-sidebar-collapsed', false) === true,
     mobileSidebarOpen: false,
-    openSections: JSON.parse(window.localStorage.getItem('sadir-open-sections') || '{}'),
+    openSections: readStoredJson('sadir-open-sections', {}),
+    // On phones the drawer starts with only the current module expanded; toggles last for this page only.
+    mobileSections: {},
+    isMobile: isMobileViewport(),
 
     init() {
         this.$watch('sidebarCollapsed', (value) => {
-            window.localStorage.setItem('sadir-sidebar-collapsed', String(value));
+            writeStored('sadir-sidebar-collapsed', String(value));
         });
         this.$watch('mobileSidebarOpen', (value) => {
             document.body.classList.toggle('shell-drawer-open', value);
+            const main = document.querySelector('.app-main-column');
+            if (main) {
+                main.toggleAttribute('inert', value);
+            }
+        });
+        MOBILE_QUERY.addEventListener('change', (e) => {
+            this.isMobile = e.matches;
+            if (!e.matches && this.mobileSidebarOpen) {
+                this.mobileSidebarOpen = false;
+            }
+        });
+        // Close the drawer immediately when a destination is tapped (the page then navigates).
+        document.getElementById('app-sidebar')?.addEventListener('click', (e) => {
+            if (this.mobileSidebarOpen && e.target.closest('a[href]')) {
+                this.mobileSidebarOpen = false;
+            }
         });
     },
 
     isSectionOpen(key, defaultActive = false) {
+        if (this.isMobile) {
+            return this.mobileSections[key] ?? defaultActive;
+        }
         if (this.openSections[key] !== undefined) {
             return this.openSections[key];
         }
@@ -26,13 +69,21 @@ Alpine.data('appShell', () => ({
 
     toggleSection(key, defaultActive = false) {
         const currentlyOpen = this.isSectionOpen(key, defaultActive);
+        if (this.isMobile) {
+            this.mobileSections[key] = !currentlyOpen;
+            return;
+        }
         this.openSections[key] = !currentlyOpen;
-        window.localStorage.setItem('sadir-open-sections', JSON.stringify(this.openSections));
+        writeStored('sadir-open-sections', JSON.stringify(this.openSections));
     },
 
     openMobileSidebar() {
         this.mobileSidebarOpen = true;
-        this.$nextTick(() => document.querySelector('#app-sidebar a, #app-sidebar button')?.focus());
+        this.$nextTick(() => {
+            const active = document.querySelector('#app-sidebar .sidebar-nav-link.active');
+            active?.scrollIntoView({ block: 'center' });
+            document.querySelector('#app-sidebar button, #app-sidebar a')?.focus();
+        });
     },
 
     closeMobileSidebar() {
@@ -40,6 +91,8 @@ Alpine.data('appShell', () => ({
         this.$nextTick(() => document.getElementById('mobile-menu-toggle')?.focus());
     },
 }));
+
+let typeaheadInstanceCounter = 0;
 
 Alpine.data('typeaheadSelect', (config = {}) => ({
     rootEl: null,
@@ -60,8 +113,22 @@ Alpine.data('typeaheadSelect', (config = {}) => ({
     requestId: 0,
     dropdownStyle: '',
     isDisabled: false,
+    dropUp: false,
+    uid: `ta-${++typeaheadInstanceCounter}`,
     _scrollHandler: null,
     _resizeHandler: null,
+
+    get listboxId() {
+        return `${this.uid}-listbox`;
+    },
+
+    get activeOptionId() {
+        return this.highlightedIndex >= 0 ? `${this.uid}-opt-${this.highlightedIndex}` : '';
+    },
+
+    optionId(index) {
+        return `${this.uid}-opt-${index}`;
+    },
 
     get placeholderText() {
         if (this.isDisabled && this.disabledPlaceholder) {
@@ -127,16 +194,11 @@ Alpine.data('typeaheadSelect', (config = {}) => ({
 
         window.addEventListener('scroll', this._scrollHandler, true);
         window.addEventListener('resize', this._resizeHandler);
+        // The on-screen keyboard shrinks the visual viewport without a window resize on iOS.
+        window.visualViewport?.addEventListener('resize', this._resizeHandler);
 
         if (typeof this.$cleanup === 'function') {
-            this.$cleanup(() => {
-                if (this._scrollHandler) {
-                    window.removeEventListener('scroll', this._scrollHandler, true);
-                }
-                if (this._resizeHandler) {
-                    window.removeEventListener('resize', this._resizeHandler);
-                }
-            });
+            this.$cleanup(() => this.destroy());
         }
     },
 
@@ -146,6 +208,7 @@ Alpine.data('typeaheadSelect', (config = {}) => ({
         }
         if (this._resizeHandler) {
             window.removeEventListener('resize', this._resizeHandler);
+            window.visualViewport?.removeEventListener('resize', this._resizeHandler);
         }
     },
 
@@ -188,15 +251,29 @@ Alpine.data('typeaheadSelect', (config = {}) => ({
             return;
         }
 
-        const minW = config.minWidth || 360;
-        const width = Math.max(rect.width, minW);
         const vw = window.innerWidth;
-        
-        if (vw <= 480) {
-            this.dropdownStyle = `position: fixed; top: ${Math.round(rect.bottom + 4)}px; left: 12px; right: 12px; width: auto; max-height: 260px; z-index: 1070;`;
+        // Visible height excludes the on-screen keyboard where the browser exposes it.
+        const viewport = window.visualViewport;
+        const visibleTop = viewport ? viewport.offsetTop : 0;
+        const visibleBottom = viewport ? viewport.offsetTop + viewport.height : window.innerHeight;
+        const spaceBelow = visibleBottom - rect.bottom - 8;
+        const spaceAbove = rect.top - visibleTop - 8;
+        const preferred = vw <= 575 ? 300 : 280;
+
+        this.dropUp = spaceBelow < 180 && spaceAbove > spaceBelow;
+        const available = Math.max(140, Math.min(preferred, this.dropUp ? spaceAbove : spaceBelow));
+        const vertical = this.dropUp
+            ? `bottom: ${Math.round(window.innerHeight - rect.top + 4)}px;`
+            : `top: ${Math.round(rect.bottom + 4)}px;`;
+
+        if (vw <= 575) {
+            // Phones: nearly full-width results so labels are never clipped.
+            this.dropdownStyle = `position: fixed; ${vertical} left: 8px; right: 8px; width: auto; max-height: ${Math.round(available)}px; z-index: 1070;`;
             return;
         }
 
+        const minW = Math.min(config.minWidth || 360, vw - 20);
+        const width = Math.max(rect.width, minW);
         let left = rect.right - width;
         if (left < 10) {
             left = 10;
@@ -205,7 +282,7 @@ Alpine.data('typeaheadSelect', (config = {}) => ({
             left = vw - width - 10;
         }
 
-        this.dropdownStyle = `position: fixed; top: ${Math.round(rect.bottom + 4)}px; left: ${Math.round(left)}px; width: ${Math.round(width)}px; max-height: 280px; z-index: 1070;`;
+        this.dropdownStyle = `position: fixed; ${vertical} left: ${Math.round(left)}px; width: ${Math.round(width)}px; max-height: ${Math.round(available)}px; z-index: 1070;`;
     },
 
     fetchResults(query = null, selectFirstIfMatchingId = false) {
@@ -269,8 +346,16 @@ Alpine.data('typeaheadSelect', (config = {}) => ({
             this.results = [];
             this.loading = false;
             this.hasSearched = true;
-            this.errorMessage = 'تعذر تحميل النتائج';
+            // Never present a failed request as "no results".
+            this.errorMessage = navigator.onLine === false
+                ? 'لا يوجد اتصال بالإنترنت. تحقق من الشبكة ثم أعد المحاولة.'
+                : 'تعذر تحميل النتائج. أعد المحاولة.';
         });
+    },
+
+    retry() {
+        this.isOpen = true;
+        this.fetchResults();
     },
 
     onFocus() {
@@ -278,6 +363,13 @@ Alpine.data('typeaheadSelect', (config = {}) => ({
         if (this.isDisabled) return;
         this.isOpen = true;
         this.updatePosition();
+        if (isMobileViewport() && this.$refs.inputBox) {
+            // Bring the field into the upper part of the screen so results stay above the keyboard.
+            window.setTimeout(() => {
+                this.$refs.inputBox?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+                window.setTimeout(() => this.isOpen && this.updatePosition(), 350);
+            }, 250);
+        }
         if (this.results.length === 0 || this.searchQuery) {
             this.fetchResults();
         }
@@ -412,7 +504,149 @@ Alpine.data('typeaheadSelect', (config = {}) => ({
     }
 }));
 
+/**
+ * Global form safety used by operational screens (desktop and mobile alike):
+ *  - data-confirm="..." on a <form> or its submit button asks before irreversible actions.
+ *  - Every submitted form disables its submitter to prevent duplicate posts on slow networks.
+ *  - data-unsaved-warning on a <form> warns before leaving with unsaved edits.
+ */
+function initFormSafety() {
+    let navigatingViaSubmit = false;
+
+    document.addEventListener('submit', (event) => {
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement) || event.defaultPrevented) {
+            return;
+        }
+        const submitter = event.submitter || null;
+        const message = submitter?.dataset.confirm || form.dataset.confirm;
+
+        if (message && !window.confirm(message)) {
+            event.preventDefault();
+            return;
+        }
+
+        if (form.method.toLowerCase() === 'get' || form.target === '_blank') {
+            return;
+        }
+
+        navigatingViaSubmit = true;
+        // Disable after the browser has captured the form data (the submitter's name/value is still sent).
+        window.setTimeout(() => {
+            const buttons = submitter ? [submitter] : form.querySelectorAll('button[type="submit"], button:not([type])');
+            buttons.forEach((button) => {
+                button.disabled = true;
+                button.classList.add('is-submitting');
+                button.setAttribute('aria-busy', 'true');
+            });
+        }, 0);
+    });
+
+    // Re-enable buttons when a page is restored from the back/forward cache.
+    window.addEventListener('pageshow', (event) => {
+        if (!event.persisted) {
+            return;
+        }
+        navigatingViaSubmit = false;
+        document.querySelectorAll('button.is-submitting').forEach((button) => {
+            button.disabled = false;
+            button.classList.remove('is-submitting');
+            button.removeAttribute('aria-busy');
+        });
+    });
+
+    const guardedForms = document.querySelectorAll('form[data-unsaved-warning]');
+    if (guardedForms.length === 0) {
+        return;
+    }
+    let isDirty = false;
+    guardedForms.forEach((form) => {
+        form.addEventListener('input', () => { isDirty = true; });
+        form.addEventListener('change', () => { isDirty = true; });
+    });
+    window.addEventListener('beforeunload', (event) => {
+        if (isDirty && !navigatingViaSubmit) {
+            event.preventDefault();
+            event.returnValue = '';
+        }
+    });
+}
+
+/** Clear feedback when the phone loses or regains connectivity. */
+function initNetworkBanner() {
+    let banner = null;
+    let hideTimer = null;
+
+    const show = (text, online) => {
+        if (!banner) {
+            banner = document.createElement('div');
+            banner.className = 'network-banner';
+            banner.setAttribute('role', 'status');
+            banner.setAttribute('aria-live', 'polite');
+            document.body.appendChild(banner);
+        }
+        window.clearTimeout(hideTimer);
+        banner.textContent = text;
+        banner.classList.toggle('is-online', online);
+        banner.hidden = false;
+        if (online) {
+            hideTimer = window.setTimeout(() => { banner.hidden = true; }, 3000);
+        }
+    };
+
+    window.addEventListener('offline', () => show('انقطع الاتصال بالإنترنت. لن يتم حفظ أي إجراء حتى يعود الاتصال.', false));
+    window.addEventListener('online', () => show('عاد الاتصال بالإنترنت.', true));
+}
+
+/**
+ * Hide sticky bottom action bars while the on-screen keyboard is open so they never cover the focused field.
+ */
+function initKeyboardAwareness() {
+    const textEntry = 'input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="submit"]):not([type="button"]), textarea';
+    document.addEventListener('focusin', (event) => {
+        if (isMobileViewport() && event.target.matches?.(textEntry)) {
+            document.body.classList.add('keyboard-open');
+        }
+    });
+    document.addEventListener('focusout', () => {
+        window.setTimeout(() => {
+            if (!document.activeElement?.matches?.(textEntry)) {
+                document.body.classList.remove('keyboard-open');
+            }
+        }, 50);
+    });
+}
+
+/**
+ * Chrome renders <input type="number"> in Arabic-Indic digits on lang="ar" pages, which mixes digit systems
+ * with the rest of the UI. Quantities, prices and dimensions stay in Western digits everywhere.
+ */
+function normalizeNumericInputs(root = document) {
+    root.querySelectorAll?.('input[type="number"]:not([lang])').forEach((input) => input.setAttribute('lang', 'en'));
+}
+
+function refreshScrollHints() {
+    document.querySelectorAll('.table-responsive').forEach((wrapper) => {
+        const hint = wrapper.previousElementSibling;
+        if (hint?.classList.contains('table-scroll-hint')) {
+            hint.classList.toggle('is-overflowing', wrapper.scrollWidth > wrapper.clientWidth + 2);
+        }
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+    initFormSafety();
+    initNetworkBanner();
+    initKeyboardAwareness();
+    normalizeNumericInputs();
+    new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+                normalizeNumericInputs(node.matches?.('input[type="number"]') ? node.parentElement : node);
+            }
+        }));
+    }).observe(document.body, { childList: true, subtree: true });
+
     document.querySelectorAll('.table-responsive').forEach((wrapper, index) => {
         wrapper.setAttribute('tabindex', '0');
         wrapper.setAttribute('role', 'region');
@@ -425,6 +659,8 @@ document.addEventListener('DOMContentLoaded', () => {
             wrapper.before(hint);
         }
     });
+    refreshScrollHints();
+    window.addEventListener('resize', refreshScrollHints);
 
     document.querySelectorAll('td .d-inline-flex').forEach((actions) => actions.classList.add('table-actions'));
     document.querySelectorAll('input[placeholder]:not([aria-label])').forEach((input) => input.setAttribute('aria-label', input.placeholder));

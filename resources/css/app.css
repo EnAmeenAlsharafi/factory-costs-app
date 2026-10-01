@@ -4,6 +4,7 @@
 @import '@fontsource/cairo/700.css';
 @import 'bootstrap/dist/css/bootstrap.rtl.min.css';
 @import '@fortawesome/fontawesome-free/css/all.min.css';
+@import './reports.css';
 
 :root {
     --factory-font: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
@@ -288,15 +289,18 @@ code { max-width: 100%; overflow-wrap: anywhere; }
 }
 @media (max-width: 767.98px) {
     .app-sidebar-column { width: 0; }
+    /* RTL: the drawer lives on the inline-start (right) edge and slides fully off-screen to the right. */
     .sidebar-wrapper {
         position: fixed;
         inset-block: 0;
-        inset-inline-start: auto;
-        inset-inline-end: 0;
+        inset-inline-start: 0;
+        inset-inline-end: auto;
         width: min(88vw, 304px) !important;
         transform: translateX(105%);
+        visibility: hidden;
+        transition: transform .25s ease, visibility 0s linear .25s;
     }
-    .sidebar-wrapper.mobile-open { transform: translateX(0); }
+    .sidebar-wrapper.mobile-open { transform: translateX(0); visibility: visible; transition: transform .25s ease, visibility 0s; }
     .sidebar-wrapper .sidebar-text, .sidebar-wrapper .sidebar-section-header { display: initial !important; }
     .sidebar-wrapper .sidebar-nav-link { justify-content: flex-start; }
     .top-header { min-height: 62px; }
@@ -381,4 +385,452 @@ code { max-width: 100%; overflow-wrap: anywhere; }
     gap: 0.35rem;
 }
 
+/* =====================================================================
+   Stage 16 — Mobile Responsive Operational UI system
+   Breakpoints (Bootstrap-aligned, see docs/18-mobile-responsive-operational-web-app.md):
+     mobile  < 768px   (max-width: 767.98px)
+     tablet  768–991px
+     desktop >= 992px
+   ===================================================================== */
+
+:root {
+    --mobile-action-bar-height: 76px;
+    --tone-primary: #1d4ed8;  --tone-primary-bg: #dbeafe;
+    --tone-info: #0e7490;     --tone-info-bg: #cffafe;
+    --tone-success: #15803d;  --tone-success-bg: #dcfce7;
+    --tone-warning: #92400e;  --tone-warning-bg: #fef3c7;
+    --tone-danger: #b91c1c;   --tone-danger-bg: #fee2e2;
+    --tone-secondary: #475569; --tone-secondary-bg: #e2e8f0;
+    --tone-dark: #f8fafc;     --tone-dark-bg: #334155;
+}
+
+.min-w-0 { min-width: 0 !important; }
+.ltr-isolate { direction: ltr; unicode-bidi: isolate; display: inline-block; }
+
+/* ---- Status chip: text + icon + color (never color alone) ---- */
+.status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .2rem .6rem;
+    border-radius: 999px;
+    font-size: .8rem;
+    font-weight: 700;
+    line-height: 1.5;
+    white-space: nowrap;
+    color: var(--tone-secondary);
+    background: var(--tone-secondary-bg);
+}
+.status-chip-lg { padding: .35rem .85rem; font-size: .9rem; }
+.status-chip-primary { color: var(--tone-primary); background: var(--tone-primary-bg); }
+.status-chip-info { color: var(--tone-info); background: var(--tone-info-bg); }
+.status-chip-success { color: var(--tone-success); background: var(--tone-success-bg); }
+.status-chip-warning { color: var(--tone-warning); background: var(--tone-warning-bg); }
+.status-chip-danger { color: var(--tone-danger); background: var(--tone-danger-bg); }
+.status-chip-dark { color: var(--tone-dark); background: var(--tone-dark-bg); }
+.status-chip-secondary { color: var(--tone-secondary); background: var(--tone-secondary-bg); }
+.rework-flag {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .15rem .55rem; border-radius: .4rem;
+    color: #fff; background: #b45309; font-size: .78rem; font-weight: 700;
+}
+
+/* ---- Task card: tappable operational record ---- */
+.task-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: .6rem;
+    padding: .9rem 1rem;
+    background: var(--factory-surface);
+    border: 1px solid var(--factory-border);
+    border-inline-start: 4px solid var(--factory-border);
+    border-radius: .85rem;
+    box-shadow: 0 2px 8px rgba(15,23,42,.045);
+}
+.task-card.tone-warning { border-inline-start-color: #f59e0b; }
+.task-card.tone-info { border-inline-start-color: #06b6d4; }
+.task-card.tone-primary { border-inline-start-color: #3b82f6; }
+.task-card.tone-success { border-inline-start-color: #22c55e; }
+.task-card.tone-danger { border-inline-start-color: #ef4444; }
+.task-card.is-rework { border-inline-start-color: #b45309; background: #fffbeb; }
+.task-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: .5rem; }
+.task-card-title { margin: 0; font-size: 1.02rem; font-weight: 700; color: var(--factory-text); line-height: 1.4; }
+.task-card-ref { font-size: .78rem; color: var(--factory-muted); }
+.task-card-meta { display: flex; flex-wrap: wrap; gap: .35rem .9rem; font-size: .875rem; color: #334155; }
+.task-card-meta > span { display: inline-flex; align-items: center; gap: .35rem; }
+.task-card-meta i { color: #94a3b8; width: 1rem; text-align: center; }
+.task-card-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: .5rem; }
+.task-card-actions .btn { min-height: 48px; font-weight: 700; }
+.task-list { display: grid; gap: .75rem; }
+.color-dot { display: inline-block; width: .85rem; height: .85rem; border-radius: 50%; border: 1px solid rgba(15,23,42,.25); vertical-align: middle; }
+
+/* ---- Quantity progress block (target / done / remaining) ---- */
+.qty-trio { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; text-align: center; }
+.qty-trio > div { padding: .5rem .25rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: .6rem; }
+.qty-trio small { display: block; color: var(--factory-muted); font-size: .75rem; }
+.qty-trio strong { display: block; font-size: 1.35rem; line-height: 1.3; color: var(--factory-text); }
+.qty-trio .is-remaining { background: #fffbeb; border-color: #fde68a; }
+.qty-trio .is-remaining strong { color: #92400e; }
+
+/* ---- Responsive details list (label/value) ---- */
+.detail-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .75rem 1rem; margin: 0; }
+.detail-list > div { min-width: 0; }
+.detail-list dt { margin: 0 0 .1rem; color: var(--factory-muted); font-size: .78rem; font-weight: 600; }
+.detail-list dd { margin: 0; color: var(--factory-text); font-weight: 600; overflow-wrap: anywhere; }
+.detail-list .span-all { grid-column: 1 / -1; }
+
+/* ---- Segmented status tabs (horizontal chips with counts) ---- */
+.segment-tabs {
+    display: flex;
+    gap: .4rem;
+    overflow-x: auto;
+    padding-bottom: .25rem;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+.segment-tabs::-webkit-scrollbar { display: none; }
+.segment-tab {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: .4rem;
+    min-height: 44px;
+    padding: .4rem .9rem;
+    color: #334155;
+    background: #fff;
+    border: 1px solid var(--factory-border);
+    border-radius: 999px;
+    font-size: .875rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+}
+.segment-tab:hover { color: var(--factory-text); background: #f8fafc; }
+.segment-tab.active { color: #fff; background: #172033; border-color: #172033; }
+.segment-tab .count { display: inline-grid; min-width: 1.5rem; height: 1.5rem; padding: 0 .35rem; place-items: center; border-radius: 999px; background: rgba(15,23,42,.08); font-size: .75rem; }
+.segment-tab.active .count { background: rgba(255,255,255,.2); }
+
+/* ---- Compact metric tile (dashboard "what do I need to do now") ---- */
+.metric-tile {
+    display: flex;
+    align-items: center;
+    gap: .85rem;
+    height: 100%;
+    min-height: 76px;
+    padding: .85rem 1rem;
+    color: var(--factory-text);
+    background: var(--factory-surface);
+    border: 1px solid var(--factory-border);
+    border-radius: .85rem;
+    box-shadow: 0 2px 8px rgba(15,23,42,.045);
+    text-decoration: none;
+}
+a.metric-tile:hover { color: var(--factory-text); border-color: #94a3b8; }
+.metric-tile-icon { display: grid; flex: 0 0 44px; width: 44px; height: 44px; place-items: center; border-radius: .7rem; font-size: 1.1rem; }
+.metric-tile-value { font-size: 1.6rem; font-weight: 700; line-height: 1.1; }
+.metric-tile-label { display: block; color: #475569; font-size: .85rem; font-weight: 600; }
+.metric-tile.is-attention { border-color: #fcd34d; background: #fffdf5; }
+.metric-tile.is-zero .metric-tile-value { color: #94a3b8; }
+.tone-bg-primary { color: var(--tone-primary); background: var(--tone-primary-bg); }
+.tone-bg-info { color: var(--tone-info); background: var(--tone-info-bg); }
+.tone-bg-success { color: var(--tone-success); background: var(--tone-success-bg); }
+.tone-bg-warning { color: var(--tone-warning); background: var(--tone-warning-bg); }
+.tone-bg-danger { color: var(--tone-danger); background: var(--tone-danger-bg); }
+.tone-bg-secondary { color: var(--tone-secondary); background: var(--tone-secondary-bg); }
+
+/* ---- Contextual action bar (x-mobile-action-bar) ---- */
+.mobile-action-bar-spacer { display: none; }
+.mobile-action-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .6rem; }
+
+/* ---- Compact sticky record header (reference + status + back) ---- */
+.record-header { display: flex; align-items: center; gap: .75rem; }
+.record-header-back { flex: 0 0 auto; }
+.record-header-main { flex: 1 1 auto; min-width: 0; }
+.record-header-title { margin: 0; font-size: clamp(1.05rem, 2.2vw, 1.35rem); font-weight: 700; overflow-wrap: anywhere; }
+
+/* ---- Filter sheet (x-filter-sheet) ---- */
+@media (min-width: 768px) {
+    .filter-sheet { padding: .85rem; background: var(--factory-surface); border: 1px solid var(--factory-border); border-radius: .85rem; margin-top: .5rem; }
+    .filter-sheet .offcanvas-header { display: none; }
+    .filter-sheet .offcanvas-body { padding: 0; }
+}
+
+/* ---- Offline / network banner ---- */
+.network-banner {
+    position: fixed;
+    inset-inline: .75rem;
+    top: calc(var(--header-height) + .5rem);
+    z-index: 1080;
+    padding: .65rem .9rem;
+    color: #fff;
+    background: #b91c1c;
+    border-radius: .7rem;
+    box-shadow: 0 8px 24px rgba(15,23,42,.25);
+    font-weight: 600;
+    text-align: center;
+}
+.network-banner.is-online { background: #15803d; }
+
+/* ---- Submitting state for guarded forms ---- */
+.btn.is-submitting { pointer-events: none; opacity: .75; }
+
+/* ---- Typeahead: accessible states & touch-friendly options ---- */
+.typeahead-item[aria-selected="true"] { background-color: #e2e8f0; }
+.typeahead-status { padding: .6rem .9rem; color: var(--factory-muted); font-size: .85rem; text-align: center; }
+.typeahead-status.is-error { color: var(--tone-danger); }
+.typeahead-dropdown.is-above { box-shadow: 0 -10px 25px rgba(15, 23, 42, 0.18); }
+
+/* ---- Sticky first column for dense analytical tables (Type B) ---- */
+.table-sticky-first > thead > tr > th:first-child,
+.table-sticky-first > tbody > tr > td:first-child {
+    position: sticky;
+    inset-inline-start: 0;
+    z-index: 2;
+    background: #fff;
+    box-shadow: inset -1px 0 0 var(--factory-border);
+}
+.table-sticky-first > thead > tr > th:first-child { background: #f5f7fa; z-index: 3; }
+
+/* ---- Any touch screen (phones and tablets): comfortable 44px targets ---- */
+@media (pointer: coarse) {
+    .btn, .btn-sm { min-height: 44px; }
+    .nav-tabs .nav-link, .nav-pills .nav-link, .page-link { min-height: 44px; }
+    .table-actions .btn, td .btn-sm { min-width: 44px; min-height: 44px; }
+}
+
+/* ---- Tablet (768–991px): keep the shell, tighten density ---- */
+@media (min-width: 768px) and (max-width: 991.98px) {
+    .app-content-container { padding-inline: .85rem; }
+}
+
+/* ---- Mobile (< 768px) ---- */
+@media (max-width: 767.98px) {
+    body { font-size: 1rem; }
+
+    /* iOS Safari zooms any focused field below 16px — keep inputs at 16px on phones. */
+    .form-control, .form-select, .form-control-sm, .form-select-sm, .input-group-text, textarea {
+        font-size: 16px !important;
+    }
+    .form-control-sm, .form-select-sm { min-height: 44px; }
+
+    /* Touch targets >= 44px */
+    .btn, .btn-sm { min-height: 44px; }
+    .btn-sm { padding-inline: .75rem; }
+    .btn-close { width: 44px; height: 44px; padding: 0; background-size: .9rem; }
+    .form-check { min-height: 44px; display: flex; align-items: center; gap: .5rem; }
+    .form-check .form-check-input { width: 1.4rem; height: 1.4rem; margin: 0; flex: 0 0 auto; float: none; }
+    .form-switch .form-check-input { width: 2.6rem; }
+    .dropdown-item { min-height: 44px; display: flex; align-items: center; }
+    .page-link { min-width: 44px; min-height: 44px; display: grid; place-items: center; }
+    .nav-tabs .nav-link, .nav-pills .nav-link { min-height: 44px; }
+
+    /* Horizontal tab strips scroll instead of wrapping into tall stacks */
+    .nav-tabs { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+    .nav-tabs .nav-link { white-space: nowrap; }
+
+    /* Pages that still use container-fluid px-4 get phone gutters */
+    .app-content-container > .container-fluid,
+    .app-content-container > .container { padding-inline: 0 !important; }
+
+    /* Headings inside legacy page headers */
+    .app-content-container h1.h3, .app-content-container h4.fw-bold { font-size: 1.2rem; }
+
+    /* Record header sticks under the top bar */
+    .record-header-sticky {
+        position: sticky;
+        top: 62px;
+        z-index: 1010;
+        margin-inline: -.75rem;
+        padding: .55rem .75rem;
+        background: rgba(244,247,251,.97);
+        border-bottom: 1px solid var(--factory-border);
+        backdrop-filter: blur(4px);
+    }
+
+    /* Filter sheet body */
+    .filter-sheet.offcanvas-bottom { height: auto; max-height: 85dvh; border-radius: 1rem 1rem 0 0; }
+    .filter-sheet .offcanvas-body { padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px)); }
+    .filter-sheet .filter-sheet-actions { position: sticky; bottom: 0; padding-top: .5rem; background: #fff; }
+
+    /* Complex modals become full-height sheets with internal scroll */
+    .modal-dialog-scrollable .modal-content { max-height: 100dvh; }
+    .modal-fullscreen-sm-down .modal-footer { padding-bottom: calc(.75rem + env(safe-area-inset-bottom, 0px)); }
+    .modal-footer .btn { flex: 1 1 0; min-height: 48px; }
+
+    /* Typeahead options are large, readable and never clipped */
+    .typeahead-item { min-height: 48px; padding: .6rem .9rem; font-size: .95rem; }
+    .typeahead-item .text-truncate { white-space: normal; overflow: visible; }
+
+    /* Type C editable tables → one stacked card per line (same DOM, no duplicated inputs) */
+    .table-stack-sm { min-width: 0 !important; border: 0 !important; }
+    .table-stack-sm > thead { display: none; }
+    .table-stack-sm > tbody, .table-stack-sm > tfoot { display: grid; gap: .75rem; }
+    .table-stack-sm > tbody > tr, .table-stack-sm > tfoot > tr {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: .5rem .75rem;
+        padding: .85rem;
+        background: #fff;
+        border: 1px solid var(--factory-border);
+        border-radius: .85rem;
+        box-shadow: 0 2px 8px rgba(15,23,42,.045);
+    }
+    .table-stack-sm > tbody > tr > td, .table-stack-sm > tfoot > tr > td {
+        display: block;
+        grid-column: 1 / -1;
+        min-width: 0 !important;
+        width: auto !important;
+        padding: 0 !important;
+        border: 0 !important;
+        background: transparent !important;
+        text-align: start !important;
+    }
+    .table-stack-sm > tbody > tr > td.stack-half { grid-column: span 1; }
+    .table-stack-sm > tbody > tr > td[data-label]::before {
+        content: attr(data-label);
+        display: block;
+        margin-bottom: .2rem;
+        color: #475569;
+        font-size: .8rem;
+        font-weight: 700;
+    }
+    .table-stack-sm > tbody > tr > td.stack-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: .5rem;
+        margin: -.85rem -.85rem .25rem;
+        padding: .6rem .85rem !important;
+        background: #f8fafc !important;
+        border-bottom: 1px solid var(--factory-border) !important;
+        border-radius: .85rem .85rem 0 0;
+        font-weight: 700;
+    }
+    .table-stack-sm > tbody > tr > td.stack-hide-sm { display: none; }
+    .table-stack-sm > tbody > tr.is-collapsed > td:not(.stack-head) { display: none; }
+    .table-stack-sm > tbody > tr { scroll-margin-top: 76px; }
+    .table-stack-sm .remove-line-btn { width: 100%; }
+    .table-stack-sm > tbody > tr > td[colspan] { padding: 1.5rem .5rem !important; text-align: center !important; }
+    .table-responsive:has(> .table-stack-sm) { overflow: visible; }
+
+    /* Type A simple lists: hide the desktop table when a card list is provided */
+    .has-mobile-cards { display: none !important; }
+
+    /* Keep focused search fields clear of the sticky top header when scrolled into view */
+    .typeahead-container .form-control { scroll-margin-top: 76px; }
+}
+/* Contextual action bar: fixed to the bottom on phones (portrait < 768px, or landscape with a short viewport),
+   respecting the safe area; hidden while the on-screen keyboard is open. */
+@media (min-width: 768px) and (max-width: 991.98px) and (max-height: 500px) {
+    /* Landscape phones keep the sidebar column, so the bar sticks to the bottom of the content column instead. */
+    .mobile-action-bar {
+        position: sticky;
+        bottom: 0;
+        z-index: 1030;
+        flex-wrap: nowrap;
+        padding: .5rem .75rem calc(.5rem + env(safe-area-inset-bottom, 0px));
+        background: rgba(255,255,255,.98);
+        border-top: 1px solid var(--factory-border);
+        box-shadow: 0 -6px 20px rgba(15,23,42,.1);
+    }
+    .mobile-action-bar > *, .mobile-action-bar form { flex: 1 1 0; min-width: 0; }
+    .mobile-action-bar .btn { width: 100%; min-height: 46px; font-weight: 700; }
+    body.keyboard-open .mobile-action-bar { position: static; }
+}
+@media (max-width: 767.98px) {
+    .mobile-action-bar-spacer { display: block; height: calc(var(--mobile-action-bar-height) + env(safe-area-inset-bottom, 0px)); }
+    .mobile-action-bar {
+        position: fixed;
+        inset-inline: 0;
+        bottom: 0;
+        z-index: 1030;
+        flex-wrap: nowrap;
+        padding: .65rem calc(.75rem + env(safe-area-inset-right, 0px)) calc(.65rem + env(safe-area-inset-bottom, 0px)) calc(.75rem + env(safe-area-inset-left, 0px));
+        background: rgba(255,255,255,.98);
+        border-top: 1px solid var(--factory-border);
+        box-shadow: 0 -6px 20px rgba(15,23,42,.1);
+    }
+    .mobile-action-bar > *, .mobile-action-bar form { flex: 1 1 0; min-width: 0; }
+    .mobile-action-bar .btn { width: 100%; min-height: 50px; font-weight: 700; }
+    body.keyboard-open .mobile-action-bar,
+    body.keyboard-open .mobile-action-bar-spacer { display: none; }
+}
+
+/* Landscape phones (short viewport): task/action sheets use the whole screen like in portrait */
+@media (max-height: 500px) and (max-width: 991.98px) {
+    .modal-fullscreen-sm-down { width: 100vw; max-width: none; height: 100%; margin: 0; }
+    .modal-fullscreen-sm-down .modal-content { height: 100%; border: 0; border-radius: 0; }
+    .modal-fullscreen-sm-down .modal-body { overflow-y: auto; }
+}
+
+/* Operational lists whose primary action sits in the last column: cards up to tablet/landscape width (< 992px) */
+@media (max-width: 991.98px) {
+    .has-mobile-cards-lg { display: none !important; }
+}
+@media (min-width: 768px) and (max-width: 991.98px) {
+    .task-list.mobile-cards-only-lg { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 992px) {
+    .mobile-cards-only-lg { display: none !important; }
+}
+@media (min-width: 768px) {
+    .mobile-cards-only { display: none !important; }
+    /* Cells that only exist as the header of a stacked mobile card */
+    .table-stack-sm .stack-only { display: none !important; }
+}
+@media (max-width: 767.98px) {
+    .table-scroll-hint { display: none; }
+    .table-scroll-hint.is-overflowing { display: block; }
+}
+
+
+
+/* =====================================================================
+   Stage 14 — Management reporting
+   ===================================================================== */
+.report-row-alert > td { background: #fff5f5 !important; }
+.report-kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: .75rem; }
+.report-section-title { display: flex; align-items: center; gap: .5rem; margin: 0 0 .6rem; font-size: 1rem; font-weight: 700; color: var(--factory-text); }
+.report-section-title i { color: var(--factory-accent-hover); }
+.report-note { color: var(--factory-muted); font-size: .8rem; }
+.print-only { display: none; }
+
+/* Lightweight bar chart (CSS only — no chart library, no CDN). Width is set inline from the prepared value. */
+.report-bars { display: grid; gap: .45rem; }
+.report-bar { display: grid; grid-template-columns: minmax(110px, 30%) 1fr auto; align-items: center; gap: .6rem; font-size: .85rem; }
+.report-bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.report-bar-track { height: .85rem; background: #eef2f7; border-radius: 999px; overflow: hidden; }
+.report-bar-fill { height: 100%; background: #1d4ed8; border-radius: 999px; }
+.report-bar-fill.is-negative { background: #b91c1c; }
+.report-bar-fill.tone-muted { background: #94a3b8; }
+.report-bar-value { font-weight: 700; white-space: nowrap; }
+.report-stack { display: flex; height: 1.4rem; border-radius: .5rem; overflow: hidden; background: #eef2f7; }
+.report-stack > span { display: block; height: 100%; min-width: 2px; }
+.report-legend { display: flex; flex-wrap: wrap; gap: .35rem .9rem; font-size: .8rem; margin-top: .45rem; }
+.report-legend i { display: inline-block; width: .7rem; height: .7rem; border-radius: 2px; margin-inline-end: .25rem; vertical-align: middle; }
+.trend-up { color: var(--tone-success); }
+.trend-down { color: var(--tone-danger); }
+
+@media (max-width: 767.98px) {
+    .report-bar { grid-template-columns: minmax(80px, 35%) 1fr auto; font-size: .8rem; }
+    .report-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+    .report-kpis .metric-tile { min-height: 64px; padding: .6rem .7rem; }
+    .report-kpis .metric-tile-value { font-size: 1.15rem; }
+}
+
+@media print {
+    @page { size: A4 landscape; margin: 12mm; }
+    body { background: #fff !important; font-size: 11px; }
+    .app-sidebar-column, .sidebar-wrapper, .top-header, .app-footer, .mobile-backdrop, .report-no-print,
+    .mobile-action-bar, .mobile-action-bar-spacer, .network-banner, .table-scroll-hint, .alert-dismissible .btn-close { display: none !important; }
+    .print-only { display: block !important; }
+    .app-content-container { padding: 0 !important; }
+    .card-factory, .page-header-card, .table-factory-wrapper, .metric-tile { box-shadow: none !important; border-color: #cbd5e1 !important; break-inside: avoid; }
+    .table-responsive { overflow: visible !important; }
+    .table-factory { min-width: 0 !important; font-size: 10px; }
+    .table-factory > thead > tr > th, .table-factory > tbody > tr > td { padding: .3rem .4rem !important; }
+    .table-sticky-first > tbody > tr > td:first-child, .table-sticky-first > thead > tr > th:first-child { position: static !important; }
+    a { color: inherit !important; text-decoration: none !important; }
+}
 

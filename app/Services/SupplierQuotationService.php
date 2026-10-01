@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\FabricColor;
 use App\Models\Material;
 use App\Models\PurchaseRequest;
+use App\Models\PurchaseRequestLine;
 use App\Models\PurchaseRfq;
 use App\Models\PurchaseRfqSupplier;
 use App\Models\Supplier;
@@ -73,10 +75,31 @@ class SupplierQuotationService
                 $lineTotal = round($quotedQty * $unitPrice, 4);
                 $subtotal += $lineTotal;
 
+                $colorId = $lineData['fabric_color_id'] ?? null;
+                $colorCode = $lineData['fabric_color_code'] ?? null;
+                $supplierColorCode = $lineData['fabric_supplier_color_code'] ?? null;
+
+                if (! empty($lineData['purchase_request_line_id']) && ! $colorId) {
+                    $prLine = PurchaseRequestLine::find($lineData['purchase_request_line_id']);
+                    $colorId = $prLine?->fabric_color_id;
+                    $colorCode = $colorCode ?: $prLine?->fabric_color_code;
+                    $supplierColorCode = $supplierColorCode ?: $prLine?->fabric_supplier_color_code;
+                }
+
+                if ($colorId && (! $colorCode || ! $supplierColorCode)) {
+                    $color = FabricColor::find($colorId);
+                    if ($color) {
+                        $colorCode = $colorCode ?: $color->color_code;
+                        $supplierColorCode = $supplierColorCode ?: $color->supplier_color_code;
+                    }
+                }
+
                 $linesData[] = [
                     'purchase_request_line_id' => $lineData['purchase_request_line_id'] ?? null,
                     'material_id' => $material->id,
-                    'fabric_color_id' => $lineData['fabric_color_id'] ?? null,
+                    'fabric_color_id' => $colorId,
+                    'fabric_color_code' => $colorCode,
+                    'fabric_supplier_color_code' => $supplierColorCode,
                     'quoted_quantity' => $quotedQty,
                     'purchase_unit_id' => $lineData['purchase_unit_id'] ?? $material->purchase_unit_id ?? $material->base_unit_id,
                     'conversion_factor' => $conversionFactor,

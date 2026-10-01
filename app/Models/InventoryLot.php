@@ -16,6 +16,7 @@ class InventoryLot extends Model
         'material_id',
         'fabric_color_id',
         'fabric_color_code',
+        'fabric_supplier_color_code',
         'supplier_id',
         'warehouse_id',
         'receipt_line_id',

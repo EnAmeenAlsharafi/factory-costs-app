@@ -8,8 +8,8 @@
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
         <div>
             <div class="d-flex align-items-center gap-2 mb-1">
-                <a href="{{ route('receivables.customers.index') }}" class="btn btn-sm btn-outline-secondary">
-                    <i class="fas fa-arrow-right"></i>
+                <a href="{{ route('receivables.customers.index') }}" class="btn btn-sm btn-outline-secondary" aria-label="العودة لأرصدة العملاء" title="العودة لأرصدة العملاء">
+                    <i class="fas fa-arrow-right" aria-hidden="true"></i>
                 </a>
                 <h1 class="h3 fw-bold text-dark mb-0">
                     المرجع المالي للعميل: <span class="text-warning">{{ $customer->name }}</span>

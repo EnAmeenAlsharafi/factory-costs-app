@@ -2,7 +2,9 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#111827">
+    <meta name="format-detection" content="telephone=no">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>@yield('title', 'مصنع مفروشات سدير - نظام إدارة الإنتاج')</title>
@@ -50,7 +52,7 @@
                         &copy; {{ date('Y') }} <strong>مصنع مفروشات سدير</strong> - نظام إدارة الإنتاج الداخلي
                     </div>
                     <div class="text-secondary">
-                        المرحلة 3.5 &bull; واجهة تشغيل داخلية
+                        واجهة تشغيل داخلية
                     </div>
                 </div>
             </footer>
@@ -61,7 +63,6 @@
     <!-- Confirmation Modal Component -->
     @include('partials.modal')
 
-    <script src="{{ asset('js/app.js') }}" defer></script>
     @stack('scripts')
 </body>
 </html>

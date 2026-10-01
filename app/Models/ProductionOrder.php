@@ -31,6 +31,7 @@ class ProductionOrder extends Model
         'fabric_material_id',
         'fabric_color_id',
         'fabric_color_code',
+        'fabric_supplier_color_code',
         'ordered_quantity',
         'released_quantity',
         'completed_quantity',

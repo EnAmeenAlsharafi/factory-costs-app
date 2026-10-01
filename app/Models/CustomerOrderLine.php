@@ -27,6 +27,7 @@ class CustomerOrderLine extends Model
         'fabric_material_id',
         'fabric_color_id',
         'fabric_color_code',
+        'fabric_supplier_color_code',
         'fabric_notes',
         'quantity',
         'unit_price',

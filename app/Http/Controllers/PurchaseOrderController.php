@@ -65,7 +65,7 @@ class PurchaseOrderController extends Controller
 
         $suppliers = Supplier::where('is_active', true)->get();
         $warehouses = Warehouse::active()->get();
-        $materials = Material::where('is_active', true)->with('unitOfMeasure', 'fabricColors')->get();
+        $materials = Material::where('is_active', true)->with('baseUnit', 'fabricColors')->get();
         $units = UnitOfMeasure::where('is_active', true)->get();
 
         return view('purchasing.orders.create', compact('purchaseRequest', 'supplierQuotation', 'suppliers', 'warehouses', 'materials', 'units'));
@@ -96,7 +96,7 @@ class PurchaseOrderController extends Controller
             'warehouse',
             'createdByUser',
             'approvedByUser',
-            'lines.material.unitOfMeasure',
+            'lines.material.baseUnit',
             'lines.fabricColor',
             'lines.purchaseUnit',
             'materialReceipts.lines',

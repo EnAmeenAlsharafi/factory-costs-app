@@ -17,6 +17,8 @@ class PurchaseOrderLine extends Model
         'supplier_quotation_line_id',
         'material_id',
         'fabric_color_id',
+        'fabric_color_code',
+        'fabric_supplier_color_code',
         'ordered_quantity',
         'purchase_unit_id',
         'conversion_factor',

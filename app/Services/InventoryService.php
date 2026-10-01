@@ -35,7 +35,12 @@ class InventoryService
         }
 
         return DB::transaction(function () use ($receipt, $userObj) {
-            foreach ($receipt->lines as $line) {
+            $lockedReceipt = MaterialReceipt::where('id', $receipt->id)->lockForUpdate()->firstOrFail();
+            if (! $lockedReceipt->isDraft()) {
+                throw new Exception('لا يمكن اعتماد إيصال استلام غير مسودة.');
+            }
+
+            foreach ($lockedReceipt->lines as $line) {
                 // Enforce Fabric color policy
                 $isFabric = strtoupper($line->material?->category?->code ?? '') === 'FABRIC';
                 $colorCode = ! empty($line->fabric_color_code) ? trim((string) $line->fabric_color_code) : null;
@@ -62,6 +67,11 @@ class InventoryService
                     $colorCode = FabricColor::find($colorId)?->color_code;
                 }
 
+                $supplierColorCode = ! empty($line->fabric_supplier_color_code) ? trim((string) $line->fabric_supplier_color_code) : null;
+                if ($colorId && empty($supplierColorCode)) {
+                    $supplierColorCode = FabricColor::find($colorId)?->supplier_color_code;
+                }
+
                 // Create Inventory Lot
                 $lotCode = DocumentNumberService::generateLotCode();
                 $lot = InventoryLot::create([
@@ -69,6 +79,7 @@ class InventoryService
                     'material_id' => $line->material_id,
                     'fabric_color_id' => $colorId,
                     'fabric_color_code' => $colorCode,
+                    'fabric_supplier_color_code' => $supplierColorCode,
                     'supplier_id' => $receipt->supplier_id,
                     'warehouse_id' => $receipt->warehouse_id,
                     'receipt_line_id' => $line->id,
@@ -90,6 +101,7 @@ class InventoryService
                     'material_id' => $line->material_id,
                     'fabric_color_id' => $colorId,
                     'fabric_color_code' => $colorCode,
+                    'fabric_supplier_color_code' => $supplierColorCode,
                     'warehouse_id' => $receipt->warehouse_id,
                     'inventory_lot_id' => $lot->id,
                     'quantity' => $line->base_quantity,
@@ -154,7 +166,9 @@ class InventoryService
                     'movement_number' => DocumentNumberService::generateMovementNumber(),
                     'movement_type' => 'ISSUE',
                     'material_id' => $line->material_id,
-                    'fabric_color_id' => $line->fabric_color_id,
+                    'fabric_color_id' => $line->fabric_color_id ?? $lot->fabric_color_id,
+                    'fabric_color_code' => $line->fabric_color_code ?? $lot->fabric_color_code,
+                    'fabric_supplier_color_code' => $line->fabric_supplier_color_code ?? $lot->fabric_supplier_color_code,
                     'warehouse_id' => $issue->warehouse_id,
                     'inventory_lot_id' => $lot->id,
                     'quantity' => $line->issued_quantity,
@@ -228,7 +242,9 @@ class InventoryService
                     'movement_number' => DocumentNumberService::generateMovementNumber(),
                     'movement_type' => 'RETURN',
                     'material_id' => $line->material_id,
-                    'fabric_color_id' => $line->fabric_color_id,
+                    'fabric_color_id' => $line->fabric_color_id ?? $lot->fabric_color_id,
+                    'fabric_color_code' => $line->fabric_color_code ?? $lot->fabric_color_code,
+                    'fabric_supplier_color_code' => $line->fabric_supplier_color_code ?? $lot->fabric_supplier_color_code,
                     'warehouse_id' => $return->warehouse_id,
                     'inventory_lot_id' => $lot->id,
                     'quantity' => $line->returned_quantity,
@@ -279,13 +295,25 @@ class InventoryService
                         $lot = InventoryLot::where('id', $line->inventory_lot_id)->lockForUpdate()->first();
                     }
 
+                    $colorId = $line->fabric_color_id ?? $lot?->fabric_color_id;
+                    $colorCode = ! empty($line->fabric_color_code) ? trim((string) $line->fabric_color_code) : $lot?->fabric_color_code;
+                    if ($colorId && empty($colorCode)) {
+                        $colorCode = FabricColor::find($colorId)?->color_code;
+                    }
+                    $supplierColorCode = ! empty($line->fabric_supplier_color_code) ? trim((string) $line->fabric_supplier_color_code) : $lot?->fabric_supplier_color_code;
+                    if ($colorId && empty($supplierColorCode)) {
+                        $supplierColorCode = FabricColor::find($colorId)?->supplier_color_code;
+                    }
+
                     if (! $lot) {
                         // Create a new lot for opening balance or unassigned positive adjustment
                         $lotCode = DocumentNumberService::generateLotCode();
                         $lot = InventoryLot::create([
                             'lot_code' => $lotCode,
                             'material_id' => $line->material_id,
-                            'fabric_color_id' => $line->fabric_color_id,
+                            'fabric_color_id' => $colorId,
+                            'fabric_color_code' => $colorCode,
+                            'fabric_supplier_color_code' => $supplierColorCode,
                             'supplier_id' => null,
                             'warehouse_id' => $adjustment->warehouse_id,
                             'received_date' => $adjustment->adjustment_date,
@@ -310,7 +338,9 @@ class InventoryService
                         'movement_number' => DocumentNumberService::generateMovementNumber(),
                         'movement_type' => $movementType,
                         'material_id' => $line->material_id,
-                        'fabric_color_id' => $line->fabric_color_id,
+                        'fabric_color_id' => $colorId,
+                        'fabric_color_code' => $colorCode,
+                        'fabric_supplier_color_code' => $supplierColorCode,
                         'warehouse_id' => $adjustment->warehouse_id,
                         'inventory_lot_id' => $lot->id,
                         'quantity' => $line->quantity,
@@ -345,11 +375,17 @@ class InventoryService
                     }
                     $lot->save();
 
+                    $colorId = $line->fabric_color_id ?? $lot->fabric_color_id;
+                    $colorCode = ! empty($line->fabric_color_code) ? trim((string) $line->fabric_color_code) : $lot->fabric_color_code;
+                    $supplierColorCode = ! empty($line->fabric_supplier_color_code) ? trim((string) $line->fabric_supplier_color_code) : $lot->fabric_supplier_color_code;
+
                     InventoryMovement::create([
                         'movement_number' => DocumentNumberService::generateMovementNumber(),
                         'movement_type' => 'ADJUSTMENT_OUT',
                         'material_id' => $line->material_id,
-                        'fabric_color_id' => $line->fabric_color_id,
+                        'fabric_color_id' => $colorId,
+                        'fabric_color_code' => $colorCode,
+                        'fabric_supplier_color_code' => $supplierColorCode,
                         'warehouse_id' => $adjustment->warehouse_id,
                         'inventory_lot_id' => $lot->id,
                         'quantity' => $line->quantity,
@@ -476,17 +512,20 @@ class InventoryService
 
             $totalCost = 0;
 
-            if (isset($data['items']) && is_array($data['items'])) {
-                foreach ($data['items'] as $item) {
-                    $lot = InventoryLot::findOrFail($item['lot_id']);
+            $items = $data['items'] ?? $data['lines'] ?? [];
+            if (is_array($items)) {
+                foreach ($items as $item) {
+                    $lotId = $item['lot_id'] ?? ($item['inventory_lot_id'] ?? null);
+                    $lot = InventoryLot::findOrFail($lotId);
                     $material = $lot->material;
-                    $issuedQty = (float) $item['quantity'];
+                    $issuedQty = (float) ($item['quantity'] ?? ($item['issued_quantity'] ?? 0));
 
                     $lineCost = $issuedQty * $lot->unit_cost;
 
                     $issue->lines()->create([
                         'inventory_lot_id' => $lot->id,
                         'material_id' => $material->id,
+                        'fabric_color_id' => $item['fabric_color_id'] ?? ($lot->fabric_color_id ?? null),
                         'base_unit_id' => $material->base_unit_id,
                         'requested_quantity' => $issuedQty,
                         'issued_quantity' => $issuedQty,
@@ -525,13 +564,17 @@ class InventoryService
                 'return_date' => $data['return_date'],
                 'notes' => $data['notes'] ?? null,
                 'status' => 'DRAFT',
+                'production_order_id' => $data['production_order_id'] ?? null,
+                'production_material_request_id' => $data['production_material_request_id'] ?? null,
             ]);
 
+            $sourceIssues = collect();
             $lines = $data['lines'] ?? $data['items'] ?? [];
             if (is_array($lines)) {
                 foreach ($lines as $item) {
                     $issueLineId = $item['original_issue_line_id'] ?? ($item['issue_line_id'] ?? null);
-                    $issueLine = $issueLineId ? MaterialIssueLine::find($issueLineId) : null;
+                    $issueLine = $issueLineId ? MaterialIssueLine::with('issue')->find($issueLineId) : null;
+                    $sourceIssues->push($issueLine?->issue);
                     $lotId = $item['inventory_lot_id'] ?? ($item['lot_id'] ?? ($issueLine?->inventory_lot_id ?? null));
                     $lot = InventoryLot::findOrFail($lotId);
                     $material = $lot->material;
@@ -549,6 +592,21 @@ class InventoryService
                         'unit_cost' => $unitCost,
                         'total_cost' => $lineCost,
                         'notes' => $item['notes'] ?? null,
+                    ]);
+                }
+            }
+
+            // A usable return reduces the actual material cost of the production order it was issued to
+            // (Stage 10 cost = posted issues − posted returns of that order). When every returned line traces back
+            // to issues of one production order, link the return to it so the authoritative cost stays correct.
+            if (! $return->production_order_id && $sourceIssues->isNotEmpty() && $sourceIssues->every(fn ($issue) => $issue !== null)) {
+                $productionOrderIds = $sourceIssues->pluck('production_order_id')->unique();
+                if ($productionOrderIds->count() === 1 && $productionOrderIds->first()) {
+                    $requestIds = $sourceIssues->pluck('production_material_request_id')->unique();
+                    $return->update([
+                        'production_order_id' => $productionOrderIds->first(),
+                        'production_material_request_id' => $return->production_material_request_id
+                            ?? ($requestIds->count() === 1 ? $requestIds->first() : null),
                     ]);
                 }
             }
@@ -602,6 +660,7 @@ class InventoryService
                         'adjustment_type' => $adjType,
                         'inventory_lot_id' => $lot?->id,
                         'material_id' => $material->id,
+                        'fabric_color_id' => $item['fabric_color_id'] ?? ($lot?->fabric_color_id ?? null),
                         'base_unit_id' => $material->base_unit_id,
                         'quantity' => $qty,
                         'unit_cost' => $unitCost,

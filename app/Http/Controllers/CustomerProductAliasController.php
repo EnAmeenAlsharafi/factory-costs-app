@@ -40,7 +40,7 @@ class CustomerProductAliasController extends Controller
 
     public function setDefault(Request $request, CustomerProductAlias $alias): RedirectResponse
     {
-        abort_if(! $request->user()->can('products.manage') && ! $request->user()->can('products.view'), 403, 'غير مصرح لك بضبط المسمى الافتراضي.');
+        abort_if(! $request->user()->can('products.manage'), 403, 'غير مصرح لك بضبط المسمى الافتراضي.');
 
         $this->productService->setDefaultAlias($alias);
 

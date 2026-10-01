@@ -17,9 +17,12 @@ class MaterialRequest extends FormRequest
     {
         $materialId = $this->route('material') ? $this->route('material')->id : null;
 
+        $category = MaterialCategory::find($this->input('material_category_id'));
+        $isFabric = $category?->code === 'FABRIC';
+
         $rules = [
-            'code' => ['required', 'string', 'max:50', Rule::unique('materials', 'code')->ignore($materialId)],
-            'name_ar' => ['required', 'string', 'max:255'],
+            'code' => [$isFabric ? 'nullable' : 'required', 'string', 'max:50', Rule::unique('materials', 'code')->ignore($materialId)],
+            'name_ar' => [$isFabric ? 'nullable' : 'required', 'string', 'max:255'],
             'name_en' => ['nullable', 'string', 'max:255'],
             'material_category_id' => ['required', 'exists:material_categories,id'],
             'base_unit_id' => ['required', 'exists:units_of_measure,id'],
@@ -29,8 +32,6 @@ class MaterialRequest extends FormRequest
             'is_active' => ['sometimes', 'boolean'],
             'notes' => ['nullable', 'string'],
         ];
-
-        $category = MaterialCategory::find($this->input('material_category_id'));
 
         if ($category?->code === 'WOOD') {
             $rules['wood_type'] = ['required', 'string', 'max:100'];
@@ -47,6 +48,17 @@ class MaterialRequest extends FormRequest
             $rules['length_cm'] = ['nullable', 'numeric', 'gt:0'];
             $rules['block_dimensions'] = ['nullable', 'string', 'max:100'];
         } elseif ($category?->code === 'FABRIC') {
+            $rules['supplier_id'] = ['required', 'exists:suppliers,id'];
+            $rules['catalog_number'] = [
+                'required',
+                'string',
+                'max:100',
+                Rule::unique('fabric_material_specs', 'catalog_number')
+                    ->where('supplier_id', $this->input('supplier_id'))
+                    ->ignore($this->route('material')?->fabricSpec?->id),
+            ];
+            $rules['catalog_name'] = ['nullable', 'string', 'max:255'];
+            $rules['catalog_image'] = ['nullable', 'image', 'max:5120'];
             $rules['fabric_type'] = ['required', 'string', 'max:100'];
             $rules['width_cm'] = ['required', 'numeric', 'gt:0'];
             $rules['pattern_type'] = ['nullable', 'string', 'max:100'];
@@ -76,6 +88,9 @@ class MaterialRequest extends FormRequest
             'length_cm.gt' => 'يجب أن يكون الطول أكبر من صفر.',
             'foam_type.required' => 'يرجى إدخال نوع الإسفنج.',
             'fabric_type.required' => 'يرجى إدخال نوع القماش.',
+            'supplier_id.required' => 'يرجى اختيار مورد الكتالوج.',
+            'catalog_number.required' => 'يرجى إدخال رقم الكتالوج لدى المورد.',
+            'catalog_number.unique' => 'رقم الكتالوج هذا مسجل مسبقاً لدى هذا المورد.',
         ];
     }
 }

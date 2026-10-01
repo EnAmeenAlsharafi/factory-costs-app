@@ -109,7 +109,7 @@ class ProductionOrderController extends Controller
             'recipeVersion.items.material.baseUnit',
             'customerProductAlias',
             'fabricMaterial',
-            'fabricColor',
+            'fabricColor.supplierCatalogColors.catalog',
             'releasedByUser',
             'routing',
             'operations.workCenter.department',

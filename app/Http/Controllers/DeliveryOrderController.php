@@ -9,7 +9,10 @@ use App\Models\Role;
 use App\Models\User;
 use App\Services\DeliveryOrderService;
 use App\Services\FinishedGoodsService;
+use App\Services\OperationalDashboardService;
+use App\Services\OrderPaymentEligibilityService;
 use Exception;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -18,7 +21,8 @@ class DeliveryOrderController extends Controller
 {
     public function __construct(
         protected DeliveryOrderService $deliveryService,
-        protected FinishedGoodsService $finishedGoodsService
+        protected FinishedGoodsService $finishedGoodsService,
+        protected OperationalDashboardService $dashboardService
     ) {}
 
     public function index(Request $request): View
@@ -60,26 +64,76 @@ class DeliveryOrderController extends Controller
         return view('delivery.orders.index', compact('deliveryOrders', 'drivers'));
     }
 
+    /**
+     * "مهامي" filters: key => label.
+     *
+     * @var array<string, string>
+     */
+    public const MY_TASK_FILTERS = [
+        'all' => 'كل المهام المفتوحة',
+        'today' => 'اليوم',
+        'assigned' => 'جاهزة للانطلاق',
+        'out' => 'خارج للتوصيل',
+        'installation' => 'بانتظار التركيب',
+        'exceptions' => 'متعذرة / مؤجلة',
+    ];
+
     public function myTasks(Request $request): View
     {
         abort_if(! $request->user()->can('delivery.view'), 403);
 
         $user = $request->user();
-        $query = DeliveryOrder::with([
-            'customerOrder.customer',
-            'lines.productionOrder.customerOrderLine.productModel',
-            'events',
-        ]);
+        $filter = array_key_exists((string) $request->query('filter'), self::MY_TASK_FILTERS) ? (string) $request->query('filter') : 'all';
 
-        if (! $user->isAdministrator() && ! $user->hasRole('production_manager')) {
-            $query->where('assigned_user_id', $user->id);
+        $filterCounts = [];
+        foreach (array_keys(self::MY_TASK_FILTERS) as $filterKey) {
+            $filterCounts[$filterKey] = $this->myTasksQuery($user, $filterKey)->count();
         }
 
-        $myDeliveries = $query->whereIn('status', ['ASSIGNED', 'READY_FOR_DELIVERY', 'OUT_FOR_DELIVERY', 'DELIVERED'])
-            ->orderBy('scheduled_delivery_date', 'asc')
-            ->get();
+        $myDeliveries = $this->myTasksQuery($user, $filter)
+            ->with([
+                'lines.productionOrder.productModel',
+                'lines.productionOrder.fabricMaterial',
+                'lines.productionOrder.fabricColor',
+                'lines.productionOrder.customerOrderLine.productModel',
+            ])
+            ->orderByRaw('scheduled_delivery_date IS NULL')
+            ->orderBy('scheduled_delivery_date')
+            ->orderBy('id')
+            ->paginate(20)
+            ->withQueryString();
 
-        return view('delivery.orders.my_tasks', compact('myDeliveries'));
+        $filters = self::MY_TASK_FILTERS;
+
+        return view('delivery.orders.my_tasks', compact('myDeliveries', 'filter', 'filters', 'filterCounts'));
+    }
+
+    private function myTasksQuery(User $user, string $filter): Builder
+    {
+        $query = $this->dashboardService->deliveriesQueryFor($user);
+
+        return match ($filter) {
+            'today' => $query->whereIn('status', OperationalDashboardService::ACTIVE_DELIVERY_STATUSES)->whereDate('scheduled_delivery_date', today()),
+            'assigned' => $query->where('status', 'ASSIGNED'),
+            'out' => $query->where('status', 'OUT_FOR_DELIVERY'),
+            'installation' => $query->where('status', 'DELIVERED')->where('installation_required', true),
+            'exceptions' => $query->whereIn('status', ['FAILED', 'RESCHEDULED']),
+            default => $query->whereIn('status', OperationalDashboardService::ACTIVE_DELIVERY_STATUSES)
+                ->where(fn (Builder $q) => $q->where('status', '!=', 'DELIVERED')->orWhere('installation_required', true)),
+        };
+    }
+
+    public function markReady(DeliveryOrder $delivery, Request $request): RedirectResponse
+    {
+        abort_if(! $request->user()->can('delivery.create'), 403);
+
+        try {
+            $this->deliveryService->markReady($delivery, $request->user());
+
+            return back()->with('success', 'تم تحويل أمر التوصيل إلى جاهز للتوصيل.');
+        } catch (Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
     }
 
     public function create(Request $request): View
@@ -133,16 +187,50 @@ class DeliveryOrderController extends Controller
             'createdByUser',
             'dispatchedByUser',
             'lines.productionOrder.customerOrderLine.productModel',
+            'lines.productionOrder.productModel',
+            'lines.productionOrder.fabricMaterial',
+            'lines.productionOrder.fabricColor',
             'events.user',
             'returns',
         ]);
 
-        $deliveryRole = Role::where('name', 'delivery_user')->first();
-        $drivers = $deliveryRole
-            ? User::where('role_id', $deliveryRole->id)->where('is_active', true)->get()
-            : User::where('is_active', true)->get();
+        $drivers = collect();
+        if ($request->user()->can('delivery.assign')) {
+            $deliveryRole = Role::where('name', 'delivery_user')->first();
+            $drivers = $deliveryRole
+                ? User::where('role_id', $deliveryRole->id)->where('is_active', true)->get()
+                : User::where('is_active', true)->get();
+        }
 
-        return view('delivery.orders.show', compact('delivery', 'drivers'));
+        $paymentGate = $this->paymentGateFor($delivery, $request->user());
+
+        return view('delivery.orders.show', compact('delivery', 'drivers', 'paymentGate'));
+    }
+
+    /**
+     * Delivery payment gate as shown to the current user.
+     * Field staff see only whether delivery is allowed and, for COD, the amount to collect;
+     * the commercial reason (balances, credit) is limited to receivables-authorised users.
+     *
+     * @return array{eligible: bool, headline: string, detail: ?string, collect_amount: ?float}|null
+     */
+    private function paymentGateFor(DeliveryOrder $delivery, User $user): ?array
+    {
+        if (! $delivery->customerOrder || in_array($delivery->status, ['INSTALLATION_COMPLETED', 'CANCELLED'], true)) {
+            return null;
+        }
+
+        $eligibility = app(OrderPaymentEligibilityService::class)->checkDeliveryEligibility($delivery->customerOrder);
+        $isCashOnDelivery = ($eligibility['status'] ?? null) === 'ALLOWED_COD';
+
+        return [
+            'eligible' => (bool) $eligibility['eligible'],
+            'headline' => $eligibility['eligible']
+                ? ($isCashOnDelivery ? 'مسموح بالتسليم مع تحصيل المبلغ عند الاستلام' : 'مسموح بالتسليم')
+                : 'التسليم موقوف — راجع قسم التحصيل قبل الانطلاق',
+            'detail' => $user->can('receivables.view') && ! $isCashOnDelivery ? $eligibility['reason'] : null,
+            'collect_amount' => $isCashOnDelivery ? (float) $eligibility['outstanding'] : null,
+        ];
     }
 
     public function assign(DeliveryOrder $delivery, Request $request): RedirectResponse

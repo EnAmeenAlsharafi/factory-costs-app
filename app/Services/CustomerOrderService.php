@@ -5,6 +5,9 @@ namespace App\Services;
 use App\Models\CustomerOrder;
 use App\Models\CustomerOrderChange;
 use App\Models\CustomerOrderLine;
+use App\Models\FabricColor;
+use App\Models\Material;
+use App\Models\ProductionOrder;
 use App\Models\User;
 use Exception;
 use Illuminate\Support\Facades\DB;
@@ -76,8 +79,8 @@ class CustomerOrderService
                 'external_order_reference' => $data['external_order_reference'] ?? $order->external_order_reference,
                 'order_date' => $data['order_date'] ?? $order->order_date,
                 'requested_delivery_date' => $data['requested_delivery_date'] ?? $order->requested_delivery_date,
-                'priority' => $data['priority'] ?? $order->priority,
-                'payment_terms_type' => $data['payment_terms_type'] ?? $order->payment_terms_type,
+                'priority' => $data['priority'] ?? $order->priority ?? 'NORMAL',
+                'payment_terms_type' => ! empty($data['payment_terms_type']) ? $data['payment_terms_type'] : ($order->payment_terms_type ?: 'FULL_BEFORE_PRODUCTION'),
                 'deposit_required_amount' => array_key_exists('deposit_required_amount', $data) ? $data['deposit_required_amount'] : $order->deposit_required_amount,
                 'deposit_required_percent' => array_key_exists('deposit_required_percent', $data) ? $data['deposit_required_percent'] : $order->deposit_required_percent,
                 'payment_due_date' => array_key_exists('payment_due_date', $data) ? $data['payment_due_date'] : $order->payment_due_date,
@@ -87,8 +90,19 @@ class CustomerOrderService
             ]);
 
             // Audit & update lines
-            $oldLines = $order->lines->keyBy('id');
-            $order->lines()->delete();
+            $oldLines = $order->lines()->get()->keyBy('id');
+            $incomingIds = collect($linesData)->pluck('id')->filter()->all();
+
+            // Check if any line being removed has production history
+            foreach ($oldLines as $oldId => $oldLine) {
+                if (! in_array($oldId, $incomingIds)) {
+                    $hasProductionOrders = ProductionOrder::where('customer_order_line_id', $oldId)->exists();
+                    if ($hasProductionOrders) {
+                        throw new Exception("لا يمكن حذف البند #{$oldId} لأنه مرتبط بأوامر تصنيع قائمة.");
+                    }
+                    $oldLine->delete();
+                }
+            }
 
             foreach ($linesData as $line) {
                 $qty = (float) ($line['quantity'] ?? 1);
@@ -96,49 +110,55 @@ class CustomerOrderService
                 $discount = (float) ($line['discount_amount'] ?? 0);
                 $lineTotal = max(0, ($qty * $unitPrice) - $discount);
 
-                $newLine = CustomerOrderLine::create([
+                $existingLine = (! empty($line['id']) && $oldLines->has($line['id'])) ? $oldLines->get($line['id']) : null;
+                $fabricAttrs = $this->resolveFabricLineAttributes($line, $existingLine);
+
+                $linePayload = [
                     'customer_order_id' => $order->id,
-                    'product_model_id' => ! empty($line['custom_design']) ? null : ($line['product_model_id'] ?? null),
-                    'product_configuration_id' => ! empty($line['custom_design']) ? null : ($line['product_configuration_id'] ?? null),
-                    'customer_product_alias_id' => $line['customer_product_alias_id'] ?? null,
-                    'custom_design' => ! empty($line['custom_design']),
-                    'custom_design_name' => $line['custom_design_name'] ?? null,
-                    'requested_width_cm' => $line['requested_width_cm'],
-                    'requested_length_cm' => $line['requested_length_cm'],
-                    'reference_width_cm' => $line['reference_width_cm'] ?? $line['requested_width_cm'],
-                    'reference_length_cm' => $line['reference_length_cm'] ?? $line['requested_length_cm'],
-                    'has_storage' => ! empty($line['has_storage']),
-                    'fabric_supplier_id' => $line['fabric_supplier_id'] ?? null,
-                    'fabric_material_id' => $line['fabric_material_id'] ?? null,
-                    'fabric_color_id' => $line['fabric_color_id'] ?? null,
-                    'fabric_color_code' => $line['fabric_color_code'] ?? null,
-                    'fabric_notes' => $line['fabric_notes'] ?? null,
+                    'product_model_id' => ! empty($line['custom_design']) ? null : ($line['product_model_id'] ?? $existingLine?->product_model_id),
+                    'product_configuration_id' => ! empty($line['custom_design']) ? null : ($line['product_configuration_id'] ?? $existingLine?->product_configuration_id),
+                    'customer_product_alias_id' => $line['customer_product_alias_id'] ?? $existingLine?->customer_product_alias_id,
+                    'custom_design' => ! empty($line['custom_design'] ?? $existingLine?->custom_design),
+                    'custom_design_name' => $line['custom_design_name'] ?? $existingLine?->custom_design_name,
+                    'requested_width_cm' => $line['requested_width_cm'] ?? $existingLine?->requested_width_cm,
+                    'requested_length_cm' => $line['requested_length_cm'] ?? $existingLine?->requested_length_cm,
+                    'reference_width_cm' => $line['reference_width_cm'] ?? $existingLine?->reference_width_cm ?? ($line['requested_width_cm'] ?? $existingLine?->requested_width_cm),
+                    'reference_length_cm' => $line['reference_length_cm'] ?? $existingLine?->reference_length_cm ?? ($line['requested_length_cm'] ?? $existingLine?->requested_length_cm),
+                    'has_storage' => ! empty($line['has_storage'] ?? $existingLine?->has_storage),
+                    'fabric_supplier_id' => $fabricAttrs['fabric_supplier_id'],
+                    'fabric_material_id' => $fabricAttrs['fabric_material_id'],
+                    'fabric_color_id' => $fabricAttrs['fabric_color_id'],
+                    'fabric_color_code' => $fabricAttrs['fabric_color_code'],
+                    'fabric_supplier_color_code' => $fabricAttrs['fabric_supplier_color_code'],
+                    'fabric_notes' => $line['fabric_notes'] ?? $existingLine?->fabric_notes,
                     'quantity' => $qty,
                     'unit_price' => $unitPrice,
                     'discount_amount' => $discount,
                     'line_total' => $lineTotal,
-                    'notes' => $line['notes'] ?? null,
-                    'production_notes' => $line['production_notes'] ?? null,
-                ]);
+                    'notes' => $line['notes'] ?? $existingLine?->notes,
+                    'production_notes' => $line['production_notes'] ?? $existingLine?->production_notes,
+                ];
 
-                // Check line change against old lines if present
-                if (isset($line['id']) && isset($oldLines[$line['id']])) {
-                    $old = $oldLines[$line['id']];
-                    if ((float) $old->requested_width_cm != (float) $newLine->requested_width_cm || (float) $old->requested_length_cm != (float) $newLine->requested_length_cm) {
-                        $this->recordOrderChange($order, $newLine->id, 'dimensions', "{$old->requested_width_cm}x{$old->requested_length_cm}", "{$newLine->requested_width_cm}x{$newLine->requested_length_cm}", $updater, $wasApproved);
+                if ($existingLine) {
+                    $old = clone $existingLine;
+                    $existingLine->update($linePayload);
+                    $targetLine = $existingLine->fresh(['fabricSupplier', 'fabricMaterial']);
+
+                    if ((float) $old->requested_width_cm != (float) $targetLine->requested_width_cm || (float) $old->requested_length_cm != (float) $targetLine->requested_length_cm) {
+                        $this->recordOrderChange($order, $targetLine->id, 'dimensions', "{$old->requested_width_cm}x{$old->requested_length_cm}", "{$targetLine->requested_width_cm}x{$targetLine->requested_length_cm}", $updater, $wasApproved);
                     }
-                    if ($old->fabric_supplier_id != $newLine->fabric_supplier_id || $old->fabric_material_id != $newLine->fabric_material_id || $old->fabric_color_code != $newLine->fabric_color_code) {
+                    if ($old->fabric_supplier_id != $targetLine->fabric_supplier_id || $old->fabric_material_id != $targetLine->fabric_material_id || $old->fabric_color_code != $targetLine->fabric_color_code) {
                         $oldSupplier = $old->fabricSupplier?->name ?? 'غير محدد';
                         $oldMaterial = $old->fabricMaterial?->name_ar ?? 'غير محدد';
                         $oldColor = $old->fabric_color_code ?? 'غير محدد';
 
-                        $newSupplier = $newLine->fabricSupplier?->name ?? 'غير محدد';
-                        $newMaterial = $newLine->fabricMaterial?->name_ar ?? 'غير محدد';
-                        $newColor = $newLine->fabric_color_code ?? 'غير محدد';
+                        $newSupplier = $targetLine->fabricSupplier?->name ?? 'غير محدد';
+                        $newMaterial = $targetLine->fabricMaterial?->name_ar ?? 'غير محدد';
+                        $newColor = $targetLine->fabric_color_code ?? 'غير محدد';
 
                         $this->recordOrderChange(
                             $order,
-                            $newLine->id,
+                            $targetLine->id,
                             'fabric_and_color',
                             "{$oldSupplier} / {$oldMaterial} / {$oldColor}",
                             "{$newSupplier} / {$newMaterial} / {$newColor}",
@@ -147,11 +167,12 @@ class CustomerOrderService
                             'تعديل مواصفات القماش (المورد / النوع / اللون)'
                         );
                     }
-                    if ((float) $old->quantity != (float) $newLine->quantity) {
-                        $this->recordOrderChange($order, $newLine->id, 'quantity', (string) $old->quantity, (string) $newLine->quantity, $updater, $wasApproved);
+                    if ((float) $old->quantity != (float) $targetLine->quantity) {
+                        $this->recordOrderChange($order, $targetLine->id, 'quantity', (string) $old->quantity, (string) $targetLine->quantity, $updater, $wasApproved);
                     }
                 } else {
-                    $this->recordOrderChange($order, $newLine->id, 'line_added', null, $newLine->display_name, $updater, $wasApproved);
+                    $targetLine = CustomerOrderLine::create($linePayload);
+                    $this->recordOrderChange($order, $targetLine->id, 'line_added', null, $targetLine->display_name, $updater, $wasApproved);
                 }
             }
 
@@ -253,6 +274,79 @@ class CustomerOrderService
     }
 
     /**
+     * Resolve fabric line attributes strictly from database records (anti-tampering).
+     */
+    public function resolveFabricLineAttributes(array $line, ?CustomerOrderLine $existing = null): array
+    {
+        $fabricMaterialId = $line['fabric_material_id'] ?? $existing?->fabric_material_id;
+        $fabricColorId = $line['fabric_color_id'] ?? $existing?->fabric_color_id;
+        $fabricSupplierId = null;
+        $fabricColorCode = null;
+        $fabricSupplierColorCode = null;
+
+        if ($fabricMaterialId) {
+            $mat = Material::with(['category', 'fabricSpec'])->find($fabricMaterialId);
+            if ($mat) {
+                // If fabricSpec has supplier_id, prefer it if no line supplier is specified or to prevent tampering
+                // If line supplies a specific supplier, check if it's that supplier or linked via pivot
+                $lineSupplierId = $line['fabric_supplier_id'] ?? $existing?->fabric_supplier_id;
+                if ($lineSupplierId) {
+                    $fabricSupplierId = $lineSupplierId;
+                } elseif ($mat->fabricSpec?->supplier_id) {
+                    $fabricSupplierId = $mat->fabricSpec->supplier_id;
+                } else {
+                    $fabricSupplierId = $mat->suppliers()->first()?->id;
+                }
+
+                if ($fabricColorId) {
+                    $color = FabricColor::where('material_id', $mat->id)->find($fabricColorId);
+                    if ($color) {
+                        $fabricColorCode = $color->color_code;
+                        $fabricSupplierColorCode = $color->supplier_color_code;
+                    }
+                }
+
+                // If color code not resolved from fabricColorId, check if passed in line or existing
+                $codePassed = $line['fabric_color_code'] ?? $existing?->fabric_color_code;
+                if (! $fabricColorCode && $codePassed) {
+                    $color = FabricColor::where('material_id', $mat->id)
+                        ->where(function ($q) use ($codePassed) {
+                            $q->where('color_code', $codePassed)
+                                ->orWhere('supplier_color_code', $codePassed);
+                        })->first();
+
+                    if ($color) {
+                        $fabricColorId = $color->id;
+                        $fabricColorCode = $color->color_code;
+                        $fabricSupplierColorCode = $color->supplier_color_code;
+                    } else {
+                        $fabricColorCode = $codePassed;
+                        $fabricSupplierColorCode = $line['fabric_supplier_color_code'] ?? $existing?->fabric_supplier_color_code ?? $codePassed;
+                    }
+                }
+            }
+        }
+
+        if (! $fabricSupplierId) {
+            $fabricSupplierId = $line['fabric_supplier_id'] ?? $existing?->fabric_supplier_id;
+        }
+        if (! $fabricColorCode) {
+            $fabricColorCode = $line['fabric_color_code'] ?? $existing?->fabric_color_code;
+        }
+        if (! $fabricSupplierColorCode) {
+            $fabricSupplierColorCode = $line['fabric_supplier_color_code'] ?? $existing?->fabric_supplier_color_code ?? $fabricColorCode;
+        }
+
+        return [
+            'fabric_supplier_id' => $fabricSupplierId ? (int) $fabricSupplierId : null,
+            'fabric_material_id' => $fabricMaterialId ? (int) $fabricMaterialId : null,
+            'fabric_color_id' => $fabricColorId ? (int) $fabricColorId : null,
+            'fabric_color_code' => $fabricColorCode,
+            'fabric_supplier_color_code' => $fabricSupplierColorCode,
+        ];
+    }
+
+    /**
      * Sync lines for customer order.
      */
     protected function syncLines(CustomerOrder $order, array $linesData): void
@@ -262,6 +356,8 @@ class CustomerOrderService
             $unitPrice = (float) ($line['unit_price'] ?? 0);
             $discount = (float) ($line['discount_amount'] ?? 0);
             $lineTotal = max(0, ($qty * $unitPrice) - $discount);
+
+            $fabricAttrs = $this->resolveFabricLineAttributes($line);
 
             CustomerOrderLine::create([
                 'customer_order_id' => $order->id,
@@ -275,10 +371,11 @@ class CustomerOrderService
                 'reference_width_cm' => $line['reference_width_cm'] ?? $line['requested_width_cm'],
                 'reference_length_cm' => $line['reference_length_cm'] ?? $line['requested_length_cm'],
                 'has_storage' => ! empty($line['has_storage']),
-                'fabric_supplier_id' => $line['fabric_supplier_id'] ?? null,
-                'fabric_material_id' => $line['fabric_material_id'] ?? null,
-                'fabric_color_id' => $line['fabric_color_id'] ?? null,
-                'fabric_color_code' => $line['fabric_color_code'] ?? null,
+                'fabric_supplier_id' => $fabricAttrs['fabric_supplier_id'],
+                'fabric_material_id' => $fabricAttrs['fabric_material_id'],
+                'fabric_color_id' => $fabricAttrs['fabric_color_id'],
+                'fabric_color_code' => $fabricAttrs['fabric_color_code'],
+                'fabric_supplier_color_code' => $fabricAttrs['fabric_supplier_color_code'],
                 'fabric_notes' => $line['fabric_notes'] ?? null,
                 'quantity' => $qty,
                 'unit_price' => $unitPrice,

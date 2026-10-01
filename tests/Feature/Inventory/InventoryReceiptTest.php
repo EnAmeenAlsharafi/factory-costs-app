@@ -10,6 +10,8 @@ use App\Models\Supplier;
 use App\Models\UnitOfMeasure;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Services\InventoryService;
+use Exception;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -171,5 +173,43 @@ class InventoryReceiptTest extends TestCase
             'unit_cost' => 10.0,
             'total_cost' => 1000.0,
         ]);
+    }
+
+    public function test_material_receipt_posting_is_idempotent_with_stale_requests(): void
+    {
+        $receipt = MaterialReceipt::create([
+            'receipt_number' => 'REC-IDEMPOTENT-001',
+            'supplier_id' => $this->supplier->id,
+            'warehouse_id' => $this->warehouse->id,
+            'created_by_user_id' => $this->adminUser->id,
+            'receipt_date' => now()->toDateString(),
+            'status' => 'DRAFT',
+        ]);
+        $line = $receipt->lines()->create([
+            'material_id' => $this->material->id,
+            'purchase_unit_id' => $this->roll->id,
+            'base_unit_id' => $this->material->base_unit_id,
+            'quantity_received' => 1,
+            'conversion_factor' => 50,
+            'base_quantity' => 50,
+            'unit_cost_purchase' => 500,
+            'unit_cost_base' => 10,
+            'total_cost' => 500,
+        ]);
+        $staleReceipt = MaterialReceipt::findOrFail($receipt->id);
+        $service = app(InventoryService::class);
+
+        $service->postReceipt($receipt, $this->adminUser);
+
+        try {
+            $service->postReceipt($staleReceipt, $this->adminUser);
+            $this->fail('A stale second posting attempt must be rejected.');
+        } catch (Exception $exception) {
+            $this->assertStringContainsString('غير مسودة', $exception->getMessage());
+        }
+
+        $this->assertSame(1, $line->lot()->count());
+        $this->assertSame(1, $receipt->fresh()->lines()->first()->lot()->count());
+        $this->assertSame(1, $receipt->fresh()->lines()->first()->lot->movements()->where('movement_type', 'RECEIPT')->count());
     }
 }

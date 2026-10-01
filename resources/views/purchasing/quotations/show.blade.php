@@ -50,8 +50,8 @@
                                 <td class="fw-bold text-dark">{{ $line->material?->name_ar }}</td>
                                 <td>{{ number_format($line->quoted_quantity, 2) }} {{ $line->purchaseUnit?->name_ar }}</td>
                                 <td class="fw-bold">{{ number_format($line->unit_price, 2) }} SAR</td>
-                                <td>1 {{ $line->purchaseUnit?->name_ar }} = {{ number_format($line->conversion_factor, 2) }} {{ $line->material?->unitOfMeasure?->name_ar }}</td>
-                                <td class="fw-bold text-primary">{{ number_format($line->base_unit_equivalent_price, 4) }} SAR / {{ $line->material?->unitOfMeasure?->name_ar }}</td>
+                                <td>1 {{ $line->purchaseUnit?->name_ar }} = {{ number_format($line->conversion_factor, 2) }} {{ $line->material?->baseUnit?->name_ar }}</td>
+                                <td class="fw-bold text-primary">{{ number_format($line->base_unit_equivalent_price, 4) }} SAR / {{ $line->material?->baseUnit?->name_ar }}</td>
                                 <td class="fw-bold text-dark">{{ number_format($line->line_total, 2) }} SAR</td>
                             </tr>
                             @endforeach

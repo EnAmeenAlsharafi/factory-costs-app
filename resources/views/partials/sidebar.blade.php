@@ -49,6 +49,84 @@
                 </ul>
             </div>
 
+            <!-- Stage 14: Reports & management (3 entry points; every report is reached from the reports center) -->
+            @if (auth()->user() && \App\Http\Controllers\Reports\ReportsCenterController::canAccess(auth()->user()))
+                @php $isReportsActive = request()->routeIs('reports.*'); @endphp
+                <div class="sidebar-section">
+                    <button type="button"
+                            @click="toggleSection('reports', {{ $isReportsActive ? 'true' : 'false' }})"
+                            class="sidebar-section-header-btn"
+                            :aria-expanded="isSectionOpen('reports', {{ $isReportsActive ? 'true' : 'false' }})"
+                            title="طي أو توسيع قسم التقارير والإدارة">
+                        <span class="sidebar-text">التقارير والإدارة</span>
+                        <span class="sidebar-chevron-icon" x-show="!sidebarCollapsed">
+                            <i class="fas fa-chevron-down" :class="{'rotate-180': !isSectionOpen('reports', {{ $isReportsActive ? 'true' : 'false' }})}"></i>
+                        </span>
+                    </button>
+                    <ul class="nav flex-column gap-1 sidebar-sub-menu ps-0"
+                        x-show="sidebarCollapsed || isSectionOpen('reports', {{ $isReportsActive ? 'true' : 'false' }})"
+                        x-transition>
+                        <li class="nav-item">
+                            <a href="{{ route('reports.index') }}" class="sidebar-nav-link {{ $isReportsActive ? 'active' : '' }}" title="مركز التقارير">
+                                <span class="sidebar-icon"><i class="fas fa-chart-pie"></i></span>
+                                <span class="sidebar-text">مركز التقارير</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            @endif
+
+            <!-- Role-aware quick access: the user's primary daily work screens -->
+            @php
+                $sidebarUser = auth()->user();
+                $quickLinks = [];
+                if ($sidebarUser && ! $sidebarUser->isAdministrator()) {
+                    if ($sidebarUser->can('production.update_progress')) {
+                        $quickLinks[] = ['route' => 'production.queue.index', 'params' => [], 'active' => 'production.queue.*', 'icon' => 'fa-list-check', 'label' => 'مهام قسمي'];
+                    }
+                    if ($sidebarUser->can('delivery.complete')) {
+                        $quickLinks[] = ['route' => 'delivery.orders.my-tasks', 'params' => [], 'active' => 'delivery.orders.my-tasks', 'icon' => 'fa-truck-fast', 'label' => 'مهامي (التوصيل)'];
+                    }
+                    if ($sidebarUser->can('inventory.issue')) {
+                        $quickLinks[] = ['route' => 'production.material-requests.index', 'params' => [], 'active' => 'production.material-requests.*', 'icon' => 'fa-dolly', 'label' => 'طلبات صرف المواد'];
+                    }
+                    if ($sidebarUser->can('inventory.receive')) {
+                        $quickLinks[] = ['route' => 'inventory.receipts.index', 'params' => [], 'active' => 'inventory.receipts.*', 'icon' => 'fa-truck-ramp-box', 'label' => 'استلام المواد'];
+                    }
+                    if ($sidebarUser->can('inventory.view') && ! $sidebarUser->can('purchasing.view')) {
+                        $quickLinks[] = ['route' => 'inventory.balances.index', 'params' => [], 'active' => 'inventory.balances.*', 'icon' => 'fa-magnifying-glass', 'label' => 'البحث في المخزون'];
+                    }
+                    if ($sidebarUser->can('orders.review_production')) {
+                        $quickLinks[] = ['route' => 'sales.orders.index', 'params' => ['status' => 'PENDING_PRODUCTION_REVIEW'], 'active' => 'sales.orders.review', 'icon' => 'fa-clipboard-check', 'label' => 'مراجعة الطلبات'];
+                    }
+                    if ($sidebarUser->can('purchasing.view')) {
+                        $quickLinks[] = ['route' => 'purchasing.planning.index', 'params' => [], 'active' => 'purchasing.planning.*', 'icon' => 'fa-cart-flatbed', 'label' => 'نواقص المشتريات'];
+                    }
+                    if ($sidebarUser->can('receivables.payment.confirm')) {
+                        $quickLinks[] = ['route' => 'receivables.payments.index', 'params' => ['status' => 'PENDING_CONFIRMATION'], 'active' => 'receivables.payments.*', 'icon' => 'fa-money-check-dollar', 'label' => 'دفعات بانتظار التأكيد'];
+                    }
+                    if ($sidebarUser->can('orders.create')) {
+                        $quickLinks[] = ['route' => 'sales.orders.create', 'params' => [], 'active' => 'sales.orders.create', 'icon' => 'fa-cart-plus', 'label' => 'طلب عميل جديد'];
+                    }
+                    $quickLinks = array_slice($quickLinks, 0, 4);
+                }
+            @endphp
+            @if (count($quickLinks) > 0)
+                <div class="sidebar-section">
+                    <div class="sidebar-section-header sidebar-text">وصول سريع</div>
+                    <ul class="nav flex-column gap-1 mb-0 ps-0">
+                        @foreach ($quickLinks as $quickLink)
+                            <li class="nav-item">
+                                <a href="{{ route($quickLink['route'], $quickLink['params']) }}" class="sidebar-nav-link {{ request()->routeIs($quickLink['active']) ? 'active' : '' }}" title="{{ $quickLink['label'] }}">
+                                    <span class="sidebar-icon"><i class="fas {{ $quickLink['icon'] }}"></i></span>
+                                    <span class="sidebar-text">{{ $quickLink['label'] }}</span>
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
             <!-- Section 2: System Administration -->
             @php
                 $isAdminActive = request()->routeIs('users.*') || request()->routeIs('roles.*');

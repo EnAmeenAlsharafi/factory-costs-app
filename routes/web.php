@@ -44,12 +44,21 @@ use App\Http\Controllers\PurchaseRfqController;
 use App\Http\Controllers\QualityIncidentController;
 use App\Http\Controllers\QuotationController;
 use App\Http\Controllers\ReceivablesReportController;
+use App\Http\Controllers\Reports\FulfillmentReportController;
+use App\Http\Controllers\Reports\InventoryReportController;
+use App\Http\Controllers\Reports\ManufacturingReportController;
+use App\Http\Controllers\Reports\ProcurementReportController;
+use App\Http\Controllers\Reports\ProfitabilityReportController;
+use App\Http\Controllers\Reports\ReceivablesManagementReportController;
+use App\Http\Controllers\Reports\ReportsCenterController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SalesChannelController;
 use App\Http\Controllers\SemiFinishedComponentController;
 use App\Http\Controllers\StandardBedSizeController;
 use App\Http\Controllers\StockBalanceController;
 use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\SupplierFabricCatalogColorController;
+use App\Http\Controllers\SupplierFabricCatalogController;
 use App\Http\Controllers\SupplierQuotationController;
 use App\Http\Controllers\UnitOfMeasureController;
 use App\Http\Controllers\UserController;
@@ -118,14 +127,24 @@ Route::middleware('auth')->group(function () {
 
     // Material Extensions: Fabric Colors, Suppliers, Unit Conversions
     Route::post('/fabric-colors', [FabricColorController::class, 'store'])->name('fabric-colors.store');
+    Route::post('/materials/{material}/fabric-colors', [FabricColorController::class, 'store'])->name('materials.fabric-colors.store');
     Route::put('/fabric-colors/{color}', [FabricColorController::class, 'update'])->name('fabric-colors.update');
+    Route::match(['post', 'patch'], '/fabric-colors/{color}/toggle-status', [FabricColorController::class, 'toggleStatus'])->name('fabric-colors.toggle-status');
+    Route::match(['post', 'patch'], '/materials/{material}/fabric-colors/{color}/toggle-status', [FabricColorController::class, 'toggleStatus'])->name('materials.fabric-colors.toggle-status');
     Route::delete('/fabric-colors/{color}', [FabricColorController::class, 'destroy'])->name('fabric-colors.destroy');
+    Route::delete('/materials/{material}/fabric-colors/{color}', [FabricColorController::class, 'destroy'])->name('materials.fabric-colors.destroy');
 
     Route::post('/material-suppliers', [MaterialSupplierController::class, 'store'])->name('material-suppliers.store');
     Route::delete('/materials/{material}/suppliers/{supplier}', [MaterialSupplierController::class, 'destroy'])->name('material-suppliers.destroy');
 
     Route::post('/material-conversions', [MaterialUnitConversionController::class, 'store'])->name('material-conversions.store');
     Route::delete('/material-conversions/{conversion}', [MaterialUnitConversionController::class, 'destroy'])->name('material-conversions.destroy');
+
+    // Supplier Fabric Catalogs (Legacy Compatibility)
+    Route::post('/supplier-fabric-catalogs', [SupplierFabricCatalogController::class, 'store'])->name('supplier-fabric-catalogs.store');
+    Route::delete('/supplier-fabric-catalogs/{catalog}', [SupplierFabricCatalogController::class, 'destroy'])->name('supplier-fabric-catalogs.destroy');
+    Route::post('/supplier-fabric-catalog-colors', [SupplierFabricCatalogColorController::class, 'store'])->name('supplier-fabric-catalog-colors.store');
+    Route::delete('/supplier-fabric-catalog-colors/{catalogColor}', [SupplierFabricCatalogColorController::class, 'destroy'])->name('supplier-fabric-catalog-colors.destroy');
 
     // Stage 9 & 10: Work Centers, Production Routing, Orders, WIP, Consumption, Quality & Waste
     Route::prefix('production')->name('production.')->group(function () {
@@ -297,10 +316,14 @@ Route::middleware('auth')->group(function () {
 
         // Dynamic recipe routes must remain after the static module prefixes.
         Route::get('/{recipe}', [ManufacturingRecipeController::class, 'show'])->name('show');
+        Route::get('/{recipe}/edit', [ManufacturingRecipeController::class, 'editRecipe'])->name('edit');
+        Route::put('/{recipe}', [ManufacturingRecipeController::class, 'updateRecipe'])->name('update');
+        Route::delete('/{recipe}', [ManufacturingRecipeController::class, 'destroy'])->name('destroy');
         Route::get('/{recipe}/versions/{version}/edit', [ManufacturingRecipeController::class, 'edit'])->name('versions.edit');
         Route::put('/{recipe}/versions/{version}', [ManufacturingRecipeController::class, 'updateVersion'])->name('versions.update');
         Route::post('/{recipe}/versions/{version}/approve', [ManufacturingRecipeController::class, 'approve'])->name('versions.approve');
         Route::post('/{recipe}/versions/{version}/copy', [ManufacturingRecipeController::class, 'copyVersion'])->name('versions.copy');
+        Route::delete('/{recipe}/versions/{version}', [ManufacturingRecipeController::class, 'destroyVersion'])->name('versions.destroy');
     });
 
     // Stage 11: Finished Goods, Delivery & Installation, and Customer Returns
@@ -318,6 +341,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/orders/create', [DeliveryOrderController::class, 'create'])->name('orders.create');
         Route::post('/orders', [DeliveryOrderController::class, 'store'])->name('orders.store');
         Route::get('/orders/{delivery}', [DeliveryOrderController::class, 'show'])->name('orders.show');
+        Route::post('/orders/{delivery}/ready', [DeliveryOrderController::class, 'markReady'])->name('orders.ready');
         Route::post('/orders/{delivery}/assign', [DeliveryOrderController::class, 'assign'])->name('orders.assign');
         Route::post('/orders/{delivery}/dispatch', [DeliveryOrderController::class, 'dispatch'])->name('orders.dispatch');
         Route::post('/orders/{delivery}/complete', [DeliveryOrderController::class, 'complete'])->name('orders.complete');
@@ -382,9 +406,31 @@ Route::middleware('auth')->group(function () {
         })->name('aliases');
     });
 
-    Route::get('/reports', function () {
-        return view('placeholders.module', ['title' => 'التقارير الإدارية والتكلفة (Reports & Costing)']);
-    })->name('reports.index');
+    // Stage 14: Management reporting & operational contribution (read-only analytics)
+    Route::prefix('reports')->name('reports.')->group(function () {
+        Route::get('/', [ReportsCenterController::class, 'index'])->name('index');
+        Route::get('/management', [ReportsCenterController::class, 'dashboard'])->name('dashboard');
+        Route::get('/exceptions', [ReportsCenterController::class, 'exceptions'])->name('exceptions');
+
+        Route::get('/profitability/orders', [ProfitabilityReportController::class, 'orders'])->name('profitability.orders');
+        Route::get('/profitability/orders/{order}', [ProfitabilityReportController::class, 'showOrder'])->name('profitability.orders.show');
+        Route::get('/profitability/products', [ProfitabilityReportController::class, 'products'])->name('profitability.products');
+        Route::get('/profitability/channels', [ProfitabilityReportController::class, 'channels'])->name('profitability.channels');
+        Route::get('/profitability/customers', [ProfitabilityReportController::class, 'customers'])->name('profitability.customers');
+
+        Route::get('/production/variance', [ManufacturingReportController::class, 'variance'])->name('production.variance');
+        Route::get('/production/variance/{productionOrder}', [ManufacturingReportController::class, 'showVariance'])->name('production.variance.show');
+        Route::get('/production/recipes', [ManufacturingReportController::class, 'recipes'])->name('production.recipes');
+        Route::get('/production/cost-structure', [ManufacturingReportController::class, 'costStructure'])->name('production.cost-structure');
+        Route::get('/production/quality', [ManufacturingReportController::class, 'quality'])->name('production.quality');
+        Route::get('/production/departments', [ManufacturingReportController::class, 'departments'])->name('production.departments');
+
+        Route::get('/inventory', [InventoryReportController::class, 'index'])->name('inventory');
+        Route::get('/procurement', [ProcurementReportController::class, 'index'])->name('procurement');
+        Route::get('/procurement/price-history', [ProcurementReportController::class, 'priceHistory'])->name('procurement.price-history');
+        Route::get('/fulfillment', [FulfillmentReportController::class, 'index'])->name('fulfillment');
+        Route::get('/receivables', [ReceivablesManagementReportController::class, 'index'])->name('receivables');
+    });
 
     Route::get('/settings', function () {
         return view('placeholders.module', ['title' => 'إعدادات النظام والقياسات (System Settings)']);
@@ -427,5 +473,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/product-configurations', [SearchApiController::class, 'productConfigurations'])->name('product-configurations');
         Route::get('/suppliers', [SearchApiController::class, 'suppliers'])->name('suppliers');
         Route::get('/fabric-materials', [SearchApiController::class, 'fabricMaterials'])->name('fabric-materials');
+        Route::get('/fabric-materials/{material}/colors', [SearchApiController::class, 'fabricColors'])->name('fabric-colors');
     });
 });

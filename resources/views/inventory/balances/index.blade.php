@@ -18,8 +18,8 @@
         </div>
     </div>
 
-    <!-- Summary KPI Cards -->
-    <div class="row g-3 mb-4">
+    <!-- Summary KPI Cards (tablet/desktop; on phones search and results come first) -->
+    <div class="row g-3 mb-4 d-none d-md-flex">
         <div class="col-12 col-sm-6 col-xl-4">
             <div class="card border-0 shadow-sm rounded-3 h-100 border-start border-primary border-4">
                 <div class="card-body p-3">
@@ -76,7 +76,7 @@
                 <div class="col-12 col-md-4">
                     <div class="input-group input-group-merge">
                         <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
-                        <input type="text" name="search" class="form-control border-start-0 bg-light" placeholder="بحث باسم المادة، الكود، أو رقم الدفعة..." value="{{ request('search') }}">
+                        <input type="search" name="search" inputmode="search" enterkeyhint="search" autocomplete="off" class="form-control border-start-0 bg-light" placeholder="بحث بالمادة، الكود، اللون أو رقم الدفعة..." aria-label="بحث في المخزون" value="{{ request('search') }}">
                     </div>
                 </div>
 
@@ -129,7 +129,7 @@
             <div class="card border-0 shadow-sm rounded-3">
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
+                        <table class="table table-hover align-middle mb-0 table-sticky-first">
                             <thead class="bg-light">
                                 <tr>
                                     <th class="ps-3">كود المادة</th>
@@ -193,7 +193,7 @@
             <div class="card border-0 shadow-sm rounded-3">
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
+                        <table class="table table-hover align-middle mb-0 table-sticky-first">
                             <thead class="bg-light">
                                 <tr>
                                     <th class="ps-3">رقم الدفعة (Lot Code)</th>

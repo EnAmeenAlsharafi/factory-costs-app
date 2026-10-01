@@ -162,31 +162,79 @@
             </div>
         </div>
     @elseif ($material->category?->code === 'FABRIC' && $material->fabricSpec)
+        <!-- Fabric Catalog & Technical Specs Card -->
         <div class="card border-0 shadow-sm">
-            <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0">
-                <h5 class="fw-bold text-dark mb-0"><i class="fas fa-scroll text-info me-2"></i>المواصفات الفنية للأقمشة والجلد</h5>
+            <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold text-dark mb-0"><i class="fas fa-book-open text-primary me-2"></i>بيانات كتالوج ومواصفات القماش</h5>
+                @if ($material->fabricSpec->supplier)
+                    <a href="{{ route('suppliers.show', $material->fabricSpec->supplier) }}" class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-3 py-1.5 fs-7 text-decoration-none">
+                        <i class="fas fa-truck me-1"></i>المورد: {{ $material->fabricSpec->supplier->name }}
+                    </a>
+                @endif
             </div>
             <div class="card-body p-4">
-                <div class="row g-4">
-                    <div class="col-md-3 col-6">
-                        <span class="text-muted fs-8 d-block mb-1">نوع القماش</span>
-                        <span class="fw-bold text-dark">{{ $material->fabricSpec->fabric_type }}</span>
-                    </div>
-                    <div class="col-md-3 col-6">
-                        <span class="text-muted fs-8 d-block mb-1">عرض الرول (سم)</span>
-                        <span class="badge bg-light text-dark border font-monospace fs-7">{{ $material->fabricSpec->width_cm }} سم</span>
-                    </div>
-                    <div class="col-md-2 col-4">
-                        <span class="text-muted fs-8 d-block mb-1">النقش / النمط</span>
-                        <span class="fw-semibold text-dark">{{ $material->fabricSpec->pattern_type ?? '-' }}</span>
-                    </div>
-                    <div class="col-md-2 col-4">
-                        <span class="text-muted fs-8 d-block mb-1">الوزن (GSM)</span>
-                        <span class="badge bg-light text-dark border font-monospace fs-7">{{ $material->fabricSpec->weight_gsm ? number_format($material->fabricSpec->weight_gsm, 0) . ' gsm' : '-' }}</span>
-                    </div>
-                    <div class="col-md-2 col-4">
-                        <span class="text-muted fs-8 d-block mb-1">التركيب الخارجي</span>
-                        <span class="text-dark fs-7">{{ $material->fabricSpec->composition ?? '-' }}</span>
+                <div class="row g-4 align-items-center">
+                    @if ($material->fabricSpec->catalog_image_path)
+                        <div class="col-md-3 col-12 text-center border-start">
+                            <div class="position-relative d-inline-block">
+                                <img src="{{ asset('storage/' . $material->fabricSpec->catalog_image_path) }}"
+                                     alt="{{ $material->fabricSpec->catalog_name ?? $material->name_ar }}"
+                                     class="img-fluid rounded-3 border shadow-sm"
+                                     style="max-height: 180px; object-fit: cover;">
+                                <span class="position-absolute bottom-0 end-0 bg-dark bg-opacity-75 text-white px-2 py-0.5 rounded-bottom-3 fs-8">
+                                    كتالوج {{ $material->fabricSpec->catalog_number }}
+                                </span>
+                            </div>
+                        </div>
+                    @endif
+
+                    <div class="{{ $material->fabricSpec->catalog_image_path ? 'col-md-9 col-12' : 'col-12' }}">
+                        <div class="row g-3">
+                            <div class="col-md-4 col-6">
+                                <span class="text-muted fs-8 d-block mb-1">المورد المعتمد للكتالوج</span>
+                                <span class="fw-bold text-dark fs-6">{{ $material->fabricSpec->supplier?->name ?? 'غير محدد' }}</span>
+                            </div>
+                            <div class="col-md-4 col-6">
+                                <span class="text-muted fs-8 d-block mb-1">رقم الكتالوج لدى المورد</span>
+                                <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 fs-7 font-monospace px-2.5 py-1">
+                                    {{ $material->fabricSpec->catalog_number ?? '-' }}
+                                </span>
+                            </div>
+                            <div class="col-md-4 col-6">
+                                <span class="text-muted fs-8 d-block mb-1">اسم الكتالوج التجاري</span>
+                                <span class="fw-semibold text-dark">{{ $material->fabricSpec->catalog_name ?? '-' }}</span>
+                            </div>
+
+                            <div class="col-md-3 col-6">
+                                <span class="text-muted fs-8 d-block mb-1">عائلة / نوع القماش</span>
+                                <span class="fw-bold text-dark">{{ $material->fabricSpec->fabric_type }}</span>
+                            </div>
+                            <div class="col-md-3 col-6">
+                                <span class="text-muted fs-8 d-block mb-1">عرض الرول (سم)</span>
+                                <span class="badge bg-light text-dark border font-monospace fs-7">{{ $material->fabricSpec->width_cm }} سم</span>
+                            </div>
+                            <div class="col-md-3 col-6">
+                                <span class="text-muted fs-8 d-block mb-1">النقش / النمط</span>
+                                <span class="fw-semibold text-dark">{{ $material->fabricSpec->pattern_type ?? '-' }}</span>
+                            </div>
+                            <div class="col-md-3 col-6">
+                                <span class="text-muted fs-8 d-block mb-1">الوزن (GSM)</span>
+                                <span class="badge bg-light text-dark border font-monospace fs-7">{{ $material->fabricSpec->weight_gsm ? number_format($material->fabricSpec->weight_gsm, 0) . ' gsm' : '-' }}</span>
+                            </div>
+
+                            @if ($material->fabricSpec->composition)
+                                <div class="col-md-6 col-12">
+                                    <span class="text-muted fs-8 d-block mb-1">التركيب الخامي</span>
+                                    <span class="text-dark fs-7">{{ $material->fabricSpec->composition }}</span>
+                                </div>
+                            @endif
+                            @if ($material->fabricSpec->martindale_rub_count)
+                                <div class="col-md-6 col-12">
+                                    <span class="text-muted fs-8 d-block mb-1">مقاومة الاحتكاك (Martindale)</span>
+                                    <span class="text-dark fs-7">{{ number_format($material->fabricSpec->martindale_rub_count) }} دورة</span>
+                                </div>
+                            @endif
+                        </div>
                     </div>
                 </div>
             </div>
@@ -197,9 +245,12 @@
     @if ($material->category?->code === 'FABRIC')
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0 d-flex justify-content-between align-items-center">
-                <h5 class="fw-bold text-dark mb-0"><i class="fas fa-palette text-danger me-2"></i>درجات الألوان المتوفرة للقماش</h5>
+                <div>
+                    <h5 class="fw-bold text-dark mb-1"><i class="fas fa-palette text-primary me-2"></i>درجات ألوان الكتالوج</h5>
+                    <p class="text-muted fs-8 mb-0">يرتبط كل لون برقم داخلي (لخدمة العملاء) وكود مورد (للمشتريات والإنتاج).</p>
+                </div>
                 @can('materials.manage')
-                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#add-color-form">
+                    <button class="btn btn-sm btn-primary" data-bs-toggle="collapse" data-bs-target="#add-color-form">
                         <i class="fas fa-plus me-1"></i> إضافة لون جديد
                     </button>
                 @endcan
@@ -208,29 +259,36 @@
 
                 @can('materials.manage')
                     <div class="collapse mb-4" id="add-color-form">
-                        <div class="p-3 bg-light rounded border">
-                            <h6 class="fw-bold mb-3 text-primary fs-7">إضافة درجة لون جديدة</h6>
+                        <div class="p-3 bg-light rounded-3 border">
+                            <h6 class="fw-bold mb-3 text-primary fs-7"><i class="fas fa-plus-circle me-1"></i>إضافة درجة لون جديدة للكتالوج</h6>
                             <form action="{{ route('fabric-colors.store') }}" method="POST">
                                 @csrf
                                 <input type="hidden" name="material_id" value="{{ $material->id }}">
-                                <div class="row g-2">
-                                    <div class="col-md-2">
-                                        <input type="text" name="color_code" class="form-control form-control-sm" placeholder="كود اللون *" required dir="ltr">
+                                <div class="row g-2 align-items-end">
+                                    <div class="col-md-2 col-6">
+                                        <label class="form-label fs-8 text-muted mb-1">الرقم الداخلي (خدمة العملاء) <span class="text-danger">*</span></label>
+                                        <input type="text" name="color_code" class="form-control form-control-sm" placeholder="مثال: 1" required dir="ltr">
                                     </div>
-                                    <div class="col-md-3">
-                                        <input type="text" name="color_name_ar" class="form-control form-control-sm" placeholder="اسم اللون (عربي) *" required>
+                                    <div class="col-md-2 col-6">
+                                        <label class="form-label fs-8 text-muted mb-1">كود المورد (المشتريات) <span class="text-danger">*</span></label>
+                                        <input type="text" name="supplier_color_code" class="form-control form-control-sm" placeholder="مثال: {{ $material->fabricSpec?->catalog_number ? $material->fabricSpec->catalog_number . '-1' : '2020-1' }}" required dir="ltr">
                                     </div>
-                                    <div class="col-md-2">
-                                        <input type="text" name="color_name_en" class="form-control form-control-sm" placeholder="الاسم بالإنجليزية" dir="ltr">
+                                    <div class="col-md-3 col-12">
+                                        <label class="form-label fs-8 text-muted mb-1">اسم اللون (اختياري)</label>
+                                        <input type="text" name="color_name_ar" class="form-control form-control-sm" placeholder="مثال: رمادي فاتح">
                                     </div>
-                                    <div class="col-md-2">
-                                        <input type="color" name="hex_code" class="form-control form-control-sm form-control-color w-100" value="#336699" title="اختر رمز اللون">
+                                    <div class="col-md-1 col-3">
+                                        <label class="form-label fs-8 text-muted mb-1">الرمز</label>
+                                        <input type="color" name="hex_code" class="form-control form-control-sm form-control-color w-100 p-1" value="#6c757d" title="اختر رمز اللون">
                                     </div>
-                                    <div class="col-md-2">
-                                        <input type="text" name="pattern" class="form-control form-control-sm" placeholder="النقشة">
+                                    <div class="col-md-2 col-5">
+                                        <label class="form-label fs-8 text-muted mb-1">النقشة (اختياري)</label>
+                                        <input type="text" name="pattern" class="form-control form-control-sm" placeholder="سادة">
                                     </div>
-                                    <div class="col-md-1">
-                                        <button type="submit" class="btn btn-sm btn-primary w-100">حفظ</button>
+                                    <div class="col-md-2 col-4">
+                                        <button type="submit" class="btn btn-sm btn-primary w-100">
+                                            <i class="fas fa-check me-1"></i> حفظ اللون
+                                        </button>
                                     </div>
                                 </div>
                             </form>
@@ -242,14 +300,15 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>رمز اللون (HEX)</th>
-                                <th>كود اللون</th>
-                                <th>اسم اللون (عربي)</th>
-                                <th>الاسم بالإنجليزية</th>
+                                <th>معاينة</th>
+                                <th>الرقم الداخلي (خدمة العملاء)</th>
+                                <th>كود المورد والإنتاج</th>
+                                <th>اسم اللون</th>
                                 <th>النقشة</th>
+                                <th>التوفر</th>
                                 <th>الحالة</th>
                                 @can('materials.manage')
-                                    <th class="text-center">إجراء</th>
+                                    <th class="text-center">إجراءات</th>
                                 @endcan
                             </tr>
                         </thead>
@@ -258,14 +317,36 @@
                                 <tr>
                                     <td>
                                         <div class="d-flex align-items-center gap-2">
-                                            <span class="d-inline-block rounded-circle border shadow-sm" style="width: 24px; height: 24px; background-color: {{ $color->hex_code ?? '#cccccc' }};"></span>
-                                            <code class="code-badge fs-8">{{ $color->hex_code ?? '-' }}</code>
+                                            <span class="d-inline-block rounded-circle border shadow-sm" style="width: 22px; height: 22px; background-color: {{ $color->hex_code ?? '#cccccc' }};"></span>
+                                            @if ($color->hex_code)
+                                                <code class="code-badge fs-8">{{ $color->hex_code }}</code>
+                                            @endif
                                         </div>
                                     </td>
-                                    <td><span class="fw-bold text-dark">{{ $color->color_code }}</span></td>
-                                    <td><span class="fw-semibold text-dark">{{ $color->color_name_ar }}</span></td>
-                                    <td><span dir="ltr" class="text-muted fs-7">{{ $color->color_name_en ?? '-' }}</span></td>
+                                    <td>
+                                        <span class="badge bg-light text-dark border font-monospace fs-7 px-2.5 py-1">
+                                            {{ $color->color_code }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="fw-bold text-primary font-monospace fs-7">
+                                            {{ $color->supplier_color_code ?? '-' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="fw-semibold text-dark">{{ $color->color_name_ar }}</span>
+                                        @if ($color->color_name_en)
+                                            <span dir="ltr" class="text-muted fs-8 d-block">{{ $color->color_name_en }}</span>
+                                        @endif
+                                    </td>
                                     <td><span class="text-muted fs-8">{{ $color->pattern ?? '-' }}</span></td>
+                                    <td>
+                                        @if ($color->is_available)
+                                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-0.5 fs-8">متوفر</span>
+                                        @else
+                                            <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2 py-0.5 fs-8">غير متوفر</span>
+                                        @endif
+                                    </td>
                                     <td>
                                         @if ($color->is_active)
                                             <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-0.5 fs-8">نشط</span>
@@ -275,20 +356,35 @@
                                     </td>
                                     @can('materials.manage')
                                         <td class="text-center">
-                                            <form action="{{ route('fabric-colors.destroy', $color) }}" method="POST" class="d-inline">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-light text-danger p-1" onclick="return confirm('حذف هذا اللون؟');" title="حذف">
-                                                    <i class="fas fa-trash-alt"></i>
-                                                </button>
-                                            </form>
+                                            <div class="d-flex justify-content-center gap-1">
+                                                <form action="{{ route('fabric-colors.toggle-status', $color) }}" method="POST" class="d-inline">
+                                                    @csrf
+                                                    <input type="hidden" name="toggle_availability" value="1">
+                                                    <button type="submit" class="btn btn-sm btn-light border p-1" title="{{ $color->is_available ? 'تعطيل التوفر' : 'تفعيل التوفر' }}">
+                                                        <i class="fas fa-boxes-stacked {{ $color->is_available ? 'text-success' : 'text-muted' }}"></i>
+                                                    </button>
+                                                </form>
+                                                <form action="{{ route('fabric-colors.toggle-status', $color) }}" method="POST" class="d-inline">
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-sm btn-light border p-1" title="{{ $color->is_active ? 'تعطيل اللون' : 'تفعيل اللون' }}">
+                                                        <i class="fas fa-power-off {{ $color->is_active ? 'text-success' : 'text-danger' }}"></i>
+                                                    </button>
+                                                </form>
+                                                <form action="{{ route('fabric-colors.destroy', $color) }}" method="POST" class="d-inline">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-sm btn-light text-danger border p-1" onclick="return confirm('هل أنت متأكد من حذف هذا اللون؟ لا يمكن حذفه إذا كان مستخدماً في عمليات تشغيلية.');" title="حذف">
+                                                        <i class="fas fa-trash-alt"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
                                         </td>
                                     @endcan
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="text-center py-4 text-muted">
-                                        لا توجد درجات ألوان مسجلة لهذا القماش.
+                                    <td colspan="8" class="text-center py-4 text-muted">
+                                        لا توجد درجات ألوان مسجلة لهذا الكتالوج حتى الآن.
                                     </td>
                                 </tr>
                             @endforelse

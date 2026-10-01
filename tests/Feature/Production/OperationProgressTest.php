@@ -15,6 +15,7 @@ use App\Models\SalesChannel;
 use App\Models\User;
 use App\Services\ProductionOrderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class OperationProgressTest extends TestCase
@@ -101,5 +102,25 @@ class OperationProgressTest extends TestCase
         ]);
 
         $response->assertSessionHasErrors(['quantity']);
+    }
+
+    public function test_stale_progress_updates_cannot_overwrite_or_exceed_target(): void
+    {
+        $operation = $this->po->operations->where('operation_code', 'OP_CARPENTRY')->firstOrFail();
+        $firstRequestOperation = $operation->fresh();
+        $staleSecondRequestOperation = $operation->fresh();
+        $service = app(ProductionOrderService::class);
+
+        $service->recordProgress($firstRequestOperation, 12, 'PROGRESS', 'الدفعة الأولى', $this->manager);
+
+        try {
+            $service->recordProgress($staleSecondRequestOperation, 9, 'PROGRESS', 'طلب متزامن قديم', $this->manager);
+            $this->fail('The stale progress update must be recalculated and rejected.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('quantity', $exception->errors());
+        }
+
+        $this->assertSame(12, (int) $operation->fresh()->completed_quantity);
+        $this->assertSame(1, ProductionOperationProgress::where('production_order_operation_id', $operation->id)->count());
     }
 }

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Supplier extends Model
 {
@@ -89,5 +90,10 @@ class Supplier extends Model
         return $this->belongsToMany(Material::class, 'material_supplier')
             ->withPivot(['supplier_item_code', 'lead_time_days', 'minimum_order_qty', 'is_preferred', 'notes'])
             ->withTimestamps();
+    }
+
+    public function fabricCatalogs(): HasMany
+    {
+        return $this->hasMany(SupplierFabricCatalog::class);
     }
 }

@@ -127,9 +127,23 @@
                                 </td>
                                 <td class="fs-7 text-muted">{{ $recipe->updated_at->format('Y-m-d H:i') }}</td>
                                 <td class="pe-3 text-end">
-                                    <a href="{{ route('recipes.show', $recipe) }}" class="btn btn-sm btn-outline-primary" title="عرض التفاصيل والإصدارات">
-                                        <i class="fas fa-eye me-1"></i> عرض
-                                    </a>
+                                    <div class="d-inline-flex gap-1">
+                                        <a href="{{ route('recipes.show', $recipe) }}" class="btn btn-sm btn-outline-primary" title="عرض التفاصيل والإصدارات">
+                                            <i class="fas fa-eye me-1"></i> عرض
+                                        </a>
+                                        @can('recipes.manage')
+                                            <a href="{{ route('recipes.edit', $recipe) }}" class="btn btn-sm btn-outline-secondary" title="تعديل بيانات الوصفة">
+                                                <i class="fas fa-edit me-1"></i> تعديل
+                                            </a>
+                                            <form action="{{ route('recipes.destroy', $recipe) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف وصفة التصنيع ({{ $recipe->recipe_code }})؟');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="حذف الوصفة">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </form>
+                                        @endcan
+                                    </div>
                                 </td>
                             </tr>
                         @empty

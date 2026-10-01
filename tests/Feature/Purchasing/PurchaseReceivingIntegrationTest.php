@@ -3,8 +3,10 @@
 namespace Tests\Feature\Purchasing;
 
 use App\Models\InventoryLot;
+use App\Models\InventoryMovement;
 use App\Models\Material;
 use App\Models\MaterialCategory;
+use App\Models\PurchaseOrder;
 use App\Models\Role;
 use App\Models\Supplier;
 use App\Models\UnitOfMeasure;
@@ -15,6 +17,7 @@ use App\Services\PurchaseReceivingService;
 use App\Services\PurchaseRequestService;
 use App\Services\SupplierQuotationService;
 use Database\Seeders\RoleAndPermissionSeeder;
+use Exception;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -182,7 +185,7 @@ class PurchaseReceivingIntegrationTest extends TestCase
                 ],
             ]);
             $receivingService->postLinkedReceipt($overDraft, $this->manager);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $failedOverReceipt = true;
             $this->assertStringContainsString('تتجاوز الكمية المتبقية بأمر الشراء', $e->getMessage());
         }
@@ -215,5 +218,43 @@ class PurchaseReceivingIntegrationTest extends TestCase
         $this->assertEquals(3000.0, $varianceSummary['total_expected_cost']); // 100 * 30
         $this->assertEquals(3040.0, $varianceSummary['total_actual_cost']); // (60 * 30) + (40 * 31)
         $this->assertEquals(40.0, $varianceSummary['net_variance']);
+    }
+
+    public function test_po_linked_receipt_rejects_supplier_mismatch_without_inventory_side_effects(): void
+    {
+        $purchaseOrder = PurchaseOrder::create([
+            'purchase_order_number' => 'PO-SUPPLIER-MISMATCH',
+            'supplier_id' => $this->supplierA->id,
+            'warehouse_id' => $this->warehouse->id,
+            'order_date' => now()->toDateString(),
+            'status' => 'SENT',
+            'created_by_user_id' => $this->manager->id,
+        ]);
+        $purchaseOrder->lines()->create([
+            'material_id' => $this->material->id,
+            'ordered_quantity' => 10,
+            'purchase_unit_id' => $this->unit->id,
+            'conversion_factor' => 1,
+            'ordered_base_quantity' => 10,
+            'unit_price' => 30,
+            'line_total' => 300,
+        ]);
+        $service = app(PurchaseReceivingService::class);
+        $receipt = $service->createDraftReceiptFromPO($purchaseOrder, $this->manager);
+        $receipt->update(['supplier_id' => $this->supplierB->id]);
+
+        try {
+            $service->postLinkedReceipt($receipt, $this->manager);
+            $this->fail('A PO-linked receipt from a different supplier must be rejected.');
+        } catch (Exception $exception) {
+            $this->assertStringContainsString('مورد سند الاستلام لا يطابق', $exception->getMessage());
+        }
+
+        $this->assertSame('DRAFT', $receipt->fresh()->status);
+        $this->assertSame(0, InventoryLot::whereIn('receipt_line_id', $receipt->lines()->pluck('id'))->count());
+        $this->assertSame(0, InventoryMovement::where('reference_type', $receipt::class)
+            ->where('reference_id', $receipt->id)
+            ->count());
+        $this->assertSame(0.0, (float) $purchaseOrder->lines()->firstOrFail()->received_base_quantity);
     }
 }

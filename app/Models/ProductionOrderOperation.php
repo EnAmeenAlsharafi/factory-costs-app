@@ -80,6 +80,14 @@ class ProductionOrderOperation extends Model
         return $this->hasMany(ProductionReworkAction::class, 'source_operation_id');
     }
 
+    /**
+     * Rework actions that send work back to this operation (i.e. this operation is being re-done).
+     */
+    public function targetReworkActions(): HasMany
+    {
+        return $this->hasMany(ProductionReworkAction::class, 'target_operation_id');
+    }
+
     public function getStatusBadgeClassAttribute(): string
     {
         return match ($this->status) {

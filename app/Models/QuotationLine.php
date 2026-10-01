@@ -26,6 +26,7 @@ class QuotationLine extends Model
         'fabric_material_id',
         'fabric_color_id',
         'fabric_color_code',
+        'fabric_supplier_color_code',
         'quantity',
         'unit_price',
         'discount_amount',

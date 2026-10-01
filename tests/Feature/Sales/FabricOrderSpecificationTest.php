@@ -353,7 +353,7 @@ class FabricOrderSpecificationTest extends TestCase
         $this->assertEquals('204', $po->fabric_color_code);
     }
 
-    public function test_production_material_requirement_resolves_customer_fabric()
+    public function test_split_production_material_requirements_use_released_quantity()
     {
         $recipe = ManufacturingRecipe::create([
             'recipe_code' => 'RCP-MILAN',
@@ -399,14 +399,15 @@ class FabricOrderSpecificationTest extends TestCase
             'fabric_supplier_id' => $this->supplierA->id,
             'fabric_material_id' => $this->velvetFabric->id,
             'fabric_color_code' => 'COLOR-999',
-            'quantity' => 2,
+            'quantity' => 20,
             'unit_price' => 2500,
-            'line_total' => 5000,
+            'line_total' => 50000,
         ]);
 
         $poService = app(ProductionOrderService::class);
         $po = $poService->createFromOrderLine($line, [
             'manufacturing_recipe_version_id' => $recipeVersion->id,
+            'released_quantity' => 8,
         ]);
 
         $reqService = app(ProductionMaterialRequestService::class);
@@ -418,7 +419,19 @@ class FabricOrderSpecificationTest extends TestCase
         $this->assertEquals($this->velvetFabric->id, $requirement->material_id);
         $this->assertStringContainsString('COLOR-999', $requirement->material_name_snapshot);
         $this->assertStringContainsString($this->supplierA->name, $requirement->material_name_snapshot);
-        $this->assertEquals(12.00, (float) $requirement->total_planned_quantity);
+        $this->assertSame(8, $requirement->production_quantity);
+        $this->assertEquals(48.00, (float) $requirement->total_planned_quantity);
+
+        $secondProductionOrder = $poService->createFromOrderLine($line, [
+            'manufacturing_recipe_version_id' => $recipeVersion->id,
+            'released_quantity' => 12,
+        ]);
+        $reqService->createMaterialRequirementsFromRecipe($secondProductionOrder);
+        $secondRequirement = $secondProductionOrder->materialRequirements()->firstOrFail();
+
+        $this->assertSame(12, $secondRequirement->production_quantity);
+        $this->assertEquals(72.00, (float) $secondRequirement->total_planned_quantity);
+        $this->assertEquals(120.00, (float) $requirement->total_planned_quantity + (float) $secondRequirement->total_planned_quantity);
     }
 
     public function test_quote_conversion_preserves_fabric_specs()

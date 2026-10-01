@@ -37,6 +37,7 @@ class StockBalanceController extends Controller
         if ($search) {
             $lotQuery->where(function ($q) use ($search) {
                 $q->where('lot_code', 'like', "%{$search}%")
+                    ->orWhere('fabric_color_code', 'like', "%{$search}%")
                     ->orWhereHas('material', fn ($mq) => $mq->where('code', 'like', "%{$search}%")->orWhere('name_ar', 'like', "%{$search}%"));
             });
         }
@@ -58,7 +59,8 @@ class StockBalanceController extends Controller
             $matQuery->where(function ($q) use ($search) {
                 $q->where('code', 'like', "%{$search}%")
                     ->orWhere('name_ar', 'like', "%{$search}%")
-                    ->orWhere('name_en', 'like', "%{$search}%");
+                    ->orWhere('name_en', 'like', "%{$search}%")
+                    ->orWhereIn('id', InventoryLot::select('material_id')->where('fabric_color_code', 'like', "%{$search}%"));
             });
         }
 

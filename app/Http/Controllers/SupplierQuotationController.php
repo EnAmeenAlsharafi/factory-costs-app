@@ -40,7 +40,7 @@ class SupplierQuotationController extends Controller
         $rfq = $rfqId ? PurchaseRfq::with('purchaseRequest.lines.material', 'rfqSuppliers.supplier')->find($rfqId) : null;
 
         $suppliers = Supplier::where('is_active', true)->get();
-        $materials = Material::where('is_active', true)->with('unitOfMeasure', 'fabricColors')->get();
+        $materials = Material::where('is_active', true)->with('baseUnit', 'fabricColors')->get();
         $units = UnitOfMeasure::where('is_active', true)->get();
 
         return view('purchasing.quotations.create', compact('rfq', 'suppliers', 'materials', 'units'));
@@ -62,7 +62,7 @@ class SupplierQuotationController extends Controller
     {
         abort_if(! $request->user()->can('purchasing.view'), 403);
 
-        $supplierQuotation->load(['supplier', 'purchaseRfq', 'createdByUser', 'selectedByUser', 'lines.material.unitOfMeasure', 'lines.fabricColor', 'lines.purchaseUnit']);
+        $supplierQuotation->load(['supplier', 'purchaseRfq', 'createdByUser', 'selectedByUser', 'lines.material.baseUnit', 'lines.fabricColor', 'lines.purchaseUnit']);
 
         return view('purchasing.quotations.show', compact('supplierQuotation'));
     }
@@ -91,7 +91,7 @@ class SupplierQuotationController extends Controller
         $purchaseRequest = $prId ? PurchaseRequest::with('lines.material')->find($prId) : null;
         $approvedRequests = PurchaseRequest::where('status', 'APPROVED')->get();
 
-        $quotationsQuery = SupplierQuotation::with(['supplier', 'lines.material.unitOfMeasure', 'lines.purchaseUnit', 'lines.fabricColor']);
+        $quotationsQuery = SupplierQuotation::with(['supplier', 'lines.material.baseUnit', 'lines.purchaseUnit', 'lines.fabricColor']);
 
         if ($purchaseRequest) {
             $rfqIds = PurchaseRfq::where('purchase_request_id', $purchaseRequest->id)->pluck('id');
@@ -110,7 +110,7 @@ class SupplierQuotationController extends Controller
                         'material_id' => $line->material_id,
                         'material_name' => $line->material->name_ar,
                         'color_name' => $line->fabricColor?->color_name_ar,
-                        'base_unit' => $line->material->unitOfMeasure?->name_ar,
+                        'base_unit' => $line->material->baseUnit?->name_ar,
                         'quotes' => [],
                     ];
                 }

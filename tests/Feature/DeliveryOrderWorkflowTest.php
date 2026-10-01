@@ -7,14 +7,17 @@ use App\Models\CustomerOrder;
 use App\Models\CustomerOrderLine;
 use App\Models\CustomerType;
 use App\Models\DeliveryOrder;
+use App\Models\FinishedGoodsMovement;
 use App\Models\ProductionOrder;
 use App\Models\ProductModel;
 use App\Models\Role;
 use App\Models\SalesChannel;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Services\DeliveryOrderService;
 use App\Services\FinishedGoodsService;
 use Database\Seeders\RoleAndPermissionSeeder;
+use Exception;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -141,6 +144,10 @@ class DeliveryOrderWorkflowTest extends TestCase
         $this->assertNotNull($delivery);
         $this->assertEquals('READY_FOR_DELIVERY', $delivery->status);
 
+        $this->actingAs($this->manager)->post(route('delivery.orders.assign', $delivery), [
+            'assigned_user_id' => $this->driver->id,
+        ])->assertRedirect();
+
         // 2. Driver checks task list
         $myTasksResponse = $this->actingAs($this->driver)->get(route('delivery.orders.my-tasks'));
         $myTasksResponse->assertOk()->assertSee($delivery->delivery_number);
@@ -187,7 +194,7 @@ class DeliveryOrderWorkflowTest extends TestCase
             'customer_phone_snapshot' => '0500000000',
             'city_snapshot' => 'الرياض',
             'assigned_user_id' => $this->driver->id,
-            'status' => 'READY_FOR_DELIVERY',
+            'status' => 'ASSIGNED',
             'created_by_user_id' => $this->manager->id,
         ]);
 
@@ -217,6 +224,90 @@ class DeliveryOrderWorkflowTest extends TestCase
             'movement_type' => 'DELIVERY_RETURN',
             'direction' => 'IN',
             'quantity' => 2,
+        ]);
+    }
+
+    public function test_delivery_cannot_jump_from_draft_to_delivered(): void
+    {
+        $delivery = $this->createDraftDelivery();
+
+        $this->expectException(Exception::class);
+        $this->expectExceptionMessage('غير مسموح');
+
+        try {
+            app(DeliveryOrderService::class)->markDelivered($delivery, $this->manager);
+        } finally {
+            $this->assertSame('DRAFT', $delivery->fresh()->status);
+        }
+    }
+
+    public function test_delivery_dispatch_is_idempotent_with_stale_requests(): void
+    {
+        $service = app(DeliveryOrderService::class);
+        $delivery = $this->createDraftDelivery();
+        $service->markReady($delivery, $this->manager);
+        $service->assignDriver($delivery, $this->driver, $this->manager);
+        $staleDelivery = DeliveryOrder::findOrFail($delivery->id);
+
+        $service->dispatchDelivery($delivery, $this->driver);
+
+        try {
+            $service->dispatchDelivery($staleDelivery, $this->driver);
+            $this->fail('A stale second dispatch attempt must be rejected.');
+        } catch (Exception $exception) {
+            $this->assertStringContainsString('غير مسموح', $exception->getMessage());
+        }
+
+        $this->assertSame(1, FinishedGoodsMovement::where('delivery_order_id', $delivery->id)
+            ->where('movement_type', 'DELIVERY_DISPATCH')
+            ->count());
+    }
+
+    public function test_delivery_rejects_production_order_from_another_customer_order(): void
+    {
+        $otherOrder = CustomerOrder::create([
+            'order_number' => 'SO-2026-CROSS',
+            'customer_id' => $this->customerOrder->customer_id,
+            'sales_channel_id' => $this->customerOrder->sales_channel_id,
+            'created_by_user_id' => $this->manager->id,
+            'status' => 'APPROVED_FOR_PRODUCTION',
+            'order_date' => now(),
+        ]);
+        $otherLine = CustomerOrderLine::create([
+            'customer_order_id' => $otherOrder->id,
+            'requested_width_cm' => 100,
+            'requested_length_cm' => 200,
+            'quantity' => 1,
+            'unit_price' => 100,
+        ]);
+        $otherProductionOrder = ProductionOrder::create([
+            'production_order_number' => 'PO-2026-CROSS',
+            'customer_order_id' => $otherOrder->id,
+            'customer_order_line_id' => $otherLine->id,
+            'released_quantity' => 1,
+            'completed_quantity' => 1,
+            'status' => 'COMPLETED',
+        ]);
+
+        $this->expectException(Exception::class);
+        $this->expectExceptionMessage('لا ينتمي');
+
+        app(DeliveryOrderService::class)->createDeliveryOrder($this->customerOrder, $this->manager, [
+            'customer_name_snapshot' => 'عميل',
+            'lines' => [
+                ['production_order_id' => $otherProductionOrder->id, 'quantity' => 1],
+            ],
+        ]);
+    }
+
+    private function createDraftDelivery(): DeliveryOrder
+    {
+        return app(DeliveryOrderService::class)->createDeliveryOrder($this->customerOrder, $this->manager, [
+            'customer_name_snapshot' => 'شركة الفنادق المتحدون',
+            'customer_phone_snapshot' => '0555123456',
+            'lines' => [
+                ['production_order_id' => $this->productionOrder->id, 'quantity' => 2],
+            ],
         ]);
     }
 }

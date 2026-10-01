@@ -11,7 +11,9 @@ use App\Models\ProductionOrder;
 use App\Models\Role;
 use App\Models\SalesChannel;
 use App\Models\User;
+use App\Services\CustomerOrderService;
 use App\Services\ProductionOrderService;
+use Exception;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -24,6 +26,8 @@ class CustomerOrderChangeWarningTest extends TestCase
     protected CustomerOrder $order;
 
     protected ProductionOrder $po;
+
+    protected CustomerOrderLine $line;
 
     protected function setUp(): void
     {
@@ -46,7 +50,7 @@ class CustomerOrderChangeWarningTest extends TestCase
         $recipe = ManufacturingRecipe::create(['recipe_code' => 'RCP-TEST-006', 'name' => 'Test Recipe', 'is_active' => true]);
         $version = ManufacturingRecipeVersion::create(['manufacturing_recipe_id' => $recipe->id, 'version_number' => 1, 'status' => 'APPROVED', 'is_active' => true]);
 
-        $line = CustomerOrderLine::create([
+        $this->line = CustomerOrderLine::create([
             'customer_order_id' => $this->order->id,
             'item_number' => 1,
             'approved_recipe_version_id' => $version->id,
@@ -58,7 +62,7 @@ class CustomerOrderChangeWarningTest extends TestCase
         ]);
 
         $poService = app(ProductionOrderService::class);
-        $this->po = $poService->createFromOrderLine($line, ['released_quantity' => 10, 'manufacturing_recipe_version_id' => $version->id]);
+        $this->po = $poService->createFromOrderLine($this->line, ['released_quantity' => 10, 'manufacturing_recipe_version_id' => $version->id]);
     }
 
     public function test_customer_order_post_approval_change_flags_warning_on_production_order(): void
@@ -78,5 +82,49 @@ class CustomerOrderChangeWarningTest extends TestCase
         $this->assertEquals(160, (int) $this->po->requested_width_cm);
         $this->assertEquals(200, (int) $this->po->requested_length_cm);
         $this->assertEquals(10, $this->po->released_quantity);
+    }
+
+    public function test_approved_order_edit_preserves_line_identity_and_production_history(): void
+    {
+        $lineId = $this->line->id;
+
+        app(CustomerOrderService::class)->updateOrder($this->order, [], [[
+            'id' => $lineId,
+            'requested_width_cm' => 160,
+            'requested_length_cm' => 200,
+            'quantity' => 12,
+            'unit_price' => 100,
+            'discount_amount' => 0,
+            'fabric_color_code' => 'NEW-COLOR',
+        ]], $this->manager);
+
+        $this->assertDatabaseHas('customer_order_lines', [
+            'id' => $lineId,
+            'quantity' => 12,
+            'fabric_color_code' => 'NEW-COLOR',
+        ]);
+        $this->assertDatabaseHas('production_orders', [
+            'id' => $this->po->id,
+            'customer_order_line_id' => $lineId,
+        ]);
+        $this->assertSame('PENDING_PRODUCTION_REVIEW', $this->order->fresh()->status);
+        $this->assertDatabaseHas('customer_order_changes', [
+            'customer_order_line_id' => $lineId,
+            'field_name' => 'quantity',
+            'occurred_after_production_approval' => true,
+        ]);
+    }
+
+    public function test_cannot_remove_customer_order_line_with_production_history(): void
+    {
+        $this->expectException(Exception::class);
+        $this->expectExceptionMessage('لا يمكن حذف البند');
+
+        try {
+            app(CustomerOrderService::class)->updateOrder($this->order, [], [], $this->manager);
+        } finally {
+            $this->assertModelExists($this->line);
+            $this->assertModelExists($this->po);
+        }
     }
 }

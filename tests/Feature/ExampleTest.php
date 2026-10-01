@@ -37,7 +37,7 @@ class ExampleTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('مصنع مفروشات سدير');
-        $response->assertSee('لوحة التحكم الرئيسية');
-        $response->assertSee('طلبات بانتظار المراجعة');
+        $response->assertSee('لوحة التحكم');
+        $response->assertSee('طلبات بانتظار مراجعة الإنتاج');
     }
 }

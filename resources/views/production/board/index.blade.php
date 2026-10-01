@@ -125,7 +125,7 @@
                                     <span class="badge {{ $lPo->status_badge_class }}">{{ $lPo->status_arabic }}</span>
                                 </td>
                                 <td class="text-end">
-                                    <a href="{{ route('production.orders.show', $lPo) }}" class="btn btn-sm btn-outline-primary"><i class="fas fa-eye"></i></a>
+                                    <a href="{{ route('production.orders.show', $lPo) }}" class="btn btn-sm btn-outline-primary" aria-label="عرض أمر الإنتاج" title="عرض أمر الإنتاج"><i class="fas fa-eye" aria-hidden="true"></i></a>
                                 </td>
                             </tr>
                         @empty

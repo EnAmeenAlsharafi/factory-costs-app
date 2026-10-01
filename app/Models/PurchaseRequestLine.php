@@ -15,6 +15,8 @@ class PurchaseRequestLine extends Model
         'purchase_request_id',
         'material_id',
         'fabric_color_id',
+        'fabric_color_code',
+        'fabric_supplier_color_code',
         'requested_quantity',
         'base_unit_id',
         'preferred_purchase_unit_id',

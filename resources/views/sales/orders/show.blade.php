@@ -5,6 +5,12 @@
 @section('content')
 <div class="container-fluid px-4 py-4">
 
+    @php
+        // Commercial values (prices, payments, balances) are for sales, production review and receivables staff only;
+        // delivery users hold orders.view for context but must not see customer receivables.
+        $canSeeCommercial = auth()->user()->can('orders.create') || auth()->user()->can('orders.review_production') || auth()->user()->can('receivables.view');
+    @endphp
+
     {{-- Page Header --}}
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
         <div>
@@ -73,19 +79,7 @@
         </div>
     </div>
 
-    {{-- Alerts --}}
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
-            <i class="fas fa-check-circle me-2"></i> {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
-    @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
-            <i class="fas fa-exclamation-triangle me-2"></i> {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
+    {{-- Flash messages are rendered once by the layout (partials.flash). --}}
 
     {{-- Production Approval Notice --}}
     @if($order->status === 'APPROVED_FOR_PRODUCTION')
@@ -131,7 +125,11 @@
             <div class="card border-0 shadow-sm rounded-3 h-100 bg-warning bg-opacity-10 border-start border-4 border-warning">
                 <div class="card-body">
                     <span class="text-muted fs-7 d-block mb-1">إجمالي مبلغ الطلب</span>
-                    <h4 class="fw-bold text-dark mb-0">{{ number_format($order->total_amount, 2) }} <small class="fs-6">ر.س</small></h4>
+                    @if ($canSeeCommercial)
+                        <h4 class="fw-bold text-dark mb-0">{{ number_format($order->total_amount, 2) }} <small class="fs-6">ر.س</small></h4>
+                    @else
+                        <h4 class="fw-bold text-muted mb-0 fs-6">غير متاح لدورك</h4>
+                    @endif
                 </div>
             </div>
         </div>
@@ -147,6 +145,7 @@
     @endif
 
     {{-- Receivables & Payment Control Card (Stage 13) --}}
+    @if ($canSeeCommercial)
     @php
         $eligibilityService = app(\App\Services\OrderPaymentEligibilityService::class);
         $prodEligibility = $eligibilityService->checkProductionEligibility($order);
@@ -280,6 +279,8 @@
         </div>
     </div>
 
+    @endif
+
     {{-- Override Modal --}}
     @can('receivables.override_payment_control')
         <div class="modal fade" id="overrideModal" tabindex="-1" aria-hidden="true">
@@ -349,15 +350,23 @@
                                         <small class="text-muted">كود: {{ $line->productModel?->model_code }}</small>
                                     @endif
 
-                                    @if($line->fabricMaterial || $line->fabricSupplier || $line->fabric_color_code)
+                                    @if($line->fabricMaterial || $line->fabricSupplier || $line->fabric_color_code || $line->fabric_supplier_color_code)
                                         <div class="mt-2 p-2 bg-light rounded border border-warning-subtle fs-8">
-                                            <strong class="text-dark d-block mb-1"><i class="fas fa-palette text-warning me-1"></i> مواصفات القماش:</strong>
-                                            <div class="d-flex flex-wrap gap-2 text-dark">
-                                                <span><strong>المورد:</strong> {{ $line->fabricSupplier?->name ?? 'غير محدد' }}</span>
+                                            <strong class="text-dark d-block mb-1"><i class="fas fa-palette text-warning me-1"></i> مواصفات القماش والكتالوج:</strong>
+                                            <div class="d-flex flex-wrap align-items-center gap-2 text-dark">
+                                                <span><strong>المادة:</strong> {{ $line->fabricMaterial?->name_ar ?? 'غير محدد' }}</span>
+                                                @if($line->fabricMaterial?->fabricSpec?->catalog_number)
+                                                    <span>•</span>
+                                                    <span><strong>رقم الكتالوج:</strong> <span class="badge bg-white text-primary border">#{{ $line->fabricMaterial->fabricSpec->catalog_number }}</span></span>
+                                                @endif
                                                 <span>•</span>
-                                                <span><strong>نوع القماش:</strong> {{ $line->fabricMaterial?->name_ar ?? 'غير محدد' }}</span>
+                                                <span><strong>المورد:</strong> {{ $line->fabricSupplier?->name ?? $line->fabricMaterial?->fabricSpec?->supplier?->name ?? 'غير محدد' }}</span>
                                                 <span>•</span>
-                                                <span><strong>رقم/كود اللون:</strong> <code class="text-dark bg-white px-1 border rounded fw-bold">{{ $line->fabric_color_code ?? 'غير محدد' }}</code></span>
+                                                <span><strong>رقم اللون الداخلي (CS):</strong> <code class="text-dark bg-white px-1 border rounded fw-bold">{{ $line->fabric_color_code ?? 'غير محدد' }}</code></span>
+                                                @if($line->fabric_supplier_color_code)
+                                                    <span>•</span>
+                                                    <span><strong>كود لون المورد:</strong> <code class="text-primary bg-white px-1 border rounded fw-bold">{{ $line->fabric_supplier_color_code }}</code></span>
+                                                @endif
                                             </div>
                                         </div>
                                     @endif
@@ -402,9 +411,9 @@
                                         <small class="d-block text-success fw-normal fs-8">مُطلق للإنتاج: {{ $alreadyReleased }}</small>
                                     @endif
                                 </td>
-                                <td class="text-end font-monospace text-dark">{{ number_format($line->unit_price, 2) }} ر.س</td>
+                                <td class="text-end font-monospace text-dark">{{ $canSeeCommercial ? number_format($line->unit_price, 2).' ر.س' : '—' }}</td>
                                 <td class="text-end pe-3 font-monospace fw-bold text-primary fs-6">
-                                    <div>{{ number_format($line->total_price, 2) }} ر.س</div>
+                                    <div>{{ $canSeeCommercial ? number_format($line->total_price, 2).' ر.س' : '—' }}</div>
                                     @if($order->status === 'APPROVED_FOR_PRODUCTION' && auth()->user()->can('production.release'))
                                         @if($line->quantity - $alreadyReleased > 0)
                                             <a href="{{ route('production.orders.create', ['line_id' => $line->id]) }}" class="btn btn-sm btn-success mt-1">
@@ -422,7 +431,7 @@
                         <tr>
                             <td colspan="7" class="text-end fw-bold fs-6">الإجمالي الكلي:</td>
                             <td class="text-end pe-3 fw-bold text-primary fs-5 font-monospace">
-                                {{ number_format($order->total_amount, 2) }} ر.س
+                                {{ $canSeeCommercial ? number_format($order->total_amount, 2).' ر.س' : '—' }}
                             </td>
                         </tr>
                     </tfoot>

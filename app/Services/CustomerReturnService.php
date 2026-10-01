@@ -81,14 +81,18 @@ class CustomerReturnService
      */
     public function receiveReturnedGoods(CustomerReturn $return, User $receiver, ?string $conditionCode = null): CustomerReturn
     {
-        if (in_array($return->status, ['RECEIVED', 'REJECTED', 'RESOLVED'], true)) {
-            throw new Exception('تم استلام أو تسوية مرتجع العملاء هذا مسبقاً.');
-        }
-
         $fgWarehouse = Warehouse::active()->where('code', 'FINISHED_GOODS')->first()
             ?? Warehouse::active()->first();
 
-        return DB::transaction(function () use ($return, $receiver, $conditionCode, $fgWarehouse) {
+        $receivedReturn = DB::transaction(function () use ($return, $receiver, $conditionCode, $fgWarehouse) {
+            $return = CustomerReturn::query()->whereKey($return->getKey())->lockForUpdate()->firstOrFail();
+
+            if (in_array($return->status, ['RECEIVED', 'REJECTED', 'RESOLVED'], true)) {
+                throw new Exception('تم استلام أو تسوية مرتجع العملاء هذا مسبقاً.');
+            }
+
+            ProductionOrder::query()->whereKey($return->production_order_id)->lockForUpdate()->firstOrFail();
+
             FinishedGoodsMovement::create([
                 'movement_number' => DocumentNumberService::generateFinishedGoodsMovementNumber(),
                 'production_order_id' => $return->production_order_id,
@@ -112,6 +116,10 @@ class CustomerReturnService
 
             return $return;
         });
+
+        $return->setRawAttributes($receivedReturn->getAttributes(), true);
+
+        return $return;
     }
 
     /**

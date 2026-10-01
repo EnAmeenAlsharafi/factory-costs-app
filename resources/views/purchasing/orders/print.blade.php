@@ -70,7 +70,23 @@
             <tr>
                 <td>{{ $idx + 1 }}</td>
                 <td class="text-start fw-bold">{{ $line->material?->name_ar }}</td>
-                <td>{{ $line->fabricColor?->color_name_ar ?? '-' }}</td>
+                <td class="text-start">
+                    @php
+                        $spec = $line->material?->fabricSpec;
+                        $colorCode = $line->fabric_color_code ?? $line->fabricColor?->color_code;
+                        $supplierColor = $line->fabric_supplier_color_code ?? $line->fabricColor?->supplier_color_code;
+                        $catalogNo = $spec?->catalog_number;
+                        $supplierName = $spec?->supplier?->name ?? $purchaseOrder->supplier?->name;
+                    @endphp
+                    @if($colorCode || $supplierColor || $catalogNo)
+                        <div><strong>كود المورد:</strong> {{ $supplierColor ?? '-' }}</div>
+                        <div class="small text-muted"><strong>الرقم الداخلي:</strong> {{ $colorCode ?? '-' }}</div>
+                        <div class="small text-muted"><strong>الكتالوج:</strong> {{ $catalogNo ?? '-' }}</div>
+                        <div class="small text-muted"><strong>المورد:</strong> {{ $supplierName ?? '-' }}</div>
+                    @else
+                        <span>{{ $line->fabricColor?->color_name_ar ?? '-' }}</span>
+                    @endif
+                </td>
                 <td class="fw-bold">{{ number_format($line->ordered_quantity, 2) }}</td>
                 <td>{{ $line->purchaseUnit?->name_ar }}</td>
                 <td>{{ number_format($line->unit_price, 2) }} SAR</td>

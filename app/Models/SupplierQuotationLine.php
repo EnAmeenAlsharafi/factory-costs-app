@@ -15,6 +15,8 @@ class SupplierQuotationLine extends Model
         'purchase_request_line_id',
         'material_id',
         'fabric_color_id',
+        'fabric_color_code',
+        'fabric_supplier_color_code',
         'quoted_quantity',
         'purchase_unit_id',
         'conversion_factor',

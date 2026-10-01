@@ -1,34 +1,25 @@
 @extends('layouts.app')
 
 @section('title', 'إنشاء طلب عميل جديد')
+@section('page-title', 'طلب عميل جديد')
 
 @section('content')
 <div class="container-fluid px-4 py-4">
 
     {{-- Page Header --}}
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h3 mb-1 text-dark fw-bold">إنشاء طلب عميل جديد</h1>
+    <div class="record-header mb-4">
+        <a href="{{ route('sales.orders.index') }}" class="btn btn-light border record-header-back" aria-label="العودة لطلبات العملاء" title="العودة لطلبات العملاء">
+            <i class="fas fa-arrow-right" aria-hidden="true"></i>
+        </a>
+        <div class="record-header-main">
+            <h1 id="page-heading" class="record-header-title text-dark">إنشاء طلب عميل جديد</h1>
             <p class="text-muted mb-0 fs-7">إدخال طلب بيع تجاري وتوصيف البنود والمواصفات المطلوبة</p>
         </div>
-        <a href="{{ route('sales.orders.index') }}" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-right me-1"></i> العودة لطلبات العملاء
-        </a>
     </div>
 
-    {{-- Validation Errors --}}
-    @if ($errors->any())
-        <div class="alert alert-danger border-0 shadow-sm mb-4">
-            <h6 class="fw-bold mb-2"><i class="fas fa-exclamation-triangle me-1"></i> يرجى تصحيح الأخطاء التالية:</h6>
-            <ul class="mb-0 ps-3">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
+    {{-- Validation errors are shown once by the layout flash partial. --}}
 
-    <form action="{{ route('sales.orders.store') }}" method="POST" id="orderForm">
+    <form action="{{ route('sales.orders.store') }}" method="POST" id="orderForm" data-unsaved-warning>
         @csrf
 
         {{-- Header Information Card --}}
@@ -104,7 +95,7 @@
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive" style="overflow-x: auto;">
-                    <table class="table table-bordered align-middle mb-0" id="lines-table">
+                    <table class="table table-bordered align-middle mb-0 table-stack-sm" id="lines-table">
                         <thead class="table-light text-nowrap">
                             <tr>
                                 <th style="width: 35px;" class="text-center">#</th>
@@ -124,7 +115,10 @@
                     </table>
                 </div>
             </div>
-            <div class="card-footer bg-light p-3 d-flex justify-content-between align-items-center">
+            <div class="card-footer bg-light p-3 d-flex flex-wrap gap-2 justify-content-between align-items-center">
+                <button type="button" class="btn btn-outline-success w-100 d-md-none" id="add-line-btn-mobile">
+                    <i class="fas fa-plus" aria-hidden="true"></i> إضافة بند جديد
+                </button>
                 <div class="fw-bold text-dark fs-6">
                     عدد البنود: <span id="line-count">0</span>
                 </div>
@@ -134,12 +128,12 @@
             </div>
         </div>
 
-        <div class="d-flex justify-content-end gap-2">
-            <a href="{{ route('sales.orders.index') }}" class="btn btn-light px-4">إلغاء</a>
+        <x-mobile-action-bar>
+            <a href="{{ route('sales.orders.index') }}" class="btn btn-light border px-4">إلغاء</a>
             <button type="submit" class="btn btn-warning px-5 fw-bold">
-                <i class="fas fa-save me-1"></i> حفظ الطلب كمسودة
+                <i class="fas fa-save" aria-hidden="true"></i> حفظ
             </button>
-        </div>
+        </x-mobile-action-bar>
     </form>
 </div>
 
@@ -157,18 +151,23 @@ if (!empty($rawOldLines)) {
     $suppliers = !empty($supplierIds) ? \App\Models\Supplier::whereIn('id', $supplierIds)->get()->keyBy('id') : collect();
 
     $materialIds = collect($rawOldLines)->pluck('fabric_material_id')->filter()->unique()->all();
-    $materials = !empty($materialIds) ? \App\Models\Material::whereIn('id', $materialIds)->get()->keyBy('id') : collect();
+    $materials = !empty($materialIds) ? \App\Models\Material::with('fabricSpec.supplier')->whereIn('id', $materialIds)->get()->keyBy('id') : collect();
+
+    $colorIds = collect($rawOldLines)->pluck('fabric_color_id')->filter()->unique()->all();
+    $colors = !empty($colorIds) ? \App\Models\FabricColor::whereIn('id', $colorIds)->get()->keyBy('id') : collect();
 
     foreach ($rawOldLines as $line) {
         $mid = $line['product_model_id'] ?? null;
         $cid = $line['product_configuration_id'] ?? null;
         $sid = $line['fabric_supplier_id'] ?? null;
         $fid = $line['fabric_material_id'] ?? null;
+        $clid = $line['fabric_color_id'] ?? null;
 
         $m = $mid ? $models->get($mid) : null;
         $c = $cid ? $configs->get($cid) : null;
-        $s = $sid ? $suppliers->get($sid) : null;
         $f = $fid ? $materials->get($fid) : null;
+        $s = $sid ? $suppliers->get($sid) : ($f?->fabricSpec?->supplier ?? null);
+        $col = $clid ? $colors->get($clid) : null;
 
         $storageLabel = ($c && $c->has_storage) ? 'بتخزين' : 'بدون تخزين';
         $cLabel = $c ? "{$c->width_cm}×{$c->length_cm} — {$storageLabel}" : '';
@@ -176,8 +175,13 @@ if (!empty($rawOldLines)) {
         $oldLinesData[] = array_merge($line, [
             'product_model_label' => $line['product_model_label'] ?? ($m ? $m->name_ar : ''),
             'product_configuration_label' => $line['product_configuration_label'] ?? $cLabel,
+            'fabric_supplier_id' => $line['fabric_supplier_id'] ?? ($s ? $s->id : ''),
             'fabric_supplier_label' => $line['fabric_supplier_label'] ?? ($s ? $s->name : ''),
             'fabric_material_label' => $line['fabric_material_label'] ?? ($f ? $f->name_ar : ''),
+            'catalog_number' => $f?->fabricSpec?->catalog_number ?? '',
+            'fabric_color_id' => $line['fabric_color_id'] ?? ($col ? $col->id : ''),
+            'fabric_color_code' => $line['fabric_color_code'] ?? ($col ? $col->color_code : ''),
+            'fabric_supplier_color_code' => $line['fabric_supplier_color_code'] ?? ($col ? $col->supplier_color_code : ''),
         ]);
     }
 }
@@ -251,6 +255,70 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    function loadColorsForFabric(tr, fabricId, selectedColorId = null, initialColorCode = null, initialSupplierColorCode = null) {
+        const colorSelect = tr.querySelector('.color-select');
+        const colorCodeInput = tr.querySelector('.color-code-input');
+        const supplierColorCodeInput = tr.querySelector('.supplier-color-code-input');
+        if (!colorSelect) return;
+
+        if (!fabricId) {
+            colorSelect.innerHTML = '<option value="">اختر القماش أولاً...</option>';
+            colorSelect.disabled = true;
+            if (colorCodeInput) colorCodeInput.value = '';
+            if (supplierColorCodeInput) supplierColorCodeInput.value = '';
+            return;
+        }
+
+        colorSelect.disabled = true;
+        colorSelect.innerHTML = '<option value="">جاري تحميل درجات الألوان...</option>';
+
+        fetch(`/api/search/fabric-materials/${fabricId}/colors`)
+            .then(res => {
+                if (!res.ok) throw new Error('Network error');
+                return res.json();
+            })
+            .then(colors => {
+                colorSelect.innerHTML = '<option value="">-- اختر درجة اللون --</option>';
+                let foundMatch = false;
+
+                colors.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.dataset.code = c.color_code || '';
+                    opt.dataset.supplierCode = c.supplier_color_code || '';
+                    opt.textContent = c.label;
+
+                    if (selectedColorId && String(selectedColorId) === String(c.id)) {
+                        opt.selected = true;
+                        foundMatch = true;
+                    } else if (!selectedColorId && initialColorCode && String(initialColorCode) === String(c.color_code)) {
+                        opt.selected = true;
+                        foundMatch = true;
+                    }
+
+                    colorSelect.appendChild(opt);
+                });
+
+                colorSelect.disabled = false;
+
+                if (foundMatch) {
+                    const sel = colorSelect.options[colorSelect.selectedIndex];
+                    if (colorCodeInput && sel) colorCodeInput.value = sel.dataset.code || '';
+                    if (supplierColorCodeInput && sel) supplierColorCodeInput.value = sel.dataset.supplierCode || '';
+                } else if (!selectedColorId && !initialColorCode && colors.length === 1) {
+                    colorSelect.selectedIndex = 1;
+                    const sel = colorSelect.options[1];
+                    if (colorCodeInput && sel) colorCodeInput.value = sel.dataset.code || '';
+                    if (supplierColorCodeInput && sel) supplierColorCodeInput.value = sel.dataset.supplierCode || '';
+                }
+            })
+            .catch(err => {
+                console.error('Error fetching colors:', err);
+                colorSelect.innerHTML = '<option value="">تعذر تحميل الألوان</option>';
+                colorSelect.disabled = false;
+            });
+    }
+
     function addLine(data = {}) {
         lineIndex++;
         const tr = document.createElement('tr');
@@ -264,14 +332,25 @@ document.addEventListener('DOMContentLoaded', function () {
         const supplierLabel = data.fabric_supplier_label || '';
         const fabricId = data.fabric_material_id || '';
         const fabricLabel = data.fabric_material_label || '';
+        const catalogNumber = data.catalog_number || '';
+        const colorId = data.fabric_color_id || '';
         const colorCode = data.fabric_color_code || '';
+        const supplierColorCode = data.fabric_supplier_color_code || '';
         const isCustom = data.custom_design ? 'checked' : '';
         const customName = data.custom_design_name || '';
         const customNameDisplay = data.custom_design ? '' : 'd-none';
 
         tr.innerHTML = `
-            <td class="text-center font-monospace line-num text-muted"></td>
-            <td>
+            <td class="text-center font-monospace text-muted stack-head">
+                <span class="min-w-0 text-truncate">
+                    <span class="d-md-none">البند </span><span class="line-num"></span><span class="line-model-title d-md-none fw-bold text-dark"></span>
+                </span>
+                <span class="d-md-none d-flex gap-1 flex-shrink-0">
+                    <button type="button" class="btn btn-sm btn-outline-secondary duplicate-line-btn" aria-label="تكرار البند" title="تكرار البند"><i class="fas fa-copy" aria-hidden="true"></i></button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary collapse-line-btn" aria-expanded="true" aria-label="طي أو توسيع البند" title="طي / توسيع"><i class="fas fa-chevron-up" aria-hidden="true"></i></button>
+                </span>
+            </td>
+            <td data-label="الموديل / التصميم *">
                 <div class="typeahead-container model-wrapper mb-1" @click.outside="closeDropdown" x-data="typeaheadSelect({
                     name: 'lines[${lineIndex}][product_model_id]',
                     endpoint: '/api/search/product-models',
@@ -282,9 +361,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     <input type="hidden" name="lines[${lineIndex}][product_model_id]" :value="selectedId" class="model-id-input">
                     <input type="hidden" name="lines[${lineIndex}][product_model_label]" :value="selectedLabel" class="model-label-input">
                     <div class="input-group input-group-sm">
-                        <input type="text" class="form-control form-control-sm"
+                        <input type="text" inputmode="search" class="form-control form-control-sm"
                                x-ref="inputBox"
                                x-model="searchQuery"
+                               role="combobox" aria-autocomplete="list" autocomplete="off" enterkeyhint="search"
+                               :aria-expanded="isOpen.toString()" :aria-controls="listboxId" :aria-activedescendant="activeOptionId"
+                               aria-label="الموديل"
                                @focus="onFocus"
                                @input.debounce.250ms="onInput"
                                @keydown.arrow-down.prevent="navigateDown"
@@ -292,16 +374,16 @@ document.addEventListener('DOMContentLoaded', function () {
                                @keydown.enter.prevent.stop="selectHighlighted"
                                @keydown.escape="closeDropdown"
                                placeholder="ابحث عن الموديل (كود / اسم)...">
-                        <button class="btn btn-outline-secondary btn-sm" type="button" x-show="selectedId" @click="clearSelection" tabindex="-1">
-                            <i class="fas fa-times fs-8"></i>
+                        <button class="btn btn-outline-secondary btn-sm" type="button" x-show="selectedId" @click="clearSelection" aria-label="مسح الموديل المختار">
+                            <i class="fas fa-times fs-8" aria-hidden="true"></i>
                         </button>
                     </div>
-                    <div class="typeahead-dropdown" x-show="isOpen" :style="dropdownStyle" @mousedown.prevent x-cloak>
-                        <div x-show="loading" class="p-2 text-center text-muted fs-8">
-                            <i class="fas fa-spinner fa-spin me-1"></i> جاري البحث...
+                    <div class="typeahead-dropdown" x-show="isOpen" :style="dropdownStyle" :class="{ 'is-above': dropUp }" :id="listboxId" role="listbox" aria-label="نتائج الموديلات" @mousedown.prevent x-cloak>
+                        <div x-show="loading" class="typeahead-status" role="status">
+                            <i class="fas fa-spinner fa-spin me-1" aria-hidden="true"></i> جاري البحث...
                         </div>
                         <template x-for="(item, index) in results" :key="item.id">
-                            <div class="typeahead-item"
+                            <div class="typeahead-item" role="option" :id="optionId(index)" :aria-selected="(index === highlightedIndex).toString()"
                                  :class="{ 'active': index === highlightedIndex }"
                                  @mousedown.prevent="selectItem(item)">
                                 <div class="d-flex justify-content-between align-items-center w-100 gap-2">
@@ -310,10 +392,14 @@ document.addEventListener('DOMContentLoaded', function () {
                                 </div>
                             </div>
                         </template>
-                        <div x-show="!loading && hasSearched && results.length === 0" class="p-2 text-center text-muted fs-8">
-                            لا توجد نتائج مطابقة
+                        <div x-show="!loading && errorMessage" class="typeahead-status is-error" role="alert">
+                            <span x-text="errorMessage"></span>
+                            <button type="button" class="btn btn-sm btn-outline-danger ms-2" @mousedown.prevent="retry()">إعادة المحاولة</button>
                         </div>
-                        <div x-show="!loading && !hasSearched && results.length === 0" class="p-2 text-center text-muted fs-8">
+                        <div x-show="!loading && !errorMessage && hasSearched && results.length === 0" class="typeahead-status">
+                            لا توجد موديلات مطابقة. جرّب الكود أو جزءاً من الاسم.
+                        </div>
+                        <div x-show="!loading && !errorMessage && !hasSearched && results.length === 0" class="typeahead-status">
                             ابدأ بالكتابة للبحث...
                         </div>
                     </div>
@@ -325,8 +411,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 </div>
                 <input type="text" name="lines[${lineIndex}][custom_design_name]" class="form-control form-control-sm custom-name-input ${customNameDisplay} mt-1" value="${customName.replace(/"/g, '&quot;')}" placeholder="اسم التصميم الخاص...">
             </td>
-            <td>
-                <select name="lines[${lineIndex}][product_configuration_id]" class="form-select form-select-sm config-select mb-1" ${!modelId ? 'disabled' : ''}>
+            <td data-label="التكوين / المقاس (سم)">
+                <select name="lines[${lineIndex}][product_configuration_id]" class="form-select form-select-sm config-select mb-1" aria-label="التكوين / المقاس" ${!modelId ? 'disabled' : ''}>
                     <option value="">اختر المقاس...</option>
                     ${configId ? `<option value="${configId}" selected>${configLabel || 'المقاس المختار'}</option>` : ''}
                 </select>
@@ -334,138 +420,113 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 <div class="row g-1">
                     <div class="col-6">
-                        <input type="number" step="0.1" name="lines[${lineIndex}][requested_width_cm]" class="form-control form-control-sm width-input" value="${data.requested_width_cm || ''}" placeholder="عرض سم">
+                        <input type="number" step="0.1" inputmode="decimal" name="lines[${lineIndex}][requested_width_cm]" class="form-control form-control-sm width-input" value="${data.requested_width_cm || ''}" placeholder="عرض سم" aria-label="العرض بالسنتيمتر">
                     </div>
                     <div class="col-6">
-                        <input type="number" step="0.1" name="lines[${lineIndex}][requested_length_cm]" class="form-control form-control-sm length-input" value="${data.requested_length_cm || ''}" placeholder="طول سم">
+                        <input type="number" step="0.1" inputmode="decimal" name="lines[${lineIndex}][requested_length_cm]" class="form-control form-control-sm length-input" value="${data.requested_length_cm || ''}" placeholder="طول سم" aria-label="الطول بالسنتيمتر">
                     </div>
                 </div>
             </td>
-            <td>
-                <div class="fabric-spec-box">
-                    <div class="typeahead-container supplier-wrapper" @click.outside="closeDropdown" x-data="typeaheadSelect({
-                        name: 'lines[${lineIndex}][fabric_supplier_id]',
-                        endpoint: '/api/search/suppliers',
-                        placeholder: 'ابحث عن مورد القماش...',
-                        initialId: '${supplierId}',
-                        initialLabel: '${supplierLabel.replace(/'/g, "\\'")}'
+            <td data-label="القماش (المورد / الخامة / اللون)">
+                <div class="fabric-spec-box d-flex flex-column gap-1">
+                    <div class="typeahead-container fabric-wrapper" @click.outside="closeDropdown" x-data="typeaheadSelect({
+                        name: 'lines[${lineIndex}][fabric_material_id]',
+                        endpoint: '/api/search/fabric-materials',
+                        placeholder: 'ابحث عن خامة القماش أو الكتالوج...',
+                        initialId: '${fabricId}',
+                        initialLabel: '${fabricLabel.replace(/'/g, "\\'")}'
                     })">
-                        <input type="hidden" name="lines[${lineIndex}][fabric_supplier_id]" :value="selectedId" class="supplier-id-input">
-                        <input type="hidden" name="lines[${lineIndex}][fabric_supplier_label]" :value="selectedLabel" class="supplier-label-input">
+                        <input type="hidden" name="lines[${lineIndex}][fabric_material_id]" :value="selectedId" class="fabric-id-input">
+                        <input type="hidden" name="lines[${lineIndex}][fabric_material_label]" :value="selectedLabel" class="fabric-label-input">
                         <div class="input-group input-group-sm">
-                            <input type="text" class="form-control form-control-sm"
+                            <input type="text" inputmode="search" class="form-control form-control-sm"
                                    x-ref="inputBox"
                                    x-model="searchQuery"
+                                   role="combobox" aria-autocomplete="list" autocomplete="off" enterkeyhint="search"
+                                   :aria-expanded="isOpen.toString()" :aria-controls="listboxId" :aria-activedescendant="activeOptionId"
+                                   aria-label="خامة القماش"
                                    @focus="onFocus"
                                    @input.debounce.250ms="onInput"
                                    @keydown.arrow-down.prevent="navigateDown"
                                    @keydown.arrow-up.prevent="navigateUp"
                                    @keydown.enter.prevent.stop="selectHighlighted"
                                    @keydown.escape="closeDropdown"
-                                   placeholder="ابحث عن مورد القماش...">
-                            <button class="btn btn-outline-secondary btn-sm" type="button" x-show="selectedId" @click="clearSelection" tabindex="-1">
-                                <i class="fas fa-times fs-8"></i>
+                                   placeholder="ابحث عن خامة القماش أو الكتالوج...">
+                            <button class="btn btn-outline-secondary btn-sm" type="button" x-show="selectedId" @click="clearSelection" aria-label="مسح القماش المختار">
+                                <i class="fas fa-times fs-8" aria-hidden="true"></i>
                             </button>
                         </div>
-                        <div class="typeahead-dropdown" x-show="isOpen" :style="dropdownStyle" @mousedown.prevent x-cloak>
-                            <div x-show="loading" class="p-2 text-center text-muted fs-8">
-                                <i class="fas fa-spinner fa-spin me-1"></i> جاري البحث...
+                        <div class="typeahead-dropdown" x-show="isOpen" :style="dropdownStyle" :class="{ 'is-above': dropUp }" :id="listboxId" role="listbox" aria-label="نتائج الأقمشة" @mousedown.prevent x-cloak>
+                            <div x-show="loading" class="typeahead-status" role="status">
+                                <i class="fas fa-spinner fa-spin me-1" aria-hidden="true"></i> جاري البحث...
                             </div>
                             <template x-for="(item, index) in results" :key="item.id">
-                                <div class="typeahead-item"
+                                <div class="typeahead-item" role="option" :id="optionId(index)" :aria-selected="(index === highlightedIndex).toString()"
                                      :class="{ 'active': index === highlightedIndex }"
                                      @mousedown.prevent="selectItem(item)">
                                     <div class="d-flex justify-content-between align-items-center w-100 gap-2">
-                                        <span class="text-truncate fw-medium" dir="rtl" x-text="item.label"></span>
+                                        <div class="d-flex flex-column text-truncate">
+                                            <span class="text-truncate fw-medium" dir="rtl" x-text="item.label"></span>
+                                            <small class="text-muted fs-8" x-show="item.supplier_name">
+                                                المورد: <span x-text="item.supplier_name"></span>
+                                                <span x-show="item.catalog_number">(كتالوج: #<span x-text="item.catalog_number"></span>)</span>
+                                            </small>
+                                        </div>
                                         <span class="code-badge text-nowrap" dir="ltr" x-text="item.code"></span>
                                     </div>
                                 </div>
                             </template>
-                            <div x-show="!loading && hasSearched && results.length === 0" class="p-2 text-center text-muted fs-8">
-                                لا توجد نتائج مطابقة
+                            <div x-show="!loading && errorMessage" class="typeahead-status is-error" role="alert">
+                                <span x-text="errorMessage"></span>
+                                <button type="button" class="btn btn-sm btn-outline-danger ms-2" @mousedown.prevent="retry()">إعادة المحاولة</button>
                             </div>
-                            <div x-show="!loading && !hasSearched && results.length === 0" class="p-2 text-center text-muted fs-8">
+                            <div x-show="!loading && !errorMessage && hasSearched && results.length === 0" class="typeahead-status">
+                                لا توجد أقمشة مطابقة. جرّب رقم الكتالوج أو اسم المورد.
+                            </div>
+                            <div x-show="!loading && !errorMessage && !hasSearched && results.length === 0" class="typeahead-status">
                                 ابدأ بالكتابة للبحث...
                             </div>
                         </div>
                     </div>
 
-                    <div class="typeahead-container fabric-wrapper" @click.outside="closeDropdown" x-data="typeaheadSelect({
-                        name: 'lines[${lineIndex}][fabric_material_id]',
-                        endpoint: '/api/search/fabric-materials',
-                        placeholder: 'ابحث عن نوع القماش...',
-                        disabledPlaceholder: 'اختر مورد القماش أولاً',
-                        initialId: '${fabricId}',
-                        initialLabel: '${fabricLabel.replace(/'/g, "\\'")}',
-                        requireParent: true,
-                        parentParam: 'supplier_id',
-                        parentSelector: '.supplier-id-input'
-                    })">
-                        <input type="hidden" name="lines[${lineIndex}][fabric_material_id]" :value="selectedId" class="fabric-id-input">
-                        <input type="hidden" name="lines[${lineIndex}][fabric_material_label]" :value="selectedLabel" class="fabric-label-input">
-                        <div class="input-group input-group-sm">
-                            <input type="text" class="form-control form-control-sm"
-                                   x-ref="inputBox"
-                                   x-model="searchQuery"
-                                   :disabled="isDisabled"
-                                   @focus="onFocus"
-                                   @input.debounce.250ms="onInput"
-                                   @keydown.arrow-down.prevent="navigateDown"
-                                   @keydown.arrow-up.prevent="navigateUp"
-                                   @keydown.enter.prevent.stop="selectHighlighted"
-                                   @keydown.escape="closeDropdown"
-                                   :placeholder="placeholderText">
-                            <button class="btn btn-outline-secondary btn-sm" type="button" x-show="selectedId && !isDisabled" @click="clearSelection" tabindex="-1">
-                                <i class="fas fa-times fs-8"></i>
-                            </button>
-                        </div>
-                        <div class="typeahead-dropdown" x-show="isOpen" :style="dropdownStyle" @mousedown.prevent x-cloak>
-                            <div x-show="loading" class="p-2 text-center text-muted fs-8">
-                                <i class="fas fa-spinner fa-spin me-1"></i> جاري البحث...
-                            </div>
-                            <template x-for="(item, index) in results" :key="item.id">
-                                <div class="typeahead-item"
-                                     :class="{ 'active': index === highlightedIndex }"
-                                     @mousedown.prevent="selectItem(item)">
-                                    <div class="d-flex justify-content-between align-items-center w-100 gap-2">
-                                        <span class="text-truncate fw-medium" dir="rtl" x-text="item.label"></span>
-                                        <span class="code-badge text-nowrap" dir="ltr" x-text="item.code"></span>
-                                    </div>
-                                </div>
-                            </template>
-                            <div x-show="!loading && results.length === 0" class="p-2 text-center fs-8">
-                                <template x-if="hasSupplierFabrics === false">
-                                    <span class="text-danger fw-medium"><i class="fas fa-exclamation-triangle me-1"></i> لا توجد أنواع قماش مرتبطة بهذا المورد في النظام. يرجى اختيار مورد أقمشة آخر أو ربط المورد بالخامة.</span>
-                                </template>
-                                <template x-if="hasSupplierFabrics !== false && hasSearched">
-                                    <span class="text-muted">لا توجد نتائج مطابقة</span>
-                                </template>
-                                <template x-if="hasSupplierFabrics !== false && !hasSearched">
-                                    <span class="text-muted">ابدأ بالكتابة للبحث...</span>
-                                </template>
-                            </div>
-                        </div>
+                    <!-- Auto-inferred Supplier and Catalog Info -->
+                    <input type="hidden" name="lines[${lineIndex}][fabric_supplier_id]" class="supplier-id-input" value="${supplierId}">
+                    <input type="hidden" name="lines[${lineIndex}][fabric_supplier_label]" class="supplier-label-input" value="${supplierLabel}">
+
+                    <div class="fabric-inferred-info d-flex flex-wrap align-items-center gap-1 fs-8 ${fabricId ? '' : 'd-none'}">
+                        <span class="badge bg-light text-dark border">
+                            <i class="fas fa-truck me-1 text-muted"></i>المورد: <strong class="inferred-supplier-name">${supplierLabel || '—'}</strong>
+                        </span>
+                        <span class="badge bg-light text-primary border catalog-info-badge ${catalogNumber ? '' : 'd-none'}">
+                            <i class="fas fa-book me-1"></i>كتالوج: <strong class="inferred-catalog-number">${catalogNumber || '—'}</strong>
+                        </span>
                     </div>
 
+                    <!-- Color Select Dropdown -->
                     <div>
-                        <input type="text" name="lines[${lineIndex}][fabric_color_code]" class="form-control form-control-sm color-code-input" value="${colorCode.replace(/"/g, '&quot;')}" placeholder="رقم / كود اللون (مثال: 204)">
+                        <select name="lines[${lineIndex}][fabric_color_id]" class="form-select form-select-sm color-select" aria-label="درجة اللون" ${!fabricId ? 'disabled' : ''}>
+                            <option value="">${fabricId ? '-- اختر درجة اللون --' : 'اختر القماش أولاً...'}</option>
+                            ${colorId ? `<option value="${colorId}" selected data-code="${colorCode}" data-supplier-code="${supplierColorCode}">${colorCode} ${supplierColorCode ? '(' + supplierColorCode + ')' : ''}</option>` : ''}
+                        </select>
+                        <input type="hidden" name="lines[${lineIndex}][fabric_color_code]" class="color-code-input" value="${colorCode}">
+                        <input type="hidden" name="lines[${lineIndex}][fabric_supplier_color_code]" class="supplier-color-code-input" value="${supplierColorCode}">
                     </div>
                 </div>
             </td>
-            <td>
-                <input type="number" min="1" name="lines[${lineIndex}][quantity]" class="form-control form-control-sm qty-input" value="${data.quantity || 1}" required>
+            <td data-label="الكمية *" class="stack-half">
+                <input type="number" min="1" step="1" inputmode="numeric" name="lines[${lineIndex}][quantity]" class="form-control form-control-sm qty-input" value="${data.quantity || 1}" required aria-label="الكمية">
             </td>
-            <td>
-                <input type="number" step="0.01" min="0" name="lines[${lineIndex}][unit_price]" class="form-control form-control-sm price-input" value="${data.unit_price || 0.00}" required>
+            <td data-label="سعر الوحدة *" class="stack-half">
+                <input type="number" step="0.01" min="0" inputmode="decimal" name="lines[${lineIndex}][unit_price]" class="form-control form-control-sm price-input" value="${data.unit_price || 0.00}" required aria-label="سعر الوحدة">
             </td>
-            <td class="fw-bold text-dark text-end line-total">
+            <td data-label="المجموع" class="fw-bold text-dark text-end line-total">
                 0.00 ر.س
             </td>
-            <td>
-                <input type="text" name="lines[${lineIndex}][notes]" class="form-control form-control-sm" value="${(data.notes || '').replace(/"/g, '&quot;')}" placeholder="أي تفاصيل...">
+            <td data-label="ملاحظات البند">
+                <input type="text" name="lines[${lineIndex}][notes]" class="form-control form-control-sm line-notes-input" value="${(data.notes || '').replace(/"/g, '&quot;')}" placeholder="أي تفاصيل..." aria-label="ملاحظات البند">
             </td>
             <td class="text-center">
-                <button type="button" class="btn btn-sm btn-outline-danger remove-line-btn" title="حذف البند"><i class="fas fa-trash"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-danger remove-line-btn" title="حذف البند" aria-label="حذف البند"><i class="fas fa-trash" aria-hidden="true"></i><span class="d-md-none"> حذف البند</span></button>
             </td>
         `;
 
@@ -494,33 +555,34 @@ document.addEventListener('DOMContentLoaded', function () {
             if (container.classList.contains('model-wrapper')) {
                 const modelLabelInp = tr.querySelector('.model-label-input');
                 if (modelLabelInp) modelLabelInp.value = item.label || '';
+                setLineTitle(tr, item.label);
                 loadConfigurationsForModel(tr, item.id);
-            } else if (container.classList.contains('supplier-wrapper')) {
-                const supLabelInp = tr.querySelector('.supplier-label-input');
-                if (supLabelInp) supLabelInp.value = item.label || '';
-
-                const fabricComp = tr.querySelector('.fabric-wrapper');
-                if (fabricComp) {
-                    const compData = window.Alpine && typeof window.Alpine.$data === 'function'
-                        ? window.Alpine.$data(fabricComp)
-                        : (fabricComp._x_dataStack ? fabricComp._x_dataStack[0] : null);
-                    if (compData) {
-                        compData.clearSelection(false);
-                        compData.checkDisabled();
-                        compData.fetchResults('');
-                    }
-                    const fabricInput = fabricComp.querySelector('input[type="text"]');
-                    if (fabricInput) {
-                        setTimeout(() => {
-                            fabricInput.focus();
-                        }, 60);
-                    }
-                }
-                const colorInp = tr.querySelector('.color-code-input');
-                if (colorInp) colorInp.value = '';
             } else if (container.classList.contains('fabric-wrapper')) {
                 const matLabelInp = tr.querySelector('.fabric-label-input');
                 if (matLabelInp) matLabelInp.value = item.label || '';
+
+                const supIdInp = tr.querySelector('.supplier-id-input');
+                const supLabelInp = tr.querySelector('.supplier-label-input');
+                const infoBox = tr.querySelector('.fabric-inferred-info');
+                const supText = tr.querySelector('.inferred-supplier-name');
+                const catBadge = tr.querySelector('.catalog-info-badge');
+                const catText = tr.querySelector('.inferred-catalog-number');
+
+                if (supIdInp) supIdInp.value = item.supplier_id || '';
+                if (supLabelInp) supLabelInp.value = item.supplier_name || '';
+                if (supText) supText.textContent = item.supplier_name || '—';
+                if (catText) catText.textContent = item.catalog_number || '—';
+
+                if (infoBox) infoBox.classList.remove('d-none');
+                if (catBadge) {
+                    if (item.catalog_number) {
+                        catBadge.classList.remove('d-none');
+                    } else {
+                        catBadge.classList.add('d-none');
+                    }
+                }
+
+                loadColorsForFabric(tr, item.id);
             }
         });
 
@@ -531,31 +593,46 @@ document.addEventListener('DOMContentLoaded', function () {
             if (container.classList.contains('model-wrapper')) {
                 const modelLabelInp = tr.querySelector('.model-label-input');
                 if (modelLabelInp) modelLabelInp.value = '';
+                setLineTitle(tr, '');
                 loadConfigurationsForModel(tr, null);
-            } else if (container.classList.contains('supplier-wrapper')) {
-                const supLabelInp = tr.querySelector('.supplier-label-input');
-                if (supLabelInp) supLabelInp.value = '';
-
-                const fabricComp = tr.querySelector('.fabric-wrapper');
-                if (fabricComp) {
-                    const compData = window.Alpine && typeof window.Alpine.$data === 'function'
-                        ? window.Alpine.$data(fabricComp)
-                        : (fabricComp._x_dataStack ? fabricComp._x_dataStack[0] : null);
-                    if (compData) {
-                        compData.clearSelection(false);
-                        compData.checkDisabled();
-                    }
-                }
-                const colorInp = tr.querySelector('.color-code-input');
-                if (colorInp) colorInp.value = '';
             } else if (container.classList.contains('fabric-wrapper')) {
                 const matLabelInp = tr.querySelector('.fabric-label-input');
                 if (matLabelInp) matLabelInp.value = '';
+
+                const supIdInp = tr.querySelector('.supplier-id-input');
+                const supLabelInp = tr.querySelector('.supplier-label-input');
+                const infoBox = tr.querySelector('.fabric-inferred-info');
+
+                if (supIdInp) supIdInp.value = '';
+                if (supLabelInp) supLabelInp.value = '';
+                if (infoBox) infoBox.classList.add('d-none');
+
+                loadColorsForFabric(tr, null);
             }
         });
 
+        const colorSelect = tr.querySelector('.color-select');
+        if (colorSelect) {
+            colorSelect.addEventListener('change', function () {
+                const sel = this.options[this.selectedIndex];
+                const colorCodeInp = tr.querySelector('.color-code-input');
+                const supColorCodeInp = tr.querySelector('.supplier-color-code-input');
+                if (sel && sel.value) {
+                    if (colorCodeInp) colorCodeInp.value = sel.dataset.code || '';
+                    if (supColorCodeInp) supColorCodeInp.value = sel.dataset.supplierCode || '';
+                } else {
+                    if (colorCodeInp) colorCodeInp.value = '';
+                    if (supColorCodeInp) supColorCodeInp.value = '';
+                }
+            });
+        }
+
         if (modelId) {
             loadConfigurationsForModel(tr, modelId, configId);
+        }
+
+        if (fabricId) {
+            loadColorsForFabric(tr, fabricId, colorId, colorCode, supplierColorCode);
         }
 
         configSelect.addEventListener('change', function () {
@@ -602,8 +679,52 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
+        // Mobile card tools: collapse a finished line, or duplicate it for a similar bed.
+        const collapseBtn = tr.querySelector('.collapse-line-btn');
+        collapseBtn?.addEventListener('click', function () {
+            const collapsed = tr.classList.toggle('is-collapsed');
+            this.setAttribute('aria-expanded', String(!collapsed));
+            this.querySelector('i')?.classList.toggle('fa-chevron-up', !collapsed);
+            this.querySelector('i')?.classList.toggle('fa-chevron-down', collapsed);
+        });
+        tr.querySelector('.duplicate-line-btn')?.addEventListener('click', function () {
+            const colorOpt = colorSelect?.options[colorSelect.selectedIndex];
+            const newTr = addLine({
+                product_model_id: tr.querySelector('.model-id-input')?.value || '',
+                product_model_label: tr.querySelector('.model-label-input')?.value || '',
+                product_configuration_id: configSelect.value || '',
+                product_configuration_label: configLabelInp?.value || '',
+                requested_width_cm: widthInput.value,
+                requested_length_cm: lengthInput.value,
+                custom_design: customCheck.checked,
+                custom_design_name: customNameInput.value,
+                fabric_supplier_id: tr.querySelector('.supplier-id-input')?.value || '',
+                fabric_supplier_label: tr.querySelector('.supplier-label-input')?.value || '',
+                fabric_material_id: tr.querySelector('.fabric-id-input')?.value || '',
+                fabric_material_label: tr.querySelector('.fabric-label-input')?.value || '',
+                catalog_number: tr.querySelector('.inferred-catalog-number')?.textContent.replace('—', '').trim() || '',
+                fabric_color_id: colorSelect?.value || '',
+                fabric_color_code: colorOpt?.dataset.code || '',
+                fabric_supplier_color_code: colorOpt?.dataset.supplierCode || '',
+                quantity: qtyInput.value,
+                unit_price: priceInput.value,
+                notes: tr.querySelector('.line-notes-input')?.value || '',
+            });
+            newTr.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+
+        setLineTitle(tr, modelLabel);
         renumberLines();
         updateLineTotal();
+
+        return tr;
+    }
+
+    function setLineTitle(tr, label) {
+        const title = tr.querySelector('.line-model-title');
+        if (title) {
+            title.textContent = label ? ` — ${label}` : '';
+        }
     }
 
     function renumberLines() {
@@ -626,6 +747,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     addLineBtn.addEventListener('click', () => addLine());
+    document.getElementById('add-line-btn-mobile')?.addEventListener('click', () => {
+        addLine().scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
 
     if (oldLines && oldLines.length > 0) {
         oldLines.forEach(line => addLine(line));

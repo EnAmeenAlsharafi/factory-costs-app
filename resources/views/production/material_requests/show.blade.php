@@ -2,58 +2,32 @@
 
 @section('title', 'تفاصيل طلب خامات الإنتاج - مصنع مفروشات سدير')
 
+@section('page-title', 'طلب مواد')
+
 @section('content')
+@php
+    $canSubmitRequest = $materialRequest->status === 'DRAFT' && auth()->user()->can('production.material_requests');
+    $canIssue = in_array($materialRequest->status, ['SUBMITTED', 'PARTIALLY_FULFILLED'], true) && auth()->user()->can('inventory.issue');
+@endphp
 <div class="container-fluid px-4 py-3">
-    <!-- Header -->
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
-        <div>
-            <div class="d-flex align-items-center gap-2">
-                <h4 class="fw-bold mb-0 text-dark">طلب خامات: {{ $materialRequest->request_number }}</h4>
-                @php
-                    $statusClass = match($materialRequest->status) {
-                        'DRAFT' => 'bg-secondary',
-                        'SUBMITTED' => 'bg-warning text-dark',
-                        'PARTIALLY_FULFILLED' => 'bg-info text-dark',
-                        'FULFILLED' => 'bg-success',
-                        'REJECTED' => 'bg-danger',
-                        default => 'bg-secondary'
-                    };
-                    $statusAr = match($materialRequest->status) {
-                        'DRAFT' => 'مسودة',
-                        'SUBMITTED' => 'مقدم للمستودع',
-                        'PARTIALLY_FULFILLED' => 'صرف جزئي',
-                        'FULFILLED' => 'صرف مكتمل',
-                        'REJECTED' => 'مرفوض',
-                        default => $materialRequest->status
-                    };
-                @endphp
-                <span class="badge {{ $statusClass }} fs-6">{{ $statusAr }}</span>
+    <div class="record-header record-header-sticky mb-3">
+        <a href="{{ route('production.material-requests.index') }}" class="btn btn-light border record-header-back" aria-label="عودة للطلبات">
+            <i class="fas fa-arrow-right" aria-hidden="true"></i>
+        </a>
+        <div class="record-header-main">
+            <h1 id="page-heading" class="record-header-title text-dark">
+                {{ $materialRequest->productionOrder->productModel?->name_ar ?? $materialRequest->productionOrder->custom_design_name ?? 'طلب مواد' }}
+            </h1>
+            <div class="fs-8 text-muted">
+                طلب <span class="ltr-isolate">{{ $materialRequest->request_number }}</span> &bull; أمر إنتاج
+                @can('production.view')
+                    <a href="{{ route('production.orders.show', $materialRequest->productionOrder) }}" class="ltr-isolate">{{ $materialRequest->productionOrder->production_order_number }}</a>
+                @else
+                    <span class="ltr-isolate">{{ $materialRequest->productionOrder->production_order_number }}</span>
+                @endcan
             </div>
-            <p class="text-muted mb-0 mt-1">
-                أمر إنتاج: <a href="{{ route('production.orders.show', $materialRequest->productionOrder) }}" class="fw-bold font-monospace text-primary text-decoration-none">{{ $materialRequest->productionOrder->production_order_number }}</a>
-                &bull; المنتج: {{ $materialRequest->productionOrder->productModel?->name_ar ?? $materialRequest->productionOrder->custom_design_name }}
-            </p>
         </div>
-        <div class="d-flex gap-2">
-            @if($materialRequest->status === 'DRAFT' && auth()->user()->can('production.material_requests'))
-                <form action="{{ route('production.material-requests.submit', $materialRequest) }}" method="POST" class="d-inline">
-                    @csrf
-                    <button type="submit" class="btn btn-warning text-dark">
-                        <i class="fas fa-paper-plane me-1"></i> تقديم للمستودع
-                    </button>
-                </form>
-            @endif
-
-            @if(in_array($materialRequest->status, ['SUBMITTED', 'PARTIALLY_FULFILLED']) && auth()->user()->can('inventory.issue'))
-                <a href="{{ route('production.material-requests.fulfill.form', $materialRequest) }}" class="btn btn-success">
-                    <i class="fas fa-dolly me-1"></i> صرف الخامات من المستودع
-                </a>
-            @endif
-
-            <a href="{{ route('production.material-requests.index') }}" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-right me-1"></i> عودة للطلبات
-            </a>
-        </div>
+        <x-status-badge domain="material_request" :status="$materialRequest->status" size="lg" />
     </div>
 
     <!-- Info Cards -->
@@ -97,36 +71,47 @@
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
+                        <table class="table table-hover align-middle mb-0 table-stack-sm">
                             <thead class="bg-light">
                                 <tr>
                                     <th>المادة الخام</th>
                                     <th>اللون</th>
-                                    <th>الكمية المطلوبة</th>
-                                    <th>الكمية المصروفة</th>
+                                    <th>المطلوب</th>
+                                    <th>المعتمد</th>
+                                    <th>المصروف</th>
+                                    <th>المتبقي</th>
                                     <th>سبب الطلب</th>
                                     <th>حالة البند</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach($materialRequest->lines as $line)
+                                    @php
+                                        $lineTarget = (float) ($line->approved_quantity ?? $line->requested_quantity);
+                                        $lineRemaining = max(0, $lineTarget - (float) $line->issued_quantity);
+                                        $lineColorCode = $line->fabric_color_code ?? $line->fabricColor?->color_code;
+                                    @endphp
                                     <tr>
-                                        <td>
-                                            <div class="fw-bold">{{ $line->material?->name_ar }}</div>
-                                            <small class="text-muted font-monospace">{{ $line->material?->item_code }}</small>
+                                        <td class="stack-head">
+                                            <div class="min-w-0">
+                                                <div class="fw-bold">{{ $line->material?->name_ar }}</div>
+                                                <small class="text-muted font-monospace">{{ $line->material?->code }}</small>
+                                            </div>
                                         </td>
-                                        <td>
-                                            @if($line->fabricColor)
-                                                <span class="badge bg-light text-dark border"><i class="fas fa-circle me-1" style="color: {{ $line->fabricColor->hex_code ?? '#ccc' }}"></i>{{ $line->fabricColor->color_name_ar }}</span>
+                                        <td data-label="اللون" class="stack-half">
+                                            @if($lineColorCode)
+                                                <span class="badge bg-light text-dark border"><span class="color-dot me-1" style="background: {{ $line->fabricColor?->hex_code ?? '#cbd5e1' }};" aria-hidden="true"></span><span class="ltr-isolate">{{ $lineColorCode }}</span> {{ $line->fabricColor?->color_name_ar }}</span>
                                             @else
                                                 <span class="text-muted">—</span>
                                             @endif
                                         </td>
-                                        <td class="fw-bold text-primary">{{ (float)$line->requested_quantity }} {{ $line->baseUnit?->name_ar }}</td>
-                                        <td class="fw-bold {{ $line->issued_quantity >= $line->requested_quantity ? 'text-success' : 'text-warning' }}">
+                                        <td data-label="المطلوب" class="fw-bold text-primary stack-half">{{ (float)$line->requested_quantity }} {{ $line->baseUnit?->name_ar }}</td>
+                                        <td data-label="المعتمد" class="stack-half">{{ $line->approved_quantity !== null ? (float) $line->approved_quantity : '—' }}</td>
+                                        <td data-label="المصروف" class="fw-bold stack-half {{ $lineRemaining <= 0 ? 'text-success' : 'text-warning-emphasis' }}">
                                             {{ (float)$line->issued_quantity }} {{ $line->baseUnit?->name_ar }}
                                         </td>
-                                        <td>
+                                        <td data-label="المتبقي" class="fw-bold stack-half">{{ $lineRemaining }} {{ $line->baseUnit?->name_ar }}</td>
+                                        <td data-label="سبب الطلب" class="stack-half">
                                             <span class="badge bg-light text-dark border fs-8">
                                                 {{ match($line->request_reason) {
                                                     'PLANNED_PRODUCTION' => 'إنتاج مخطط',
@@ -138,8 +123,8 @@
                                                 } }}
                                             </span>
                                         </td>
-                                        <td>
-                                            @if($line->issued_quantity >= $line->requested_quantity)
+                                        <td data-label="حالة البند" class="stack-half">
+                                            @if($lineRemaining <= 0)
                                                 <span class="badge bg-success"><i class="fas fa-check me-1"></i>مكتمل</span>
                                             @elseif($line->issued_quantity > 0)
                                                 <span class="badge bg-info text-dark">جزئي</span>
@@ -196,6 +181,24 @@
                 </div>
             </div>
         </div>
+    @endif
+
+    @if ($canSubmitRequest || $canIssue)
+        <x-mobile-action-bar class="mt-3">
+            @if ($canSubmitRequest)
+                <form action="{{ route('production.material-requests.submit', $materialRequest) }}" method="POST">
+                    @csrf
+                    <button type="submit" class="btn btn-warning text-dark">
+                        <i class="fas fa-paper-plane" aria-hidden="true"></i> تقديم للمستودع
+                    </button>
+                </form>
+            @endif
+            @if ($canIssue)
+                <a href="{{ route('production.material-requests.fulfill.form', $materialRequest) }}" class="btn btn-success">
+                    <i class="fas fa-dolly" aria-hidden="true"></i> صرف
+                </a>
+            @endif
+        </x-mobile-action-bar>
     @endif
 </div>
 @endsection

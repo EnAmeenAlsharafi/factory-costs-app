@@ -3,11 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ManufacturingRecipeRequest;
+use App\Http\Requests\UpdateManufacturingRecipeRequest;
+use App\Models\CustomerOrderLine;
 use App\Models\ManufacturingRecipe;
 use App\Models\ManufacturingRecipeVersion;
 use App\Models\ManufacturingTemplate;
 use App\Models\Material;
 use App\Models\ProductConfiguration;
+use App\Models\ProductionMaterialRequirement;
+use App\Models\ProductionOrder;
 use App\Models\ProductModel;
 use App\Models\SemiFinishedComponent;
 use App\Models\UnitOfMeasure;
@@ -101,6 +105,62 @@ class ManufacturingRecipeController extends Controller
         $costPreview = $selectedVersion ? $this->recipeService->calculateStandardCostPreview($selectedVersion) : null;
 
         return view('recipes.show', compact('recipe', 'selectedVersion', 'costPreview'));
+    }
+
+    public function editRecipe(Request $request, ManufacturingRecipe $recipe): View
+    {
+        abort_if(! $request->user()->can('recipes.manage'), 403, 'غير مصرح لك بتعديل بيانات وصفة التصنيع.');
+
+        $recipe->load(['productConfiguration.productModel', 'semiFinishedComponent', 'versions']);
+        $configurations = ProductConfiguration::with('productModel')->where('is_active', true)->get();
+        $components = SemiFinishedComponent::where('is_active', true)->get();
+
+        $versionIds = $recipe->versions()->pluck('id');
+        $hasProductionHistory = ProductionOrder::whereIn('manufacturing_recipe_version_id', $versionIds)->exists()
+            || ProductionMaterialRequirement::whereIn('manufacturing_recipe_version_id', $versionIds)->exists()
+            || CustomerOrderLine::whereIn('approved_recipe_version_id', $versionIds)->exists();
+
+        return view('recipes.edit_recipe', compact('recipe', 'configurations', 'components', 'hasProductionHistory'));
+    }
+
+    public function updateRecipe(UpdateManufacturingRecipeRequest $request, ManufacturingRecipe $recipe): RedirectResponse
+    {
+        try {
+            $this->recipeService->updateRecipe($recipe, $request->validated());
+
+            return redirect()->route('recipes.show', $recipe)
+                ->with('success', 'تم تعديل بيانات وصفة التصنيع بنجاح.');
+        } catch (Exception $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
+    }
+
+    public function destroy(Request $request, ManufacturingRecipe $recipe): RedirectResponse
+    {
+        abort_if(! $request->user()->can('recipes.manage'), 403, 'غير مصرح لك بحذف وصفة التصنيع.');
+
+        try {
+            $this->recipeService->deleteRecipe($recipe);
+
+            return redirect()->route('recipes.index')
+                ->with('success', 'تم حذف وصفة التصنيع ['.$recipe->recipe_code.'] بنجاح.');
+        } catch (Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    public function destroyVersion(Request $request, ManufacturingRecipe $recipe, ManufacturingRecipeVersion $version): RedirectResponse
+    {
+        abort_if(! $request->user()->can('recipes.manage'), 403, 'غير مصرح لك بحذف إصدار الوصفة.');
+
+        try {
+            $this->recipeService->deleteVersion($version);
+
+            return redirect()->route('recipes.show', $recipe)
+                ->with('success', 'تم حذف الإصدار (V'.$version->version_number.') بنجاح.');
+        } catch (Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
     }
 
     public function edit(Request $request, ManufacturingRecipe $recipe, ManufacturingRecipeVersion $version): View

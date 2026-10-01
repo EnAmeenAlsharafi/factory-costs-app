@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\FabricColor;
 use App\Models\Material;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderLine;
@@ -9,6 +10,7 @@ use App\Models\PurchaseRequest;
 use App\Models\PurchaseRequestLine;
 use App\Models\Supplier;
 use App\Models\SupplierQuotation;
+use App\Models\SupplierQuotationLine;
 use App\Models\User;
 use App\Models\Warehouse;
 use Exception;
@@ -63,11 +65,39 @@ class PurchaseOrderService
                 $lineTotal = round($orderedQty * $unitPrice, 4);
                 $subtotal += $lineTotal;
 
+                $colorId = $lineData['fabric_color_id'] ?? null;
+                $colorCode = $lineData['fabric_color_code'] ?? null;
+                $supplierColorCode = $lineData['fabric_supplier_color_code'] ?? null;
+
+                if (! empty($lineData['supplier_quotation_line_id']) && ! $colorId) {
+                    $sqLine = SupplierQuotationLine::find($lineData['supplier_quotation_line_id']);
+                    $colorId = $sqLine?->fabric_color_id;
+                    $colorCode = $colorCode ?: $sqLine?->fabric_color_code;
+                    $supplierColorCode = $supplierColorCode ?: $sqLine?->fabric_supplier_color_code;
+                }
+
+                if (! empty($lineData['purchase_request_line_id']) && ! $colorId) {
+                    $prLine = PurchaseRequestLine::find($lineData['purchase_request_line_id']);
+                    $colorId = $prLine?->fabric_color_id;
+                    $colorCode = $colorCode ?: $prLine?->fabric_color_code;
+                    $supplierColorCode = $supplierColorCode ?: $prLine?->fabric_supplier_color_code;
+                }
+
+                if ($colorId && (! $colorCode || ! $supplierColorCode)) {
+                    $color = FabricColor::find($colorId);
+                    if ($color) {
+                        $colorCode = $colorCode ?: $color->color_code;
+                        $supplierColorCode = $supplierColorCode ?: $color->supplier_color_code;
+                    }
+                }
+
                 $linesToCreate[] = [
                     'purchase_request_line_id' => $lineData['purchase_request_line_id'] ?? null,
                     'supplier_quotation_line_id' => $lineData['supplier_quotation_line_id'] ?? null,
                     'material_id' => $material->id,
-                    'fabric_color_id' => $lineData['fabric_color_id'] ?? null,
+                    'fabric_color_id' => $colorId,
+                    'fabric_color_code' => $colorCode,
+                    'fabric_supplier_color_code' => $supplierColorCode,
                     'ordered_quantity' => $orderedQty,
                     'purchase_unit_id' => $lineData['purchase_unit_id'] ?? $material->purchase_unit_id ?? $material->base_unit_id,
                     'conversion_factor' => $conversionFactor,

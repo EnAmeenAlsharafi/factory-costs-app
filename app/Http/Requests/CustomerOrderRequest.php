@@ -7,7 +7,6 @@ use App\Models\Material;
 use App\Models\ProductConfiguration;
 use App\Models\ProductModel;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\DB;
 
 class CustomerOrderRequest extends FormRequest
 {
@@ -44,6 +43,26 @@ class CustomerOrderRequest extends FormRequest
                     if ($config) {
                         $lines[$i]['requested_width_cm'] = ! empty($line['requested_width_cm']) ? $line['requested_width_cm'] : $config->width_cm;
                         $lines[$i]['requested_length_cm'] = ! empty($line['requested_length_cm']) ? $line['requested_length_cm'] : $config->length_cm;
+                    }
+                }
+
+                // Auto-infer supplier from fabric material (strictly from fabric_material_specs) if not provided
+                if (! empty($line['fabric_material_id']) && empty($line['fabric_supplier_id'])) {
+                    $material = Material::with('fabricSpec')->find($line['fabric_material_id']);
+                    if ($material?->fabricSpec?->supplier_id) {
+                        $lines[$i]['fabric_supplier_id'] = $material->fabricSpec->supplier_id;
+                    }
+                }
+
+                // Auto-populate codes and supplier strictly from color ID in database (anti-tampering)
+                if (! empty($line['fabric_color_id'])) {
+                    $color = FabricColor::with('material.fabricSpec')->find($line['fabric_color_id']);
+                    if ($color) {
+                        $lines[$i]['fabric_color_code'] = $color->color_code;
+                        $lines[$i]['fabric_supplier_color_code'] = $color->supplier_color_code;
+                        if ($color->material?->fabricSpec?->supplier_id) {
+                            $lines[$i]['fabric_supplier_id'] = $color->material->fabricSpec->supplier_id;
+                        }
                     }
                 }
             }
@@ -88,6 +107,7 @@ class CustomerOrderRequest extends FormRequest
             'lines.*.fabric_material_id' => 'nullable|exists:materials,id',
             'lines.*.fabric_color_id' => 'nullable|exists:fabric_colors,id',
             'lines.*.fabric_color_code' => 'nullable|string|max:100',
+            'lines.*.fabric_supplier_color_code' => 'nullable|string|max:100',
             'lines.*.fabric_notes' => 'nullable|string',
             'lines.*.quantity' => 'required|numeric|gt:0',
             'lines.*.unit_price' => 'required|numeric|min:0',
@@ -109,7 +129,6 @@ class CustomerOrderRequest extends FormRequest
                         $requiresFabric = true;
                     }
                 } elseif (! empty($line['custom_design']) && (! isset($line['requires_fabric']) || ! empty($line['requires_fabric']))) {
-                    // For custom design lines, if fabric supplier/material/color or requires_fabric is present
                     if (! empty($line['fabric_supplier_id']) || ! empty($line['fabric_material_id']) || ! empty($line['fabric_color_code']) || ! empty($line['requires_fabric'])) {
                         $requiresFabric = true;
                     }
@@ -117,36 +136,47 @@ class CustomerOrderRequest extends FormRequest
 
                 if ($requiresFabric) {
                     if (empty($line['fabric_supplier_id'])) {
-                        $validator->errors()->add("lines.{$index}.fabric_supplier_id", 'يرجى اختيار مورد القماش لهذا البند.');
+                        $validator->errors()->add("lines.{$index}.fabric_supplier_id", 'يرجى اختيار مورد القماش لهذا البند أو اختيار مادة مرتبطة بمورد.');
                     }
                     if (empty($line['fabric_material_id'])) {
-                        $validator->errors()->add("lines.{$index}.fabric_material_id", 'يرجى اختيار نوع القماش.');
+                        $validator->errors()->add("lines.{$index}.fabric_material_id", 'يرجى اختيار مادة القماش.');
                     }
-                    if (empty($line['fabric_color_code'])) {
-                        $validator->errors()->add("lines.{$index}.fabric_color_code", 'يرجى إدخال رقم أو كود اللون.');
+                    if (empty($line['fabric_color_id']) && empty($line['fabric_color_code'])) {
+                        $validator->errors()->add("lines.{$index}.fabric_color_code", 'يرجى اختيار لون القماش المعتمد.');
                     }
                 }
 
                 if (! empty($line['fabric_material_id'])) {
-                    $material = Material::with('category')->find($line['fabric_material_id']);
+                    $material = Material::with(['category', 'fabricSpec'])->find($line['fabric_material_id']);
                     if ($material && strtoupper($material->category?->code) !== 'FABRIC') {
                         $validator->errors()->add("lines.{$index}.fabric_material_id", 'نوع المادة المختار ليس من فئة الأقمشة.');
                     }
 
-                    if (! empty($line['fabric_supplier_id'])) {
-                        $isLinked = DB::table('material_supplier')
-                            ->where('material_id', $line['fabric_material_id'])
-                            ->where('supplier_id', $line['fabric_supplier_id'])
-                            ->exists();
+                    // Requirement 7: Prevent using incomplete legacy fabrics without supplier or catalog
+                    $hasSupplier = ! empty($material->fabricSpec?->supplier_id) || $material->suppliers()->exists();
+                    $hasCatalog = ! empty($material->fabricSpec?->catalog_number);
+                    $isIncompleteLegacy = in_array($material->code, ['MAT-000014', 'MAT-000016', 'MAT-000017'], true) || (! $hasSupplier && ! $hasCatalog);
+
+                    if ($material && (! $material->is_active || $isIncompleteLegacy)) {
+                        $validator->errors()->add("lines.{$index}.fabric_material_id", 'لا يمكن استخدام هذا القماش في طلب جديد لعدم اكتمال بيانات المورد ورقم الكتالوج.');
+                    }
+
+                    // Requirement 2.7: Check supplier-material linkage
+                    if (! empty($line['fabric_supplier_id']) && $material) {
+                        $supplierId = (int) $line['fabric_supplier_id'];
+                        $isLinked = ((int) $material->fabricSpec?->supplier_id === $supplierId)
+                            || $material->suppliers()->where('suppliers.id', $supplierId)->exists();
                         if (! $isLinked) {
-                            $validator->errors()->add("lines.{$index}.fabric_supplier_id", 'المورد المحدد غير مرتبط بنوع القماش المختار.');
+                            $validator->errors()->add("lines.{$index}.fabric_supplier_id", 'المورد المختار غير مرتبط بقماش هذا البند.');
                         }
                     }
 
                     if (! empty($line['fabric_color_id'])) {
                         $color = FabricColor::find($line['fabric_color_id']);
-                        if ($color && $color->material_id != $line['fabric_material_id']) {
-                            $validator->errors()->add("lines.{$index}.fabric_color_id", 'اللون المحدد لا يتبع نوع القماش المختار.');
+                        if (! $color || (int) $color->material_id !== (int) $line['fabric_material_id']) {
+                            $validator->errors()->add("lines.{$index}.fabric_color_id", 'اللون المحدد لا يتبع مادة القماش المختارة.');
+                        } elseif (! $color->is_active || ! $color->is_available) {
+                            $validator->errors()->add("lines.{$index}.fabric_color_id", 'اللون المحدد غير متوفر أو غير نشط حالياً.');
                         }
                     }
                 }

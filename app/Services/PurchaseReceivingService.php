@@ -56,12 +56,14 @@ class PurchaseReceivingService
                     : (float) $poLine->unit_price;
 
                 $poColorCode = $poLine->fabric_color_code ?? $poLine->fabricColor?->color_code;
+                $poSupplierColorCode = $poLine->fabric_supplier_color_code ?? $poLine->fabricColor?->supplier_color_code;
 
                 $receiptLines[] = [
                     'purchase_order_line_id' => $poLine->id,
                     'material_id' => $poLine->material_id,
                     'fabric_color_id' => $poLine->fabric_color_id,
                     'fabric_color_code' => $poColorCode,
+                    'fabric_supplier_color_code' => $poSupplierColorCode,
                     'quantity_received' => $qtyToReceive,
                     'purchase_unit_id' => $poLine->purchase_unit_id,
                     'conversion_factor' => $factor,
@@ -101,6 +103,10 @@ class PurchaseReceivingService
             // 1. Transactional ceiling enforcement and fabric color matching
             if ($receipt->purchase_order_id && $receipt->purchaseOrder) {
                 $po = PurchaseOrder::where('id', $receipt->purchase_order_id)->lockForUpdate()->firstOrFail();
+
+                if ((int) $receipt->supplier_id !== (int) $po->supplier_id) {
+                    throw new Exception('مورد سند الاستلام لا يطابق مورد أمر الشراء المرتبط.');
+                }
 
                 if (in_array($po->status, ['CLOSED', 'CANCELLED'], true)) {
                     throw new Exception('لا يمكن ترحيل استلام لأمر شراء مغلق أو ملغى.');

@@ -1,162 +1,115 @@
 @extends('layouts.app')
 
-@section('title', 'مهامي اليومية - التوصيل والتركيب')
+@section('title', 'مهامي - التوصيل والتركيب')
+@section('page-title', 'مهامي')
 
 @section('content')
-<div class="container py-2" style="max-width: 500px;">
-    <!-- Driver Mobile Header -->
-    <div class="card border-0 bg-primary text-white shadow-sm rounded-4 mb-3">
-        <div class="card-body p-3">
-            <div class="d-flex align-items-center justify-content-between">
-                <div>
-                    <h5 class="fw-bold mb-0">
-                        <i class="fas fa-clipboard-list me-2"></i>مهام التوصيل والتركيب
-                    </h5>
-                    <div class="small opacity-75 mt-1">مرحباً {{ auth()->user()->name }} (السائق/الفني)</div>
+@php
+    $emptyMessages = [
+        'all' => 'لا توجد مهام توصيل مسندة إليك حالياً. ستظهر هنا فور إسناد أمر توصيل لك.',
+        'today' => 'لا توجد توصيلات مجدولة لك اليوم.',
+        'assigned' => 'لا توجد مهام جاهزة للانطلاق حالياً.',
+        'out' => 'لا توجد شحنات خارجة للتوصيل معك الآن.',
+        'installation' => 'لا توجد طلبات بانتظار التركيب.',
+        'exceptions' => 'لا توجد توصيلات متعذرة أو مؤجلة — ممتاز.',
+    ];
+@endphp
+<div class="d-flex flex-column gap-3 mx-auto" style="max-width: 760px;">
+    <div class="page-header-card">
+        <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+            <i class="fas fa-truck-fast text-warning fs-5" aria-hidden="true"></i>
+            <span>مهامي — التوصيل والتركيب</span>
+        </h1>
+        <p class="page-header-subtitle text-muted mb-0 fs-7">اضغط على المهمة لعرض العميل والعنوان والمنتجات، أو نفّذ الإجراء التالي مباشرة.</p>
+    </div>
+
+    <nav class="segment-tabs" aria-label="تصفية المهام">
+        @foreach ($filters as $filterKey => $filterLabel)
+            <a href="{{ route('delivery.orders.my-tasks', ['filter' => $filterKey]) }}"
+               class="segment-tab {{ $filter === $filterKey ? 'active' : '' }}"
+               @if ($filter === $filterKey) aria-current="page" @endif>
+                {{ $filterLabel }} <span class="count">{{ $filterCounts[$filterKey] }}</span>
+            </a>
+        @endforeach
+    </nav>
+
+    @forelse ($myDeliveries as $delivery)
+        @php
+            $presented = \App\Services\StatusPresenter::present('delivery', $delivery->status);
+            $itemCount = (float) $delivery->lines->sum('quantity');
+        @endphp
+        <article class="task-card tone-{{ $presented['tone'] }}" aria-labelledby="delivery-title-{{ $delivery->id }}">
+            <div class="task-card-head">
+                <div class="min-w-0">
+                    <h2 id="delivery-title-{{ $delivery->id }}" class="task-card-title">
+                        <a href="{{ route('delivery.orders.show', $delivery) }}" class="text-reset text-decoration-none">{{ $delivery->customer_name_snapshot }}</a>
+                    </h2>
+                    <div class="task-card-ref"><span class="ltr-isolate">{{ $delivery->delivery_number }}</span></div>
                 </div>
-                <span class="badge bg-white text-primary rounded-pill px-3 py-2 fw-bold">
-                    {{ $myDeliveries->count() }} مهام
+                <x-status-badge domain="delivery" :status="$delivery->status" />
+            </div>
+
+            <div class="task-card-meta">
+                <span><i class="fas fa-location-dot" aria-hidden="true"></i>{{ collect([$delivery->city_snapshot, $delivery->district_snapshot])->filter()->implode(' — ') ?: 'العنوان غير محدد' }}</span>
+                <span><i class="far fa-calendar" aria-hidden="true"></i>
+                    @if ($delivery->scheduled_delivery_date)
+                        {{ $delivery->scheduled_delivery_date->isToday() ? 'اليوم' : $delivery->scheduled_delivery_date->format('Y-m-d') }}
+                    @else
+                        بدون موعد
+                    @endif
+                    @if ($delivery->scheduled_time_notes) ({{ $delivery->scheduled_time_notes }}) @endif
                 </span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Task Cards -->
-    @forelse($myDeliveries as $delivery)
-    <div class="card border-0 shadow-sm rounded-4 mb-3 overflow-hidden">
-        <div class="card-header bg-light border-0 d-flex justify-content-between align-items-center py-2 px-3">
-            <span class="fw-bold text-dark">{{ $delivery->delivery_number }}</span>
-            @php
-                $statusBadges = [
-                    'ASSIGNED' => ['bg' => 'bg-info', 'label' => 'معين لك'],
-                    'READY_FOR_DELIVERY' => ['bg' => 'bg-primary', 'label' => 'جاهز للشحن'],
-                    'OUT_FOR_DELIVERY' => ['bg' => 'bg-warning text-dark', 'label' => 'في الطريق للعميل'],
-                    'DELIVERED' => ['bg' => 'bg-success', 'label' => 'تم التسليم'],
-                ];
-                $status = $statusBadges[$delivery->status] ?? ['bg' => 'bg-secondary', 'label' => $delivery->status];
-            @endphp
-            <span class="badge {{ $status['bg'] }} px-2 py-1">{{ $status['label'] }}</span>
-        </div>
-        <div class="card-body p-3">
-            <!-- Customer Info -->
-            <div class="mb-3">
-                <div class="fw-bold fs-6 text-dark mb-1">{{ $delivery->customer_name_snapshot }}</div>
-                <div class="text-muted small mb-2">
-                    <i class="fas fa-map-marker-alt text-danger me-1"></i>
-                    {{ $delivery->city_snapshot }} - {{ $delivery->district_snapshot }}
-                    <br>
-                    <span class="text-secondary">{{ $delivery->delivery_address_snapshot }}</span>
-                </div>
-                @if($delivery->customer_phone_snapshot)
-                <a href="tel:{{ $delivery->customer_phone_snapshot }}" class="btn btn-outline-success btn-sm w-100 rounded-pill py-2 text-decoration-none">
-                    <i class="fas fa-phone-alt me-2"></i>الاتصال بالعميل ({{ $delivery->customer_phone_snapshot }})
-                </a>
+                <span><i class="fas fa-couch" aria-hidden="true"></i>{{ rtrim(rtrim(number_format($itemCount, 2), '0'), '.') }} قطعة</span>
+                @if ($delivery->installation_required)
+                    <span><i class="fas fa-screwdriver-wrench" aria-hidden="true"></i>يتطلب تركيب</span>
                 @endif
             </div>
 
-            <!-- Items summary -->
-            <div class="bg-light p-2 rounded-3 mb-3">
-                <div class="small fw-bold text-secondary mb-1">قطع الأثاث المطلوبة:</div>
-                <ul class="list-unstyled mb-0 small">
-                    @foreach($delivery->lines as $line)
-                    <li class="d-flex justify-content-between py-1 border-bottom border-light">
-                        <span>{{ $line->productionOrder->customerOrderLine->productModel->name_ar ?? 'منتج أثاث' }}</span>
-                        <span class="badge bg-secondary rounded-pill">{{ (float)$line->quantity }} قطعة</span>
+            <ul class="list-unstyled mb-0 fs-7 border-top pt-2">
+                @foreach ($delivery->lines as $line)
+                    @php $linePo = $line->productionOrder; @endphp
+                    <li class="d-flex justify-content-between gap-2 py-1">
+                        <span class="min-w-0">
+                            {{ $linePo?->productModel?->name_ar ?? $linePo?->customerOrderLine?->productModel?->name_ar ?? 'منتج أثاث' }}
+                            @if ($linePo?->requested_width_cm)
+                                <span class="text-muted">— <span class="ltr-isolate">{{ (int) $linePo->requested_width_cm }}×{{ (int) $linePo->requested_length_cm }}</span></span>
+                            @endif
+                        </span>
+                        <strong class="flex-shrink-0">× {{ (float) $line->quantity }}</strong>
                     </li>
-                    @endforeach
-                </ul>
-            </div>
+                @endforeach
+            </ul>
 
-            <!-- Actions based on status -->
-            <div class="d-grid gap-2">
-                @if($delivery->status === 'READY_FOR_DELIVERY' || $delivery->status === 'ASSIGNED')
-                    @can('delivery.dispatch')
-                    <form action="{{ route('delivery.orders.dispatch', $delivery) }}" method="POST">
-                        @csrf
-                        <button type="submit" class="btn btn-primary w-100 py-2 rounded-pill fw-bold shadow-sm">
-                            <i class="fas fa-shipping-fast me-1"></i>انطلاق وتأكيد خروج الشحنة
-                        </button>
-                    </form>
-                    @endcan
-                @elseif($delivery->status === 'OUT_FOR_DELIVERY')
-                    @can('delivery.complete')
-                    <form action="{{ route('delivery.orders.complete', $delivery) }}" method="POST">
-                        @csrf
-                        <button type="submit" class="btn btn-success w-100 py-2 rounded-pill fw-bold shadow-sm">
-                            <i class="fas fa-check-circle me-1"></i>تم تسليم المنتجات للعميل
-                        </button>
-                    </form>
-                    @endcan
-                    @can('delivery.reschedule')
-                    <button type="button" class="btn btn-outline-danger btn-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#failModal-{{ $delivery->id }}">
-                        <i class="fas fa-exclamation-triangle me-1"></i>تعذر التسليم / إعادة جدولة
-                    </button>
-                    @endcan
-                @elseif($delivery->status === 'DELIVERED')
-                    @can('delivery.install')
-                    <form action="{{ route('delivery.orders.install', $delivery) }}" method="POST">
-                        @csrf
-                        <button type="submit" class="btn btn-teal text-white w-100 py-2 rounded-pill fw-bold shadow-sm" style="background-color: #0d9488;">
-                            <i class="fas fa-tools me-1"></i>إكمال التركيب والتشغيل النهائي
-                        </button>
-                    </form>
-                    @endcan
+            <div class="task-card-actions">
+                @if ($delivery->customer_phone_snapshot)
+                    <a href="tel:{{ preg_replace('/[^0-9+]/', '', $delivery->customer_phone_snapshot) }}" class="btn btn-outline-success">
+                        <i class="fas fa-phone" aria-hidden="true"></i> اتصال
+                    </a>
                 @endif
-
-                <a href="{{ route('delivery.orders.show', $delivery) }}" class="btn btn-link btn-sm text-decoration-none text-muted">
-                    عرض تفاصيل الأمر الكاملة <i class="fas fa-arrow-left ms-1"></i>
+                <a href="{{ route('delivery.orders.show', $delivery) }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-folder-open" aria-hidden="true"></i> التفاصيل
                 </a>
             </div>
-        </div>
-    </div>
+            <div class="task-card-actions">
+                @include('delivery.orders.partials.next-actions', ['delivery' => $delivery, 'failSheetId' => 'fail-sheet-'.$delivery->id, 'assignSheetId' => null])
+            </div>
+            @if (in_array($delivery->status, ['FAILED', 'RESCHEDULED'], true))
+                <p class="fs-7 text-muted mb-0"><i class="fas fa-circle-info" aria-hidden="true"></i> هذه المهمة بانتظار قرار الإدارة لإعادة الجدولة أو الإلغاء.</p>
+            @endif
+        </article>
 
-    <!-- Fail / Reschedule Modal -->
-    @can('delivery.reschedule')
-    <div class="modal fade" id="failModal-{{ $delivery->id }}" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <form action="{{ route('delivery.orders.fail-or-reschedule', $delivery) }}" method="POST" class="modal-content">
-                @csrf
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title fs-6 fw-bold">تسجيل إخفاق التوصيل / إعادة الجدولة</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">الحدث المطلوب:</label>
-                        <select name="new_status" class="form-select" required>
-                            <option value="RESCHEDULED">إعادة جدولة لموعد آخر</option>
-                            <option value="FAILED">متعذر التسليم (فشل)</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">سبب الإخفاق / التأجيل:</label>
-                        <textarea name="reason" class="form-control" rows="3" placeholder="العميل غير متواجد، الموقع غير دقيق..." required></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">تاريخ التوصيل الجديد (اختياري):</label>
-                        <input type="date" name="scheduled_delivery_date" class="form-control">
-                    </div>
-                    <div class="form-check form-switch mb-3">
-                        <input class="form-check-input" type="checkbox" name="returned_to_factory" value="1" id="returnSwitch-{{ $delivery->id }}" checked>
-                        <label class="form-check-label small" for="returnSwitch-{{ $delivery->id }}">إعادة المنتجات إلى مخزن المنتجات الجاهزة</label>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-danger btn-sm">حفظ وإرسال التقرير</button>
-                </div>
-            </form>
-        </div>
-    </div>
-    @endcan
+        @if ($delivery->status === 'OUT_FOR_DELIVERY')
+            @include('delivery.orders.partials.fail-sheet', ['delivery' => $delivery, 'sheetId' => 'fail-sheet-'.$delivery->id])
+        @endif
     @empty
-    <div class="card border-0 shadow-sm rounded-4 text-center py-5">
-        <div class="card-body">
-            <i class="fas fa-check-double text-success display-3 mb-3"></i>
-            <h6 class="fw-bold">لا توجد مهام توصيل قيد التنفيذ حالياً</h6>
-            <p class="text-muted small">جميع الطلبات المسندة إليك مكتملة أو لا توجد شحنات جديدة.</p>
+        <div class="card-factory empty-state" role="status">
+            <i class="fas fa-circle-check text-success fs-2 mb-3 d-block" aria-hidden="true"></i>
+            <p class="mb-0 fw-semibold">{{ $emptyMessages[$filter] }}</p>
         </div>
-    </div>
     @endforelse
+
+    @if ($myDeliveries->hasPages())
+        <div class="d-flex justify-content-center">{{ $myDeliveries->links() }}</div>
+    @endif
 </div>
 @endsection

@@ -3,92 +3,66 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
-use App\Models\CustomerOrder;
 use App\Models\Department;
-use App\Models\Material;
-use App\Models\ProductionMaterialRequest;
-use App\Models\ProductionOrder;
-use App\Models\ProductionReworkAction;
-use App\Models\QualityIncident;
 use App\Models\SalesChannel;
 use App\Models\Supplier;
 use App\Models\UnitOfMeasure;
 use App\Models\User;
+use App\Services\OperationalDashboardService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
+    public function __construct(protected OperationalDashboardService $dashboardService) {}
+
     /**
-     * Display the main factory production management dashboard.
+     * Display the role-oriented operational dashboard ("what do I need to do now?").
      */
     public function index(Request $request): View
     {
-        // Live Master Data Statistics
-        $masterDataStats = [
-            'customers_count' => Customer::count(),
-            'suppliers_count' => Supplier::count(),
-            'departments_count' => Department::active()->count(),
-            'units_count' => UnitOfMeasure::active()->count(),
-            'sales_channels_count' => SalesChannel::active()->count(),
-            'users_count' => User::active()->count(),
+        $user = $request->user();
+
+        $sections = $this->dashboardService->sectionsFor($user);
+
+        return view('dashboard', [
+            'sections' => $sections,
+            'masterDataStats' => $this->masterDataStatsFor($user),
+        ]);
+    }
+
+    /**
+     * Reference-data counts, computed only for records the user is allowed to open.
+     *
+     * @return list<array{label: string, value: ?int, icon: string, route: string}>
+     */
+    private function masterDataStatsFor(User $user): array
+    {
+        $candidates = [
+            ['permission' => 'users.view', 'label' => 'المستخدمون النشطون', 'icon' => 'fa-users-gear', 'route' => 'users.index', 'count' => fn () => User::active()->count()],
+            ['permission' => 'customers.view', 'label' => 'العملاء', 'icon' => 'fa-users', 'route' => 'customers.index', 'count' => fn () => Customer::count()],
+            ['permission' => 'suppliers.view', 'label' => 'الموردون', 'icon' => 'fa-truck', 'route' => 'suppliers.index', 'count' => fn () => Supplier::count()],
+            ['permission' => 'departments.view', 'label' => 'الأقسام النشطة', 'icon' => 'fa-building', 'route' => 'departments.index', 'count' => fn () => Department::active()->count()],
+            ['permission' => 'units.view', 'label' => 'وحدات القياس النشطة', 'icon' => 'fa-ruler-combined', 'route' => 'units.index', 'count' => fn () => UnitOfMeasure::active()->count()],
+            ['permission' => 'sales_channels.view', 'label' => 'قنوات البيع النشطة', 'icon' => 'fa-store', 'route' => 'sales-channels.index', 'count' => fn () => SalesChannel::active()->count()],
+            ['permission' => 'customer_types.view', 'label' => 'أنواع العملاء', 'icon' => 'fa-id-badge', 'route' => 'customer-types.index', 'count' => null],
+            ['permission' => 'roles.view', 'label' => 'الأدوار والصلاحيات', 'icon' => 'fa-shield-halved', 'route' => 'roles.index', 'count' => null],
         ];
 
-        $user = $request->user();
-        $metrics = collect([
-            $user->can('orders.view') ? [
-                'label' => 'طلبات بانتظار المراجعة',
-                'value' => CustomerOrder::where('status', 'PENDING_PRODUCTION_REVIEW')->count(),
-                'unit' => 'طلب',
-                'icon' => 'clipboard-check',
-                'route' => 'sales.orders.index',
-                'class' => 'warning',
-            ] : null,
-            $user->can('production.view') ? [
-                'label' => 'أوامر الإنتاج النشطة',
-                'value' => ProductionOrder::whereIn('status', ['RELEASED', 'IN_PROGRESS', 'PARTIALLY_COMPLETED', 'ON_HOLD'])->count(),
-                'unit' => 'أمر إنتاج',
-                'icon' => 'industry',
-                'route' => 'production.orders.index',
-                'class' => 'primary',
-            ] : null,
-            $user->can('inventory.view') ? [
-                'label' => 'طلبات مواد تنتظر الصرف',
-                'value' => ProductionMaterialRequest::whereIn('status', ['SUBMITTED', 'PARTIALLY_FULFILLED'])->count(),
-                'unit' => 'طلب مواد',
-                'icon' => 'clipboard-list',
-                'route' => 'production.material-requests.index',
-                'class' => 'info',
-            ] : null,
-            $user->can('inventory.view') ? [
-                'label' => 'مواد منخفضة المخزون',
-                'value' => Material::where('is_active', true)
-                    ->where('reorder_point', '>', 0)
-                    ->whereRaw('(SELECT COALESCE(SUM(inventory_lots.remaining_quantity), 0) FROM inventory_lots WHERE inventory_lots.material_id = materials.id AND inventory_lots.status = ?) <= materials.reorder_point', ['ACTIVE'])
-                    ->count(),
-                'unit' => 'صنف خام',
-                'icon' => 'exclamation-triangle',
-                'route' => 'inventory.balances.index',
-                'class' => 'danger',
-            ] : null,
-            $user->can('production.view') ? [
-                'label' => 'حوادث الجودة المفتوحة',
-                'value' => QualityIncident::whereNotIn('status', ['RESOLVED', 'CANCELLED'])->count(),
-                'unit' => 'حادثة',
-                'icon' => 'triangle-exclamation',
-                'route' => 'production.quality-incidents.index',
-                'class' => 'warning',
-            ] : null,
-            $user->can('production.view') ? [
-                'label' => 'حالات إعادة التصنيع المفتوحة',
-                'value' => ProductionReworkAction::whereNotIn('status', ['COMPLETED', 'CANCELLED'])->count(),
-                'unit' => 'حالة',
-                'icon' => 'tools',
-                'route' => 'production.rework.index',
-                'class' => 'danger',
-            ] : null,
-        ])->filter()->values();
+        $stats = [];
+        foreach ($candidates as $candidate) {
+            if (! $user->can($candidate['permission'])) {
+                continue;
+            }
 
-        return view('dashboard', compact('metrics', 'masterDataStats'));
+            $stats[] = [
+                'label' => $candidate['label'],
+                'value' => $candidate['count'] ? ($candidate['count'])() : null,
+                'icon' => $candidate['icon'],
+                'route' => $candidate['route'],
+            ];
+        }
+
+        return $stats;
     }
 }

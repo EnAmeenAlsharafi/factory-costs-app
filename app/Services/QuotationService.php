@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\CustomerOrder;
 use App\Models\CustomerOrderLine;
+use App\Models\FabricColor;
+use App\Models\Material;
 use App\Models\Quotation;
 use App\Models\QuotationLine;
 use App\Models\User;
@@ -151,6 +153,7 @@ class QuotationService
                     'fabric_material_id' => $qLine->fabric_material_id,
                     'fabric_color_id' => $qLine->fabric_color_id,
                     'fabric_color_code' => $qLine->fabric_color_code,
+                    'fabric_supplier_color_code' => $qLine->fabric_supplier_color_code,
                     'quantity' => $qLine->quantity,
                     'unit_price' => $qLine->unit_price,
                     'discount_amount' => $qLine->discount_amount,
@@ -180,6 +183,32 @@ class QuotationService
             $discount = (float) ($line['discount_amount'] ?? 0);
             $lineTotal = ($qty * $unitPrice) - $discount;
 
+            $fabricMaterialId = $line['fabric_material_id'] ?? null;
+            $fabricColorId = $line['fabric_color_id'] ?? null;
+            $fabricSupplierId = null;
+            $fabricColorCode = null;
+            $fabricSupplierColorCode = null;
+
+            if ($fabricMaterialId && $fabricColorId) {
+                $mat = Material::with(['category', 'fabricSpec'])->find($fabricMaterialId);
+                if (! $mat || strtoupper($mat->category?->code ?? '') !== 'FABRIC' || ! $mat->is_active || ! $mat->fabricSpec) {
+                    throw new Exception('مادة القماش المختارة غير صالحة أو غير نشطة أو ينقصها مواصفات الكتالوج.');
+                }
+                if (empty($mat->fabricSpec->supplier_id) || empty($mat->fabricSpec->catalog_number)) {
+                    throw new Exception('لا يمكن استخدام هذا القماش في عرض سعر لعدم اكتمال بيانات المورد ورقم الكتالوج.');
+                }
+                $color = FabricColor::where('material_id', $mat->id)->find($fabricColorId);
+                if (! $color || ! $color->is_active || ! $color->is_available) {
+                    throw new Exception('لون القماش المحدد غير صالح أو غير نشط أو غير متوفر في هذا الكتالوج.');
+                }
+                $fabricSupplierId = $mat->fabricSpec->supplier_id;
+                $fabricColorCode = $color->color_code;
+                $fabricSupplierColorCode = $color->supplier_color_code;
+            } elseif ($fabricMaterialId && ! $fabricColorId) {
+                $mat = Material::with('fabricSpec')->find($fabricMaterialId);
+                $fabricSupplierId = $mat?->fabricSpec?->supplier_id;
+            }
+
             QuotationLine::create([
                 'quotation_id' => $quotation->id,
                 'product_model_id' => ! empty($line['custom_design']) ? null : ($line['product_model_id'] ?? null),
@@ -187,15 +216,16 @@ class QuotationService
                 'customer_product_alias_id' => $line['customer_product_alias_id'] ?? null,
                 'custom_design' => ! empty($line['custom_design']),
                 'custom_design_name' => $line['custom_design_name'] ?? null,
-                'requested_width_cm' => $line['requested_width_cm'],
-                'requested_length_cm' => $line['requested_length_cm'],
-                'reference_width_cm' => $line['reference_width_cm'] ?? $line['requested_width_cm'],
-                'reference_length_cm' => $line['reference_length_cm'] ?? $line['requested_length_cm'],
+                'requested_width_cm' => $line['requested_width_cm'] ?? null,
+                'requested_length_cm' => $line['requested_length_cm'] ?? null,
+                'reference_width_cm' => $line['reference_width_cm'] ?? ($line['requested_width_cm'] ?? null),
+                'reference_length_cm' => $line['reference_length_cm'] ?? ($line['requested_length_cm'] ?? null),
                 'has_storage' => ! empty($line['has_storage']),
-                'fabric_supplier_id' => $line['fabric_supplier_id'] ?? null,
-                'fabric_material_id' => $line['fabric_material_id'] ?? null,
-                'fabric_color_id' => $line['fabric_color_id'] ?? null,
-                'fabric_color_code' => $line['fabric_color_code'] ?? null,
+                'fabric_supplier_id' => $fabricSupplierId,
+                'fabric_material_id' => $fabricMaterialId,
+                'fabric_color_id' => $fabricColorId,
+                'fabric_color_code' => $fabricColorCode,
+                'fabric_supplier_color_code' => $fabricSupplierColorCode,
                 'quantity' => $qty,
                 'unit_price' => $unitPrice,
                 'discount_amount' => $discount,

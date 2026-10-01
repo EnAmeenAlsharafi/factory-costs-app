@@ -76,6 +76,16 @@ class Material extends Model
         return $this->hasMany(FabricColor::class);
     }
 
+    public function activeFabricColors(): HasMany
+    {
+        return $this->hasMany(FabricColor::class)->where('is_active', true)->where('is_available', true);
+    }
+
+    public function primarySupplier(): ?Supplier
+    {
+        return $this->fabricSpec?->supplier ?? $this->suppliers->first();
+    }
+
     public function suppliers(): BelongsToMany
     {
         return $this->belongsToMany(Supplier::class, 'material_supplier')

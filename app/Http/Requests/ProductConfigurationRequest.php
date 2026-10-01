@@ -8,7 +8,7 @@ class ProductConfigurationRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('products.manage') || $this->user()?->can('products.view');
+        return $this->user()?->can('products.manage') ?? false;
     }
 
     protected function prepareForValidation(): void

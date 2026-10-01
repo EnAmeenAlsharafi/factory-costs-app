@@ -15,6 +15,19 @@ use Illuminate\Support\Facades\DB;
 
 class DeliveryOrderService
 {
+    /**
+     * Allowed delivery status transitions (single source of truth for rules and for which UI actions appear).
+     *
+     * @var array<string, list<string>>
+     */
+    public const TRANSITIONS = [
+        'DRAFT' => ['READY_FOR_DELIVERY', 'CANCELLED'],
+        'READY_FOR_DELIVERY' => ['ASSIGNED', 'CANCELLED'],
+        'ASSIGNED' => ['OUT_FOR_DELIVERY', 'CANCELLED'],
+        'OUT_FOR_DELIVERY' => ['DELIVERED', 'FAILED', 'RESCHEDULED'],
+        'DELIVERED' => ['INSTALLATION_COMPLETED'],
+    ];
+
     public function __construct(
         protected FinishedGoodsService $finishedGoodsService
     ) {}
@@ -24,9 +37,9 @@ class DeliveryOrderService
      */
     public function createDeliveryOrder(CustomerOrder $customerOrder, User $creator, array $data): DeliveryOrder
     {
-        $customer = $customerOrder->customer;
-
-        return DB::transaction(function () use ($customerOrder, $customer, $creator, $data) {
+        return DB::transaction(function () use ($customerOrder, $creator, $data) {
+            $customerOrder = CustomerOrder::query()->whereKey($customerOrder->getKey())->lockForUpdate()->firstOrFail();
+            $customer = $customerOrder->customer;
             $deliveryNumber = DocumentNumberService::generateDeliveryNumber();
 
             $delivery = DeliveryOrder::create([
@@ -51,16 +64,34 @@ class DeliveryOrderService
             ]);
 
             if (isset($data['lines']) && is_array($data['lines'])) {
+                $requestedByProductionOrder = [];
+
                 foreach ($data['lines'] as $lineData) {
-                    $po = ProductionOrder::findOrFail($lineData['production_order_id']);
+                    $po = ProductionOrder::query()->whereKey($lineData['production_order_id'])->lockForUpdate()->firstOrFail();
                     $qty = (float) $lineData['quantity'];
 
                     if ($qty <= 0) {
                         continue;
                     }
 
+                    $lineId = (int) ($lineData['customer_order_line_id'] ?? $po->customer_order_line_id);
+                    $belongsToOrder = $customerOrder->lines()->whereKey($lineId)->exists();
+
+                    if ((int) $po->customer_order_id !== (int) $customerOrder->id
+                        || (int) $po->customer_order_line_id !== $lineId
+                        || ! $belongsToOrder
+                        || (int) $customerOrder->customer_id !== (int) $customer->id) {
+                        throw new Exception('أمر الإنتاج أو بند الطلب لا ينتمي إلى طلب العميل المحدد للتوصيل.');
+                    }
+
+                    $requestedByProductionOrder[$po->id] = ($requestedByProductionOrder[$po->id] ?? 0) + $qty;
+                    $available = $this->finishedGoodsService->getAvailableQuantity($po);
+                    if ($requestedByProductionOrder[$po->id] > $available) {
+                        throw new Exception("كمية التوصيل المطلوبة لأمر الإنتاج {$po->production_order_number} تتجاوز رصيد المنتجات الجاهزة المتاح ({$available}).");
+                    }
+
                     $delivery->lines()->create([
-                        'customer_order_line_id' => $lineData['customer_order_line_id'] ?? $po->customer_order_line_id,
+                        'customer_order_line_id' => $lineId,
                         'production_order_id' => $po->id,
                         'quantity' => $qty,
                         'notes' => $lineData['notes'] ?? null,
@@ -79,22 +110,24 @@ class DeliveryOrderService
      */
     public function markReady(DeliveryOrder $delivery, User $user): DeliveryOrder
     {
-        if ($delivery->status !== 'DRAFT') {
-            throw new Exception('يمكن فقط نقل المسودة إلى حالة جاهز للتوصيل.');
-        }
+        return DB::transaction(function () use ($delivery, $user) {
+            $delivery = DeliveryOrder::query()->whereKey($delivery->getKey())->lockForUpdate()->firstOrFail();
+            $this->assertTransition($delivery->status, 'READY_FOR_DELIVERY');
 
-        foreach ($delivery->lines as $line) {
-            $available = $this->finishedGoodsService->getAvailableQuantity($line->productionOrder);
-            if ((float) $line->quantity > $available) {
-                throw new Exception("الكمية المطلوبة بالتوصيل ({$line->quantity}) للطلب {$line->productionOrder->production_order_number} تتجاوز الرصيد المتاح بالمنتجات الجاهزة ({$available}).");
+            foreach ($delivery->lines()->lockForUpdate()->get() as $line) {
+                $productionOrder = ProductionOrder::query()->whereKey($line->production_order_id)->lockForUpdate()->firstOrFail();
+                $available = $this->finishedGoodsService->getAvailableQuantity($productionOrder);
+                if ((float) $line->quantity > $available) {
+                    throw new Exception("الكمية المطلوبة بالتوصيل ({$line->quantity}) للطلب {$productionOrder->production_order_number} تتجاوز الرصيد المتاح بالمنتجات الجاهزة ({$available}).");
+                }
             }
-        }
 
-        $oldStatus = $delivery->status;
-        $delivery->update(['status' => 'READY_FOR_DELIVERY']);
-        $this->recordEvent($delivery, 'READY', $oldStatus, 'READY_FOR_DELIVERY', $user, 'جاهز للتوصيل والتحميل');
+            $oldStatus = $delivery->status;
+            $delivery->update(['status' => 'READY_FOR_DELIVERY']);
+            $this->recordEvent($delivery, 'READY', $oldStatus, 'READY_FOR_DELIVERY', $user, 'جاهز للتوصيل والتحميل');
 
-        return $delivery;
+            return $delivery;
+        });
     }
 
     /**
@@ -102,15 +135,20 @@ class DeliveryOrderService
      */
     public function assignDriver(DeliveryOrder $delivery, User $assignedDriver, User $assigner): DeliveryOrder
     {
-        $oldStatus = $delivery->status;
-        $delivery->update([
-            'assigned_user_id' => $assignedDriver->id,
-            'status' => $delivery->status === 'DRAFT' ? 'ASSIGNED' : $delivery->status,
-        ]);
+        return DB::transaction(function () use ($delivery, $assignedDriver, $assigner) {
+            $delivery = DeliveryOrder::query()->whereKey($delivery->getKey())->lockForUpdate()->firstOrFail();
+            $this->assertTransition($delivery->status, 'ASSIGNED');
 
-        $this->recordEvent($delivery, 'ASSIGNED', $oldStatus, $delivery->status, $assigner, "تعيين مسؤول التوصيل: {$assignedDriver->name}");
+            $oldStatus = $delivery->status;
+            $delivery->update([
+                'assigned_user_id' => $assignedDriver->id,
+                'status' => 'ASSIGNED',
+            ]);
 
-        return $delivery;
+            $this->recordEvent($delivery, 'ASSIGNED', $oldStatus, 'ASSIGNED', $assigner, "تعيين مسؤول التوصيل: {$assignedDriver->name}");
+
+            return $delivery;
+        });
     }
 
     /**
@@ -119,15 +157,14 @@ class DeliveryOrderService
      */
     public function dispatchDelivery(DeliveryOrder $delivery, User $dispatcher): DeliveryOrder
     {
-        if (in_array($delivery->status, ['OUT_FOR_DELIVERY', 'DELIVERED', 'INSTALLATION_COMPLETED', 'CANCELLED'], true)) {
-            throw new Exception('أمر التوصيل خرج بالفعل أو انتهى.');
-        }
-
         $fgWarehouse = Warehouse::active()->where('code', 'FINISHED_GOODS')->first()
             ?? Warehouse::active()->first();
 
         return DB::transaction(function () use ($delivery, $dispatcher, $fgWarehouse) {
-            foreach ($delivery->lines as $line) {
+            $delivery = DeliveryOrder::query()->whereKey($delivery->getKey())->lockForUpdate()->firstOrFail();
+            $this->assertTransition($delivery->status, 'OUT_FOR_DELIVERY');
+
+            foreach ($delivery->lines()->lockForUpdate()->get() as $line) {
                 $po = ProductionOrder::where('id', $line->production_order_id)->lockForUpdate()->firstOrFail();
                 $available = $this->finishedGoodsService->getAvailableQuantity($po, $fgWarehouse);
 
@@ -169,20 +206,21 @@ class DeliveryOrderService
      */
     public function markDelivered(DeliveryOrder $delivery, User $user, ?string $notes = null): DeliveryOrder
     {
-        if ($delivery->status === 'CANCELLED') {
-            throw new Exception('لا يمكن تسليم أمر توصيل ملغى.');
-        }
+        return DB::transaction(function () use ($delivery, $user, $notes) {
+            $delivery = DeliveryOrder::query()->whereKey($delivery->getKey())->lockForUpdate()->firstOrFail();
+            $this->assertTransition($delivery->status, 'DELIVERED');
 
-        $oldStatus = $delivery->status;
-        $delivery->update([
-            'status' => 'DELIVERED',
-            'delivered_at' => now(),
-            'delivery_notes' => $notes ?? $delivery->delivery_notes,
-        ]);
+            $oldStatus = $delivery->status;
+            $delivery->update([
+                'status' => 'DELIVERED',
+                'delivered_at' => now(),
+                'delivery_notes' => $notes ?? $delivery->delivery_notes,
+            ]);
 
-        $this->recordEvent($delivery, 'DELIVERED', $oldStatus, 'DELIVERED', $user, $notes ?? 'تم تسليم المنتجات للعميل بنجاح');
+            $this->recordEvent($delivery, 'DELIVERED', $oldStatus, 'DELIVERED', $user, $notes ?? 'تم تسليم المنتجات للعميل بنجاح');
 
-        return $delivery;
+            return $delivery;
+        });
     }
 
     /**
@@ -190,21 +228,25 @@ class DeliveryOrderService
      */
     public function markInstalled(DeliveryOrder $delivery, User $user, ?string $notes = null): DeliveryOrder
     {
-        if (! in_array($delivery->status, ['DELIVERED', 'OUT_FOR_DELIVERY'], true)) {
-            throw new Exception('يمكن فقط تسجيل إكمال التركيب للطلبات المسلمة أو الخارجة للتوصيل.');
-        }
+        return DB::transaction(function () use ($delivery, $user, $notes) {
+            $delivery = DeliveryOrder::query()->whereKey($delivery->getKey())->lockForUpdate()->firstOrFail();
+            $this->assertTransition($delivery->status, 'INSTALLATION_COMPLETED');
 
-        $oldStatus = $delivery->status;
-        $delivery->update([
-            'status' => 'INSTALLATION_COMPLETED',
-            'installed_at' => now(),
-            'delivered_at' => $delivery->delivered_at ?? now(),
-            'installation_notes' => $notes ?? $delivery->installation_notes,
-        ]);
+            if (! $delivery->installation_required) {
+                throw new Exception('هذا الأمر لا يتطلب تركيباً؛ حالة التسليم هي الحالة النهائية.');
+            }
 
-        $this->recordEvent($delivery, 'INSTALLED', $oldStatus, 'INSTALLATION_COMPLETED', $user, $notes ?? 'تم التركيب والمعاينة النهائية بنجاح');
+            $oldStatus = $delivery->status;
+            $delivery->update([
+                'status' => 'INSTALLATION_COMPLETED',
+                'installed_at' => now(),
+                'installation_notes' => $notes ?? $delivery->installation_notes,
+            ]);
 
-        return $delivery;
+            $this->recordEvent($delivery, 'INSTALLED', $oldStatus, 'INSTALLATION_COMPLETED', $user, $notes ?? 'تم التركيب والمعاينة النهائية بنجاح');
+
+            return $delivery;
+        });
     }
 
     /**
@@ -220,11 +262,12 @@ class DeliveryOrderService
             ?? Warehouse::active()->first();
 
         return DB::transaction(function () use ($delivery, $user, $newStatus, $reason, $newDate, $returnedToFactory, $fgWarehouse) {
+            $delivery = DeliveryOrder::query()->whereKey($delivery->getKey())->lockForUpdate()->firstOrFail();
+            $this->assertTransition($delivery->status, $newStatus);
             $oldStatus = $delivery->status;
 
-            // If it was dispatched out and physically returned back to factory warehouse, restore FG availability
             if ($delivery->isDispatched() && $returnedToFactory) {
-                foreach ($delivery->lines as $line) {
+                foreach ($delivery->lines()->lockForUpdate()->get() as $line) {
                     FinishedGoodsMovement::create([
                         'movement_number' => DocumentNumberService::generateFinishedGoodsMovementNumber(),
                         'production_order_id' => $line->production_order_id,
@@ -249,7 +292,12 @@ class DeliveryOrderService
                 'delivery_notes' => $reason ? "سبب الحدوث: {$reason}" : $delivery->delivery_notes,
             ]);
 
-            $this->recordEvent($delivery, $newStatus === 'RESCHEDULED' ? 'RESCHEDULED' : 'FAILED', $oldStatus, $newStatus, $user, $reason ?? 'تعثر أمر التوصيل');
+            $eventType = match ($newStatus) {
+                'RESCHEDULED' => 'RESCHEDULED',
+                'CANCELLED' => 'CANCELLED',
+                default => 'FAILED',
+            };
+            $this->recordEvent($delivery, $eventType, $oldStatus, $newStatus, $user, $reason ?? 'تعثر أمر التوصيل');
 
             return $delivery;
         });
@@ -269,5 +317,17 @@ class DeliveryOrderService
             'notes' => $notes,
             'occurred_at' => now(),
         ]);
+    }
+
+    private function assertTransition(string $from, string $to): void
+    {
+        $allowedTransitions = self::TRANSITIONS;
+
+        if (! in_array($to, $allowedTransitions[$from] ?? [], true)) {
+            $fromLabel = StatusPresenter::label('delivery', $from);
+            $toLabel = StatusPresenter::label('delivery', $to);
+
+            throw new Exception("انتقال حالة التوصيل من «{$fromLabel}» إلى «{$toLabel}» غير مسموح. قد تكون الحالة تغيّرت — حدّث الصفحة.");
+        }
     }
 }

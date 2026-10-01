@@ -52,9 +52,10 @@ class MaterialController extends Controller
 
         $categories = MaterialCategory::where('is_active', true)->orderBy('name_ar')->get();
         $units = UnitOfMeasure::where('is_active', true)->orderBy('name_ar')->get();
+        $suppliers = Supplier::where('is_active', true)->orderBy('name')->get();
         $generatedCode = Material::generateNextCode();
 
-        return view('materials.create', compact('categories', 'units', 'generatedCode'));
+        return view('materials.create', compact('categories', 'units', 'suppliers', 'generatedCode'));
     }
 
     public function store(MaterialRequest $request): RedirectResponse
@@ -62,9 +63,20 @@ class MaterialController extends Controller
         $validated = $request->validated();
 
         DB::transaction(function () use ($request, $validated) {
+            $category = MaterialCategory::find($validated['material_category_id']);
+            $code = ! empty($validated['code']) ? $validated['code'] : Material::generateNextCode();
+            $nameAr = $validated['name_ar'] ?? null;
+
+            if ($category?->code === 'FABRIC' && ! empty($validated['supplier_id']) && ! empty($validated['fabric_type']) && ! empty($validated['catalog_number'])) {
+                $supplier = Supplier::find($validated['supplier_id']);
+                if ($supplier) {
+                    $nameAr = "قماش {$validated['fabric_type']} - {$supplier->name} - {$validated['catalog_number']}";
+                }
+            }
+
             $material = Material::create([
-                'code' => $validated['code'],
-                'name_ar' => $validated['name_ar'],
+                'code' => $code,
+                'name_ar' => $nameAr ?? ($validated['fabric_type'] ?? 'مادة خام جديدة'),
                 'name_en' => $validated['name_en'] ?? null,
                 'material_category_id' => $validated['material_category_id'],
                 'base_unit_id' => $validated['base_unit_id'],
@@ -75,7 +87,6 @@ class MaterialController extends Controller
                 'notes' => $validated['notes'] ?? null,
             ]);
 
-            $category = MaterialCategory::find($validated['material_category_id']);
             if ($category) {
                 switch ($category->code) {
                     case 'WOOD':
@@ -101,8 +112,17 @@ class MaterialController extends Controller
                         ]);
                         break;
                     case 'FABRIC':
+                        $imagePath = null;
+                        if ($request->hasFile('catalog_image')) {
+                            $imagePath = $request->file('catalog_image')->store('fabric-catalogs', 'public');
+                        }
+
                         FabricMaterialSpec::create([
                             'material_id' => $material->id,
+                            'supplier_id' => $validated['supplier_id'],
+                            'catalog_number' => $validated['catalog_number'],
+                            'catalog_name' => $validated['catalog_name'] ?? $nameAr,
+                            'catalog_image_path' => $imagePath,
                             'fabric_type' => $validated['fabric_type'],
                             'pattern_type' => $validated['pattern_type'] ?? null,
                             'width_cm' => $validated['width_cm'],
@@ -110,6 +130,17 @@ class MaterialController extends Controller
                             'composition' => $validated['composition'] ?? null,
                             'martindale_rub_count' => $validated['martindale_rub_count'] ?? null,
                         ]);
+
+                        DB::table('material_supplier')->updateOrInsert(
+                            [
+                                'material_id' => $material->id,
+                                'supplier_id' => $validated['supplier_id'],
+                            ],
+                            [
+                                'is_preferred' => true,
+                                'updated_at' => now(),
+                            ]
+                        );
                         break;
                 }
             }
@@ -146,11 +177,12 @@ class MaterialController extends Controller
     {
         abort_if(! $request->user()->can('materials.manage'), 403, 'غير مصرح لك بتعديل بيانات المادة.');
 
-        $material->load(['category', 'baseUnit', 'purchaseUnit', 'woodSpec', 'foamSpec', 'fabricSpec']);
+        $material->load(['category', 'baseUnit', 'purchaseUnit', 'woodSpec', 'foamSpec', 'fabricSpec.supplier']);
         $categories = MaterialCategory::where('is_active', true)->orderBy('name_ar')->get();
         $units = UnitOfMeasure::where('is_active', true)->orderBy('name_ar')->get();
+        $suppliers = Supplier::where('is_active', true)->orderBy('name')->get();
 
-        return view('materials.edit', compact('material', 'categories', 'units'));
+        return view('materials.edit', compact('material', 'categories', 'units', 'suppliers'));
     }
 
     public function update(MaterialRequest $request, Material $material): RedirectResponse
@@ -200,17 +232,45 @@ class MaterialController extends Controller
                         );
                         break;
                     case 'FABRIC':
+                        $fabricData = [
+                            'fabric_type' => $validated['fabric_type'],
+                            'pattern_type' => $validated['pattern_type'] ?? null,
+                            'width_cm' => $validated['width_cm'],
+                            'weight_gsm' => $validated['weight_gsm'] ?? null,
+                            'composition' => $validated['composition'] ?? null,
+                            'martindale_rub_count' => $validated['martindale_rub_count'] ?? null,
+                        ];
+
+                        if (! empty($validated['supplier_id'])) {
+                            $fabricData['supplier_id'] = $validated['supplier_id'];
+                        }
+                        if (! empty($validated['catalog_number'])) {
+                            $fabricData['catalog_number'] = $validated['catalog_number'];
+                        }
+                        if (! empty($validated['catalog_name'])) {
+                            $fabricData['catalog_name'] = $validated['catalog_name'];
+                        }
+                        if ($request->hasFile('catalog_image')) {
+                            $fabricData['catalog_image_path'] = $request->file('catalog_image')->store('fabric-catalogs', 'public');
+                        }
+
                         FabricMaterialSpec::updateOrCreate(
                             ['material_id' => $material->id],
-                            [
-                                'fabric_type' => $validated['fabric_type'],
-                                'pattern_type' => $validated['pattern_type'] ?? null,
-                                'width_cm' => $validated['width_cm'],
-                                'weight_gsm' => $validated['weight_gsm'] ?? null,
-                                'composition' => $validated['composition'] ?? null,
-                                'martindale_rub_count' => $validated['martindale_rub_count'] ?? null,
-                            ]
+                            $fabricData
                         );
+
+                        if (! empty($validated['supplier_id'])) {
+                            DB::table('material_supplier')->updateOrInsert(
+                                [
+                                    'material_id' => $material->id,
+                                    'supplier_id' => $validated['supplier_id'],
+                                ],
+                                [
+                                    'is_preferred' => true,
+                                    'updated_at' => now(),
+                                ]
+                            );
+                        }
                         break;
                 }
             }

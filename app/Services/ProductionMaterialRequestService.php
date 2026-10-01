@@ -46,7 +46,10 @@ class ProductionMaterialRequestService
                 $reqQtyPerUnit = (float) ($item->quantity_per_unit ?? $item->quantity);
                 $wastePct = (float) $item->waste_percentage;
                 $plannedQtyPerUnit = $reqQtyPerUnit * (1 + ($wastePct / 100));
-                $totalPlannedQty = $plannedQtyPerUnit * $productionOrder->ordered_quantity;
+                $targetQty = ($productionOrder->released_quantity && (float) $productionOrder->released_quantity > 0)
+                    ? $productionOrder->released_quantity
+                    : $productionOrder->ordered_quantity;
+                $totalPlannedQty = $plannedQtyPerUnit * $targetQty;
 
                 $materialId = $item->material_id;
                 $materialName = $item->material?->name_ar
@@ -79,7 +82,7 @@ class ProductionMaterialRequestService
                     'required_quantity_per_unit' => $reqQtyPerUnit,
                     'waste_percentage' => $wastePct,
                     'planned_quantity_per_unit' => $plannedQtyPerUnit,
-                    'production_quantity' => $productionOrder->ordered_quantity,
+                    'production_quantity' => $targetQty,
                     'total_planned_quantity' => $totalPlannedQty,
                     'unit_id' => $item->unit_id ?? $item->material?->base_unit_id,
                     'material_name_snapshot' => $materialName,
@@ -130,6 +133,7 @@ class ProductionMaterialRequestService
                         'material_id' => $materialId,
                         'fabric_color_id' => $lineData['fabric_color_id'] ?? ($productionOrder->fabric_color_id ?? null),
                         'fabric_color_code' => $lineData['fabric_color_code'] ?? ($productionOrder->fabric_color_code ?? null),
+                        'fabric_supplier_color_code' => $lineData['fabric_supplier_color_code'] ?? ($productionOrder->fabric_supplier_color_code ?? null),
                         'requested_quantity' => $requestedQty,
                         'approved_quantity' => $lineData['approved_quantity'] ?? $requestedQty,
                         'issued_quantity' => 0,

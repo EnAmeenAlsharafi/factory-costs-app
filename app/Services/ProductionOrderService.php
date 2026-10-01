@@ -73,6 +73,7 @@ class ProductionOrderService
                 'fabric_material_id' => $line->fabric_material_id,
                 'fabric_color_id' => $line->fabric_color_id,
                 'fabric_color_code' => $line->fabric_color_code,
+                'fabric_supplier_color_code' => $line->fabric_supplier_color_code ?? $line->fabricColor?->supplier_color_code,
                 'ordered_quantity' => $line->quantity,
                 'released_quantity' => $requestedQty,
                 'completed_quantity' => 0,
@@ -200,29 +201,46 @@ class ProductionOrderService
             ]);
         }
 
-        return DB::transaction(function () use ($op, $po, $addedQty, $newCompleted, $eventType, $notes, $user) {
-            $prevCompleted = $op->completed_quantity;
-            $op->completed_quantity = $newCompleted;
-            $op->started_quantity = max($op->started_quantity, $newCompleted);
+        return DB::transaction(function () use ($op, $po, $addedQty, $eventType, $notes, $user) {
+            $lockedOp = ProductionOrderOperation::where('id', $op->id)->lockForUpdate()->firstOrFail();
+            $newCompleted = $lockedOp->completed_quantity + $addedQty;
 
-            if ($op->started_at === null) {
-                $op->started_at = now();
+            if ($newCompleted > $lockedOp->required_quantity) {
+                throw ValidationException::withMessages([
+                    'quantity' => "الكمية المنجزة الكلية ({$newCompleted}) تتجاوز الكمية المطلوبة للعملية ({$lockedOp->required_quantity}).",
+                ]);
             }
 
-            if ($op->completed_quantity >= $op->required_quantity) {
-                $op->status = 'COMPLETED';
-                $op->completed_at = now();
-            } elseif ($op->completed_quantity > 0) {
-                $op->status = 'PARTIALLY_COMPLETED';
+            // Validate join dependencies limit
+            $maxEligible = $this->calculateMaxEligibleQuantity($lockedOp);
+            if ($newCompleted > $maxEligible) {
+                throw ValidationException::withMessages([
+                    'quantity' => "الكمية المنجزة المتاحة لهذه العملية محددة باكتمل المراحل السابقة (الحد الأقصى المتاح حالياً: {$maxEligible}).",
+                ]);
+            }
+
+            $prevCompleted = $lockedOp->completed_quantity;
+            $lockedOp->completed_quantity = $newCompleted;
+            $lockedOp->started_quantity = max($lockedOp->started_quantity, $newCompleted);
+
+            if ($lockedOp->started_at === null) {
+                $lockedOp->started_at = now();
+            }
+
+            if ($lockedOp->completed_quantity >= $lockedOp->required_quantity) {
+                $lockedOp->status = 'COMPLETED';
+                $lockedOp->completed_at = now();
+            } elseif ($lockedOp->completed_quantity > 0) {
+                $lockedOp->status = 'PARTIALLY_COMPLETED';
             } else {
-                $op->status = 'IN_PROGRESS';
+                $lockedOp->status = 'IN_PROGRESS';
             }
 
-            $op->save();
+            $lockedOp->save();
 
             // Log event
             ProductionOperationProgress::create([
-                'production_order_operation_id' => $op->id,
+                'production_order_operation_id' => $lockedOp->id,
                 'event_type' => $eventType,
                 'quantity' => $addedQty,
                 'previous_completed_quantity' => $prevCompleted,
@@ -238,7 +256,7 @@ class ProductionOrderService
             // Re-evaluate overall Production Order completion
             $this->evaluateProductionOrderCompletion($po);
 
-            return $op->fresh();
+            return $lockedOp->fresh();
         });
     }
 

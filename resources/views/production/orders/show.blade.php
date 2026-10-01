@@ -190,22 +190,37 @@
                                 </tr>
                                 <tr>
                                     <td class="text-muted">مورد القماش:</td>
-                                    <td><strong class="text-dark">{{ $order->fabricSupplier?->name ?? 'غير محدد' }}</strong></td>
+                                    <td><strong class="text-dark">{{ $order->fabricSupplier?->name ?? $order->fabricMaterial?->fabricSpec?->supplier?->name ?? 'غير محدد' }}</strong></td>
                                 </tr>
                                 <tr>
-                                    <td class="text-muted">نوع القماش:</td>
-                                    <td>{{ $order->fabricMaterial?->name_ar ?? 'غير محدد' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="text-muted">رقم / كود اللون:</td>
+                                    <td class="text-muted">نوع القماش / الكتالوج:</td>
                                     <td>
-                                        @if($order->fabric_color_code)
-                                            <code class="text-dark bg-light px-2 py-1 border rounded fw-bold fs-7">{{ $order->fabric_color_code }}</code>
-                                        @elseif($order->fabricColor)
-                                            <span class="badge bg-light text-dark border"><i class="fas fa-circle me-1" style="color: {{ $order->fabricColor->hex_code ?? '#ccc' }};"></i>{{ $order->fabricColor->color_name_ar }}</span>
-                                        @else
-                                            غير محدد
+                                        <span class="text-dark fw-semibold">{{ $order->fabricMaterial?->name_ar ?? 'غير محدد' }}</span>
+                                        @if($order->fabricMaterial?->fabricSpec?->catalog_number)
+                                            <span class="badge bg-light text-primary border ms-1">كتالوج: #{{ $order->fabricMaterial->fabricSpec->catalog_number }}</span>
                                         @endif
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">أكواد اللون (داخلي / مورد):</td>
+                                    <td>
+                                        <div class="d-flex flex-wrap align-items-center gap-2">
+                                            @if($order->fabric_color_code)
+                                                <span class="badge bg-light text-dark border">
+                                                    داخلي (CS): <code class="text-dark fw-bold fs-7">{{ $order->fabric_color_code }}</code>
+                                                </span>
+                                            @elseif($order->fabricColor)
+                                                <span class="badge bg-light text-dark border"><i class="fas fa-circle me-1" style="color: {{ $order->fabricColor->hex_code ?? '#ccc' }};"></i>{{ $order->fabricColor->color_name_ar }}</span>
+                                            @else
+                                                <span class="text-muted">غير محدد</span>
+                                            @endif
+
+                                            @if($order->fabric_supplier_color_code)
+                                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25">
+                                                    كود المورد: <code class="text-primary fw-bold fs-7">{{ $order->fabric_supplier_color_code }}</code>
+                                                </span>
+                                            @endif
+                                        </div>
                                     </td>
                                 </tr>
                                 <tr>

@@ -152,6 +152,7 @@ class MaterialTest extends TestCase
         $admin = User::where('username', 'admin')->first();
         $fabricCategory = MaterialCategory::where('code', 'FABRIC')->first();
         $meterUnit = UnitOfMeasure::where('code', 'METER')->first();
+        $supplier = Supplier::factory()->create();
 
         $response = $this->actingAs($admin)->post(route('materials.store'), [
             'code' => 'MAT-FAB-001',
@@ -162,6 +163,8 @@ class MaterialTest extends TestCase
             'min_stock_level' => 50,
             'reorder_point' => 100,
             'is_active' => 1,
+            'supplier_id' => $supplier->id,
+            'catalog_number' => 'CAT-VELVET-2026',
             'fabric_type' => 'مخمل',
             'width_cm' => 140,
             'pattern_type' => 'سادة',
@@ -172,11 +175,13 @@ class MaterialTest extends TestCase
         $response->assertRedirect(route('materials.index'));
         $material = Material::where('code', 'MAT-FAB-001')->first();
         $this->assertNotNull($material->fabricSpec);
+        $this->assertEquals('CAT-VELVET-2026', $material->fabricSpec->catalog_number);
 
         // Add Color
         $colorResponse = $this->actingAs($admin)->post(route('fabric-colors.store'), [
             'material_id' => $material->id,
             'color_code' => 'COL-BLUE-01',
+            'supplier_color_code' => 'SUP-BL-01',
             'color_name_ar' => 'كحلي كلاسيك',
             'color_name_en' => 'Classic Navy',
             'hex_code' => '#000080',
@@ -187,6 +192,7 @@ class MaterialTest extends TestCase
         $this->assertDatabaseHas('fabric_colors', [
             'material_id' => $material->id,
             'color_code' => 'COL-BLUE-01',
+            'supplier_color_code' => 'SUP-BL-01',
             'color_name_ar' => 'كحلي كلاسيك',
         ]);
     }

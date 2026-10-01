@@ -1,172 +1,210 @@
 @extends('layouts.app')
 
-@section('title', 'أعمال الأقسام (WIP) - مصنع مفروشات سدير')
+@section('title', 'مهام الأقسام - مصنع مفروشات سدير')
+@section('page-title', 'مهام الأقسام')
 
 @section('content')
-<div class="container-fluid px-4 py-3">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
-        <div>
-            <h4 class="fw-bold mb-1"><i class="fas fa-tasks text-primary me-2"></i>أعمال الأقسام وتشغيل الورش (WIP Queue)</h4>
-            <p class="text-muted mb-0">قائمة العمليات المتاحة والتنفيذية لكل قسم مصنعي لتحديث كميات الإنجاز</p>
+@php
+    $user = auth()->user();
+    $canManageAllDepartments = $user->isAdministrator() || $user->hasRole('production_manager');
+    $activeFilterCount = collect(['department_id', 'priority'])->filter(fn ($key) => request()->filled($key))->count();
+    $priorityLabels = ['NORMAL' => 'عادي', 'URGENT' => 'عاجل', 'VIP' => 'VIP'];
+    $emptyMessages = [
+        'active' => 'لا توجد مهام مفتوحة لقسمك حالياً. ستظهر المهام هنا فور إطلاق أوامر إنتاج تمر بقسمك.',
+        'waiting' => 'لا توجد مهام بانتظار البدء. كل المهام الجاهزة بدأ العمل عليها.',
+        'in_progress' => 'لا توجد مهام قيد التنفيذ حالياً. ابدأ مهمة من تبويب "بانتظار البدء".',
+        'rework' => 'لا توجد مهام إعادة عمل مفتوحة لقسمك — هذا مؤشر جيد.',
+        'completed_today' => 'لم تُكمل أي مهمة اليوم بعد.',
+    ];
+@endphp
+
+<div class="d-flex flex-column gap-3">
+    <div class="page-header-card">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="min-w-0">
+                <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                    <i class="fas fa-list-check text-warning fs-5" aria-hidden="true"></i>
+                    <span>مهام الأقسام</span>
+                </h1>
+                <p class="page-header-subtitle text-muted mb-0 fs-7">
+                    @if ($canManageAllDepartments)
+                        العمليات التشغيلية لجميع الأقسام — افتح المهمة لتسجيل الإنجاز.
+                    @else
+                        قسمك: <strong>{{ $user->department?->name_ar ?? 'غير محدد' }}</strong> — افتح المهمة لتسجيل الإنجاز.
+                    @endif
+                </p>
+            </div>
+            @if ($canManageAllDepartments)
+                <a href="{{ route('production.board.index') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-table-columns" aria-hidden="true"></i> لوحة متابعة الإنتاج
+                </a>
+            @endif
         </div>
-        <a href="{{ route('production.board.index') }}" class="btn btn-outline-primary">
-            <i class="fas fa-chart-kanban me-1"></i> لوحة متابعة الإنتاج
-        </a>
     </div>
 
-    <!-- Filter Card -->
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-body">
-            <form action="{{ route('production.queue.index') }}" method="GET" class="row g-3">
-                @if(auth()->user()->isAdministrator() || auth()->user()->hasRole('production_manager'))
-                    <div class="col-md-6">
-                        <select name="department_id" class="form-select">
-                            <option value="">جميع الأقسام التشغيلية</option>
-                            @foreach($departments as $dept)
-                                <option value="{{ $dept->id }}" {{ request('department_id') == $dept->id ? 'selected' : '' }}>
-                                    قسم {{ $dept->name_ar }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                @else
-                    <div class="col-md-6">
-                        <div class="form-control bg-light text-muted">
-                            <i class="fas fa-building me-1"></i> قسمك التشغيلي: <strong>{{ auth()->user()->department?->name_ar ?? 'غير محدد' }}</strong>
+    {{-- Status tabs (keep filtering simple) --}}
+    <nav class="segment-tabs" aria-label="تصنيف المهام">
+        @foreach ($tabs as $tabKey => $tabLabel)
+            <a href="{{ route('production.queue.index', array_merge(request()->except(['tab', 'page']), ['tab' => $tabKey])) }}"
+               class="segment-tab {{ $tab === $tabKey ? 'active' : '' }}"
+               @if ($tab === $tabKey) aria-current="page" @endif>
+                @if ($tabKey === 'rework') <i class="fas fa-rotate" aria-hidden="true"></i> @endif
+                {{ $tabLabel }}
+                <span class="count">{{ $tabCounts[$tabKey] }}</span>
+            </a>
+        @endforeach
+    </nav>
+
+    <x-filter-sheet id="queue-filters" :action="route('production.queue.index')" :active-count="$activeFilterCount" :reset-url="route('production.queue.index', ['tab' => $tab])">
+        <input type="hidden" name="tab" value="{{ $tab }}">
+        @if ($canManageAllDepartments)
+            <div class="col-12 col-md-5">
+                <label for="queue-department" class="form-label fs-7">القسم</label>
+                <select name="department_id" id="queue-department" class="form-select">
+                    <option value="">جميع الأقسام التشغيلية</option>
+                    @foreach ($departments as $dept)
+                        <option value="{{ $dept->id }}" @selected(request('department_id') == $dept->id)>قسم {{ $dept->name_ar }}</option>
+                    @endforeach
+                </select>
+            </div>
+        @endif
+        <div class="col-12 col-md-4">
+            <label for="queue-priority" class="form-label fs-7">الأولوية</label>
+            <select name="priority" id="queue-priority" class="form-select">
+                <option value="">جميع الأولويات</option>
+                @foreach ($priorityLabels as $priorityKey => $priorityLabel)
+                    <option value="{{ $priorityKey }}" @selected(request('priority') === $priorityKey)>{{ $priorityLabel }}</option>
+                @endforeach
+            </select>
+        </div>
+    </x-filter-sheet>
+
+    @if ($operations->isEmpty())
+        <div class="card-factory empty-state" role="status">
+            <i class="fas {{ $tab === 'rework' ? 'fa-circle-check text-success' : 'fa-mug-hot text-secondary' }} fs-2 mb-3 d-block" aria-hidden="true"></i>
+            <p class="mb-0 fw-semibold">{{ $emptyMessages[$tab] }}</p>
+        </div>
+    @else
+        {{-- Mobile: task cards --}}
+        <div class="task-list mobile-cards-only-lg">
+            @foreach ($operations as $op)
+                @php
+                    $po = $op->productionOrder;
+                    $productName = $po->is_custom_design ? $po->custom_design_name : ($po->productModel?->name_ar ?? 'منتج');
+                    $remaining = max(0, $op->required_quantity - $op->completed_quantity);
+                    $isRework = $op->targetReworkActions->isNotEmpty();
+                    $tone = \App\Services\StatusPresenter::present('operation', $op->status)['tone'];
+                @endphp
+                <article class="task-card tone-{{ $tone }} {{ $isRework ? 'is-rework' : '' }}" aria-labelledby="task-title-{{ $op->id }}">
+                    <div class="task-card-head">
+                        <div class="min-w-0">
+                            <h2 id="task-title-{{ $op->id }}" class="task-card-title">{{ $productName }}</h2>
+                            <div class="task-card-ref">
+                                {{ $op->operation_name_snapshot }} &bull; <span class="ltr-isolate">{{ $po->production_order_number }}</span>
+                            </div>
                         </div>
+                        <x-status-badge domain="operation" :status="$op->status" />
                     </div>
-                @endif
-                <div class="col-md-4">
-                    <select name="priority" class="form-select">
-                        <option value="">جميع الأولويات</option>
-                        <option value="NORMAL" {{ request('priority') === 'NORMAL' ? 'selected' : '' }}>عادي</option>
-                        <option value="URGENT" {{ request('priority') === 'URGENT' ? 'selected' : '' }}>عاجل</option>
-                        <option value="VIP" {{ request('priority') === 'VIP' ? 'selected' : '' }}>VIP</option>
-                    </select>
-                </div>
-                <div class="col-md-2 d-flex gap-2">
-                    <button type="submit" class="btn btn-primary w-100"><i class="fas fa-search me-1"></i> تصفية</button>
-                    <a href="{{ route('production.queue.index') }}" class="btn btn-outline-secondary"><i class="fas fa-undo"></i></a>
-                </div>
-            </form>
+                    <div class="d-flex flex-wrap gap-2">
+                        @if ($isRework)
+                            <span class="rework-flag"><i class="fas fa-rotate" aria-hidden="true"></i> إعادة عمل</span>
+                        @endif
+                        @if (in_array($po->priority, ['URGENT', 'VIP'], true))
+                            <span class="status-chip status-chip-danger"><i class="fas fa-bolt" aria-hidden="true"></i> {{ $priorityLabels[$po->priority] }}</span>
+                        @endif
+                    </div>
+                    <div class="task-card-meta">
+                        <span><i class="fas fa-ruler-combined" aria-hidden="true"></i><span class="ltr-isolate">{{ (int) $po->requested_width_cm }}×{{ (int) $po->requested_length_cm }}</span> سم{{ $po->has_storage ? ' — سحارة' : '' }}</span>
+                        @if ($po->fabricMaterial)
+                            <span><i class="fas fa-scroll" aria-hidden="true"></i>{{ $po->fabricMaterial->name_ar }}</span>
+                        @endif
+                        @if ($po->fabricColor || $po->fabric_color_code)
+                            <span>
+                                <span class="color-dot" style="background: {{ $po->fabricColor?->hex_code ?? '#cbd5e1' }};" aria-hidden="true"></span>
+                                لون <strong class="ltr-isolate">{{ $po->fabric_color_code ?? $po->fabricColor?->color_code }}</strong>
+                            </span>
+                        @endif
+                    </div>
+                    <div class="qty-trio" aria-label="الكميات">
+                        <div><small>المطلوب</small><strong>{{ $op->required_quantity }}</strong></div>
+                        <div><small>المنجز</small><strong>{{ $op->completed_quantity }}</strong></div>
+                        <div class="is-remaining"><small>المتبقي</small><strong>{{ $remaining }}</strong></div>
+                    </div>
+                    <div class="task-card-actions">
+                        <button type="button" class="btn btn-factory-primary" data-bs-toggle="modal" data-bs-target="#task-sheet-{{ $op->id }}">
+                            <i class="fas fa-folder-open" aria-hidden="true"></i> فتح المهمة
+                        </button>
+                    </div>
+                </article>
+            @endforeach
         </div>
-    </div>
 
-    <!-- Operations Table -->
-    <div class="card border-0 shadow-sm">
-        <div class="card-body p-0">
+        {{-- Tablet/desktop: dense table --}}
+        <div class="table-factory-wrapper has-mobile-cards-lg">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="bg-light">
+                <table class="table table-factory table-hover align-middle mb-0">
+                    <thead>
                         <tr>
-                            <th>أمر الإنتاج</th>
-                            <th>المرحلة / العملية</th>
-                            <th>القسم التشغيلي</th>
-                            <th>المنتج والمواصفات</th>
+                            <th>المنتج والمقاس</th>
+                            <th>العملية / القسم</th>
                             <th>القماش واللون</th>
-                            <th class="text-center">المطلوب / المنجز</th>
+                            <th class="text-center">المطلوب / المنجز / المتبقي</th>
                             <th>الحالة</th>
-                            <th class="text-end">الإجراء السريع</th>
+                            <th class="text-end">الإجراء</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($operations as $op)
+                        @foreach ($operations as $op)
                             @php
                                 $po = $op->productionOrder;
+                                $remaining = max(0, $op->required_quantity - $op->completed_quantity);
+                                $isRework = $op->targetReworkActions->isNotEmpty();
                             @endphp
-                            <tr>
+                            <tr @class(['table-warning' => $isRework])>
                                 <td>
-                                    <a href="{{ route('production.orders.show', $po) }}" class="fw-bold text-primary font-monospace text-decoration-none">
-                                        {{ $po->production_order_number }}
-                                    </a>
-                                    <small class="text-muted d-block">{{ $po->customerOrder?->customer?->name_ar }}</small>
+                                    <div class="fw-bold text-dark">{{ $po->is_custom_design ? $po->custom_design_name : $po->productModel?->name_ar }}</div>
+                                    <small class="text-muted d-block"><span class="ltr-isolate">{{ (int) $po->requested_width_cm }}×{{ (int) $po->requested_length_cm }}</span> سم {{ $po->has_storage ? '(سحارة)' : '' }}</small>
+                                    <a href="{{ route('production.orders.show', $po) }}" class="fs-8 font-monospace text-decoration-none">{{ $po->production_order_number }}</a>
+                                    @if ($isRework)
+                                        <span class="rework-flag ms-1"><i class="fas fa-rotate" aria-hidden="true"></i> إعادة عمل</span>
+                                    @endif
                                 </td>
                                 <td>
-                                    <div class="fw-bold text-dark">{{ $op->operation_name_snapshot }}</div>
-                                    <small class="text-muted">تسلسل #{{ $op->sequence_number }}</small>
-                                </td>
-                                <td>
-                                    <span class="badge bg-light text-dark border"><i class="fas fa-building me-1"></i>{{ $op->workCenter?->department?->name_ar }}</span>
-                                </td>
-                                <td>
-                                    <span class="fw-semibold text-dark">{{ $po->is_custom_design ? $po->custom_design_name : $po->productModel?->name_ar }}</span>
-                                    <small class="text-muted d-block">{{ (int)$po->requested_width_cm }}×{{ (int)$po->requested_length_cm }} سم {{ $po->has_storage ? '(سحارة)' : '' }}</small>
+                                    <div class="fw-semibold text-dark">{{ $op->operation_name_snapshot }}</div>
+                                    <small class="text-muted">{{ $op->workCenter?->department?->name_ar }} &bull; تسلسل #{{ $op->sequence_number }}</small>
                                 </td>
                                 <td>
                                     <small class="d-block text-dark">{{ $po->fabricMaterial?->name_ar ?? '-' }}</small>
-                                    @if($po->fabricColor)
-                                        <small class="text-muted"><i class="fas fa-circle me-1" style="color: {{ $po->fabricColor->hex_code ?? '#ccc' }};"></i>{{ $po->fabricColor->color_name_ar }}</small>
+                                    @if ($po->fabricColor || $po->fabric_color_code)
+                                        <small class="text-muted"><span class="color-dot" style="background: {{ $po->fabricColor?->hex_code ?? '#cbd5e1' }};" aria-hidden="true"></span> <span class="ltr-isolate">{{ $po->fabric_color_code ?? $po->fabricColor?->color_code }}</span></small>
                                     @endif
                                 </td>
-                                <td class="text-center">
-                                    <span class="fw-bold text-success fs-6">{{ $op->completed_quantity }}</span>
-                                    <span class="text-muted fs-7">/ {{ $op->required_quantity }}</span>
+                                <td class="text-center text-nowrap">
+                                    <span class="fw-bold">{{ $op->required_quantity }}</span> /
+                                    <span class="fw-bold text-success">{{ $op->completed_quantity }}</span> /
+                                    <span class="fw-bold text-warning-emphasis">{{ $remaining }}</span>
                                 </td>
-                                <td>
-                                    <span class="badge {{ $op->status_badge_class }}">{{ $op->status_arabic }}</span>
-                                </td>
+                                <td><x-status-badge domain="operation" :status="$op->status" /></td>
                                 <td class="text-end">
-                                    @can('production.update_progress')
-                                        <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#queueProgressModal-{{ $op->id }}">
-                                            <i class="fas fa-check-circle me-1"></i> تسجيل إنجاز
-                                        </button>
-
-                                        <!-- Progress Modal -->
-                                        <div class="modal fade text-start" id="queueProgressModal-{{ $op->id }}" tabindex="-1">
-                                            <div class="modal-dialog">
-                                                <div class="modal-content">
-                                                    <form action="{{ route('production.operations.progress', $op) }}" method="POST">
-                                                        @csrf
-                                                        <div class="modal-header">
-                                                            <h5 class="modal-title">تسجيل إنجاز: {{ $op->operation_name_snapshot }}</h5>
-                                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                        </div>
-                                                        <div class="modal-body">
-                                                            <div class="mb-3">
-                                                                <small class="text-muted d-block">أمر الإنتاج:</small>
-                                                                <span class="fw-bold text-primary font-monospace">{{ $po->production_order_number }}</span>
-                                                            </div>
-                                                            <div class="mb-3">
-                                                                <label class="form-label">المنجز المكتمل حالياً:</label>
-                                                                <div class="fw-bold text-success fs-5">{{ $op->completed_quantity }} من أصل {{ $op->required_quantity }} قطعة</div>
-                                                            </div>
-                                                            <div class="mb-3">
-                                                                <label class="form-label required">الكمية المنجزة إضافياً الآن</label>
-                                                                <input type="number" name="added_quantity" class="form-control form-control-lg" min="1" max="{{ $op->required_quantity - $op->completed_quantity }}" value="1" required>
-                                                            </div>
-                                                            <div class="mb-3">
-                                                                <label class="form-label">ملاحظات التشغيل</label>
-                                                                <input type="text" name="notes" class="form-control" placeholder="أي ملاحظات فنية...">
-                                                            </div>
-                                                        </div>
-                                                        <div class="modal-footer">
-                                                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">إلغاء</button>
-                                                            <button type="submit" class="btn btn-success"><i class="fas fa-save me-1"></i> تأكيد الإنجاز</button>
-                                                        </div>
-                                                    </form>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    @endcan
+                                    <button type="button" class="btn btn-sm btn-factory-primary" data-bs-toggle="modal" data-bs-target="#task-sheet-{{ $op->id }}">
+                                        <i class="fas fa-folder-open" aria-hidden="true"></i> فتح المهمة
+                                    </button>
                                 </td>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="8" class="text-center py-4 text-muted">
-                                    <i class="fas fa-check-double fa-2x mb-2 d-block text-success"></i>
-                                    لا توجد عمليات معلقة أو قيد الانتظار لهذا القسم حالياً.
-                                </td>
-                            </tr>
-                        @endforelse
+                        @endforeach
                     </tbody>
                 </table>
             </div>
         </div>
-        @if($operations->hasPages())
-            <div class="card-footer bg-white">
-                {{ $operations->links() }}
-            </div>
+
+        @if ($operations->hasPages())
+            <div class="d-flex justify-content-center">{{ $operations->links() }}</div>
         @endif
-    </div>
+
+        {{-- Task sheets: one per operation, shared by cards and table. Full screen on phones. --}}
+        @foreach ($operations as $op)
+            @include('production.queue.partials.task-sheet', ['op' => $op, 'priorityLabels' => $priorityLabels])
+        @endforeach
+    @endif
 </div>
 @endsection

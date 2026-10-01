@@ -54,7 +54,7 @@ class PurchaseRequestController extends Controller
 
         $warehouses = Warehouse::active()->get();
         $departments = Department::where('is_active', true)->get();
-        $materials = Material::where('is_active', true)->with('unitOfMeasure', 'fabricColors')->get();
+        $materials = Material::where('is_active', true)->with('baseUnit', 'fabricColors')->get();
         $suppliers = Supplier::where('is_active', true)->get();
         $units = UnitOfMeasure::where('is_active', true)->get();
 
@@ -88,7 +88,7 @@ class PurchaseRequestController extends Controller
             'reviewedByUser',
             'approvedByUser',
             'rejectedByUser',
-            'lines.material.unitOfMeasure',
+            'lines.material.baseUnit',
             'lines.fabricColor',
             'lines.preferredPurchaseUnit',
             'lines.preferredSupplier',

@@ -64,7 +64,7 @@ class ProcurementReportingService
                 'supplier_name' => $ql->supplierQuotation->supplier?->name,
                 'reference' => $ql->supplierQuotation->supplier_quotation_number,
                 'unit_cost' => (float) $ql->base_unit_equivalent_price,
-                'unit_name' => $ql->material->unitOfMeasure?->name_ar,
+                'unit_name' => $ql->material->baseUnit?->name_ar,
                 'notes' => 'عرض سعر مورد',
             ];
         }

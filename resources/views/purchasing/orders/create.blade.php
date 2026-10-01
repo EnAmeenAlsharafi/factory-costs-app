@@ -100,7 +100,7 @@
                                     <select :name="'lines['+index+'][material_id]'" class="form-select form-select-sm" x-model="line.material_id" required>
                                         <option value="">اختر الخامة...</option>
                                         @foreach($materials as $mat)
-                                        <option value="{{ $mat->id }}">{{ $mat->name_ar }} ({{ $mat->code }}) - [{{ $mat->unitOfMeasure?->name_ar }}]</option>
+                                        <option value="{{ $mat->id }}">{{ $mat->name_ar }} ({{ $mat->code }}) - [{{ $mat->baseUnit?->name_ar }}]</option>
                                         @endforeach
                                     </select>
                                 </td>

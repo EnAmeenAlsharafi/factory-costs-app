@@ -319,3 +319,8 @@ function toggleIdleItems() {
 }
 </script>
 @endsection
+
+@push('scripts')
+    {{-- Legacy daily-report helpers (only these pages depend on them). --}}
+    <script src="{{ asset('js/app.js') }}" defer></script>
+@endpush

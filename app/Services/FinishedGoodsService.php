@@ -80,11 +80,13 @@ class FinishedGoodsService
      */
     public function postReceipt(FinishedGoodsReceipt $receipt, User $user): FinishedGoodsReceipt
     {
-        if (! $receipt->isDraft()) {
-            throw new Exception('يمكن فقط ترحيل سندات استلام المنتجات الجاهزة في حالة المسودة.');
-        }
-
         return DB::transaction(function () use ($receipt, $user) {
+            $receipt = FinishedGoodsReceipt::query()->whereKey($receipt->getKey())->lockForUpdate()->firstOrFail();
+
+            if (! $receipt->isDraft()) {
+                throw new Exception('يمكن فقط ترحيل سندات استلام المنتجات الجاهزة في حالة المسودة.');
+            }
+
             $po = ProductionOrder::where('id', $receipt->production_order_id)->lockForUpdate()->firstOrFail();
 
             $alreadyReceived = (float) FinishedGoodsReceipt::where('production_order_id', $po->id)

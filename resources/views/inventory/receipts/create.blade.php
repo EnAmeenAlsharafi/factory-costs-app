@@ -24,19 +24,9 @@
         </div>
     </div>
 
-    @if ($errors->any())
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="fas fa-exclamation-triangle me-2"></i><strong>يرجى تصحيح الأخطاء التالية:</strong>
-            <ul class="mb-0 mt-2">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="إغلاق"></button>
-        </div>
-    @endif
+    {{-- Validation errors are shown once by the layout flash partial. --}}
 
-    <form action="{{ route('inventory.receipts.store') }}" method="POST">
+    <form action="{{ route('inventory.receipts.store') }}" method="POST" data-unsaved-warning>
         @csrf
 
         <!-- Header Card -->
@@ -102,7 +92,7 @@
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-bordered align-middle mb-0">
+                    <table class="table table-bordered align-middle mb-0 table-stack-sm">
                         <thead class="bg-light">
                             <tr>
                                 <th style="width: 22%;">المادة الخام <span class="text-danger">*</span></th>
@@ -118,8 +108,14 @@
                         <tbody>
                             <template x-for="(line, index) in lines" :key="index">
                                 <tr>
-                                    <td>
-                                        <select :name="`items[${index}][material_id]`" x-model="line.material_id" @change="onMaterialChange(index)" class="form-select form-select-sm" required>
+                                    <td class="stack-head stack-only">
+                                        <span>البند <span x-text="index + 1"></span></span>
+                                        <button type="button" @click="removeLine(index)" class="btn btn-sm btn-outline-danger" :disabled="lines.length === 1" aria-label="حذف البند">
+                                            <i class="fas fa-trash-alt" aria-hidden="true"></i> حذف
+                                        </button>
+                                    </td>
+                                    <td data-label="المادة الخام *">
+                                        <select :name="`items[${index}][material_id]`" x-model="line.material_id" @change="onMaterialChange(index)" class="form-select form-select-sm" required aria-label="المادة الخام">
                                             <option value="">-- اختر المادة --</option>
                                             @foreach($materials as $mat)
                                                 <option value="{{ $mat->id }}" 
@@ -132,14 +128,16 @@
                                             @endforeach
                                         </select>
                                     </td>
-                                    <td>
+                                    <td data-label="رقم / كود اللون (مطلوب للأقمشة)" :class="line.is_fabric ? '' : 'stack-hide-sm'">
                                         <div x-show="line.is_fabric">
-                                            <input type="text" 
-                                                   :name="`items[${index}][fabric_color_code]`" 
-                                                   x-model="line.fabric_color_code" 
+                                            <input type="text"
+                                                   :name="`items[${index}][fabric_color_code]`"
+                                                   x-model="line.fabric_color_code"
                                                    :list="`colors-list-${index}`"
-                                                   class="form-control form-control-sm fw-mono border-primary" 
-                                                   placeholder="مثال: 204" 
+                                                   class="form-control form-control-sm fw-mono border-primary"
+                                                   placeholder="مثال: 204"
+                                                   autocomplete="off"
+                                                   aria-label="كود اللون"
                                                    :required="line.is_fabric">
                                             <datalist :id="`colors-list-${index}`">
                                                 <template x-for="col in line.available_colors" :key="col">
@@ -151,29 +149,29 @@
                                             <span class="badge bg-light text-muted border-0">—</span>
                                         </div>
                                     </td>
-                                    <td>
-                                        <input type="number" step="0.0001" :name="`items[${index}][quantity]`" x-model.number="line.quantity" class="form-control form-control-sm fw-mono text-center" min="0.0001" required>
+                                    <td data-label="الكمية *" class="stack-half">
+                                        <input type="number" step="0.0001" inputmode="decimal" :name="`items[${index}][quantity]`" x-model.number="line.quantity" class="form-control form-control-sm fw-mono text-center" min="0.0001" required aria-label="الكمية">
                                     </td>
-                                    <td>
-                                        <select :name="`items[${index}][unit_id]`" x-model="line.unit_id" class="form-select form-select-sm" required>
+                                    <td data-label="وحدة القياس *" class="stack-half">
+                                        <select :name="`items[${index}][unit_id]`" x-model="line.unit_id" class="form-select form-select-sm" required aria-label="وحدة القياس">
                                             <option value="">-- اختر الوحدة --</option>
                                             @foreach($units as $unit)
                                                 <option value="{{ $unit->id }}">{{ $unit->name_ar }} ({{ $unit->code }})</option>
                                             @endforeach
                                         </select>
                                     </td>
-                                    <td>
-                                        <input type="number" step="0.000001" :name="`items[${index}][unit_cost]`" x-model.number="line.unit_cost" class="form-control form-control-sm fw-mono text-end" min="0" required>
+                                    <td data-label="سعر الوحدة (ر.س) *" class="stack-half">
+                                        <input type="number" step="0.000001" inputmode="decimal" :name="`items[${index}][unit_cost]`" x-model.number="line.unit_cost" class="form-control form-control-sm fw-mono text-end" min="0" required aria-label="سعر الوحدة">
                                     </td>
-                                    <td>
-                                        <input type="text" :name="`items[${index}][lot_reference]`" x-model="line.lot_reference" class="form-control form-control-sm fw-mono" placeholder="تلقائي إن ترك فارغاً">
+                                    <td data-label="رقم الدفعة (Lot)" class="stack-half">
+                                        <input type="text" :name="`items[${index}][lot_reference]`" x-model="line.lot_reference" class="form-control form-control-sm fw-mono" placeholder="تلقائي إن ترك فارغاً" autocomplete="off" aria-label="رقم الدفعة">
                                     </td>
-                                    <td class="text-end fw-mono fw-bold">
+                                    <td data-label="الإجمالي" class="text-end fw-mono fw-bold">
                                         <span x-text="formatNumber(line.quantity * line.unit_cost)"></span> ر.س
                                     </td>
-                                    <td class="text-center">
-                                        <button type="button" @click="removeLine(index)" class="btn btn-sm btn-outline-danger border-0" :disabled="lines.length === 1">
-                                            <i class="fas fa-trash-alt"></i>
+                                    <td class="text-center stack-hide-sm">
+                                        <button type="button" @click="removeLine(index)" class="btn btn-sm btn-outline-danger border-0" :disabled="lines.length === 1" aria-label="حذف البند">
+                                            <i class="fas fa-trash-alt" aria-hidden="true"></i>
                                         </button>
                                     </td>
                                 </tr>
@@ -185,31 +183,60 @@
                                 <td class="text-end fw-mono fw-bold text-primary fs-6">
                                     <span x-text="formatNumber(calculateTotal())"></span> ر.س
                                 </td>
-                                <td></td>
+                                <td class="stack-hide-sm"></td>
                             </tr>
                         </tfoot>
                     </table>
                 </div>
             </div>
+            <div class="card-footer bg-white d-md-none">
+                <button type="button" @click="addLine()" class="btn btn-outline-primary w-100">
+                    <i class="fas fa-plus" aria-hidden="true"></i> إضافة مادة أخرى
+                </button>
+            </div>
         </div>
 
         <!-- Submission Actions -->
-        <div class="d-flex justify-content-end gap-3 mb-5">
+        <x-mobile-action-bar class="mb-4">
             <button type="submit" name="action" value="draft" class="btn btn-outline-primary px-4">
-                <i class="fas fa-save me-1"></i> حفظ كـ مسودة (Draft)
+                <i class="fas fa-save" aria-hidden="true"></i> حفظ كمسودة
             </button>
-            <button type="submit" name="action" value="post" class="btn btn-success px-4">
-                <i class="fas fa-check-circle me-1"></i> حفظ وترحيل للمخزون فوراً (Post)
+            <button type="submit" name="action" value="post" class="btn btn-success px-4"
+                    data-confirm="ترحيل سند الاستلام الآن؟ ستُضاف الكميات للمخزون ولا يمكن تعديل السند بعد الترحيل.">
+                <i class="fas fa-check-circle" aria-hidden="true"></i> ترحيل سند الاستلام
             </button>
-        </div>
+        </x-mobile-action-bar>
 
     </form>
 </div>
 
+@php
+    $receiptMaterialMeta = $materials->mapWithKeys(fn ($mat) => [$mat->id => [
+        'is_fabric' => strtoupper($mat->category?->code ?? '') === 'FABRIC',
+        'colors' => $mat->fabricColors->pluck('color_code')->values()->all(),
+    ]]);
+@endphp
 <script>
 function materialReceiptForm() {
+    // Restore the lines the user already entered when validation sends them back to this form.
+    const materialMeta = @js($receiptMaterialMeta);
+    const oldItems = @js(array_values(old('items', [])));
+    const restoredLines = oldItems.map((item) => {
+        const meta = materialMeta[item.material_id] || { is_fabric: false, colors: [] };
+        return {
+            material_id: item.material_id || '',
+            fabric_color_code: item.fabric_color_code || '',
+            is_fabric: meta.is_fabric,
+            available_colors: meta.colors,
+            quantity: item.quantity ?? 1,
+            unit_id: item.unit_id || '',
+            unit_cost: item.unit_cost ?? 0,
+            lot_reference: item.lot_reference || '',
+        };
+    });
+
     return {
-        lines: [
+        lines: restoredLines.length > 0 ? restoredLines : [
             { material_id: '', fabric_color_code: '', is_fabric: false, available_colors: [], quantity: 1, unit_id: '', unit_cost: 0, lot_reference: '' }
         ],
         addLine() {

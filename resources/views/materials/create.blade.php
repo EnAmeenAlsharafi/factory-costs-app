@@ -18,7 +18,7 @@
         ]
     ])
 
-    <form action="{{ route('materials.store') }}" method="POST">
+    <form action="{{ route('materials.store') }}" method="POST" enctype="multipart/form-data">
         @csrf
 
         <div class="card border-0 shadow-sm mb-4">
@@ -249,22 +249,62 @@
         <!-- Fabric Specs Section -->
         <div class="card border-0 shadow-sm mb-4 spec-section d-none" id="spec-fabric">
             <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0">
-                <h5 class="fw-bold text-dark mb-0"><i class="fas fa-scroll text-info me-2"></i>المواصفات الفنية للأقمشة والجلد</h5>
+                <h5 class="fw-bold text-dark mb-0"><i class="fas fa-scroll text-info me-2"></i>بيانات كتالوج ومواصفات الأقمشة</h5>
+                <p class="text-muted fs-8 mb-0">يعامل كل كتالوج تابع لمورد كمادة خام مستقلة، وترتبط به ألوانه كدرجات تابعة.</p>
             </div>
             <div class="card-body p-4">
                 <div class="row g-3">
-                    <div class="col-md-6">
-                        <label for="fabric_type" class="form-label fw-semibold text-dark">نوع القماش / الخامة <span class="text-danger">*</span></label>
-                        <input type="text" name="fabric_type" id="fabric_type" class="form-control @error('fabric_type') is-invalid @enderror" value="{{ old('fabric_type') }}" placeholder="مثال: مخمل، شانيل، خيش، جلد طبيعي">
+                    <div class="col-md-4">
+                        <label for="fabric_supplier_id" class="form-label fw-semibold text-dark">المورد المعتمد للكتالوج <span class="text-danger">*</span></label>
+                        <select name="supplier_id" id="fabric_supplier_id" class="form-select @error('supplier_id') is-invalid @enderror">
+                            <option value="">-- اختر مورد الكتالوج --</option>
+                            @foreach ($suppliers ?? [] as $s)
+                                <option value="{{ $s->id }}" {{ old('supplier_id') == $s->id ? 'selected' : '' }} data-name="{{ $s->name }}">
+                                    {{ $s->name }} ({{ $s->supplier_code }})
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('supplier_id')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="catalog_number" class="form-label fw-semibold text-dark">رقم الكتالوج لدى المورد <span class="text-danger">*</span></label>
+                        <input type="text" name="catalog_number" id="catalog_number" class="form-control @error('catalog_number') is-invalid @enderror" value="{{ old('catalog_number') }}" placeholder="مثال: 2020">
+                        @error('catalog_number')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="catalog_name" class="form-label fw-semibold text-dark">اسم الكتالوج التجاري (اختياري)</label>
+                        <input type="text" name="catalog_name" id="catalog_name" class="form-control @error('catalog_name') is-invalid @enderror" value="{{ old('catalog_name') }}" placeholder="مثال: شانيل 2020">
+                        @error('catalog_name')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="fabric_type" class="form-label fw-semibold text-dark">نوع / عائلة القماش <span class="text-danger">*</span></label>
+                        <input type="text" name="fabric_type" id="fabric_type" class="form-control @error('fabric_type') is-invalid @enderror" value="{{ old('fabric_type') }}" placeholder="مثال: شانيل، مخمل، بوكلية">
                         @error('fabric_type')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <label for="fabric_width_cm" class="form-label fw-semibold text-dark">عرض الرول (سم) <span class="text-danger">*</span></label>
-                        <input type="number" step="0.01" name="width_cm" id="fabric_width_cm" class="form-control @error('width_cm') is-invalid @enderror" value="{{ old('width_cm') }}" placeholder="مثال: 140">
+                        <input type="number" step="0.01" name="width_cm" id="fabric_width_cm" class="form-control @error('width_cm') is-invalid @enderror" value="{{ old('width_cm', 140) }}" placeholder="مثال: 140">
                         @error('width_cm')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="catalog_image" class="form-label fw-semibold text-dark">صورة غلاف الكتالوج (اختياري)</label>
+                        <input type="file" name="catalog_image" id="catalog_image" class="form-control @error('catalog_image') is-invalid @enderror" accept="image/*">
+                        @error('catalog_image')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>

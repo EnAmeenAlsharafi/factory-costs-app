@@ -21,6 +21,7 @@ use App\Services\CustomerReturnService;
 use App\Services\DeliveryOrderService;
 use App\Services\FinishedGoodsService;
 use Database\Seeders\RoleAndPermissionSeeder;
+use Exception;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -122,6 +123,8 @@ class CustomerReturnAndQualityTest extends TestCase
                 ['production_order_id' => $this->productionOrder->id, 'quantity' => 2],
             ],
         ]);
+        $deliveryService->markReady($this->deliveryOrder, $this->manager);
+        $deliveryService->assignDriver($this->deliveryOrder, $this->manager, $this->manager);
         $deliveryService->dispatchDelivery($this->deliveryOrder, $this->manager);
         $deliveryService->markDelivered($this->deliveryOrder, $this->manager);
     }
@@ -252,6 +255,8 @@ class CustomerReturnAndQualityTest extends TestCase
                 ['production_order_id' => $po->id, 'quantity' => 10],
             ],
         ]);
+        $deliveryService->markReady($delivery, $this->manager);
+        $deliveryService->assignDriver($delivery, $this->manager, $this->manager);
         $deliveryService->dispatchDelivery($delivery, $this->manager);
         $deliveryService->markDelivered($delivery, $this->manager);
 
@@ -279,7 +284,7 @@ class CustomerReturnAndQualityTest extends TestCase
                 'quantity_returned' => 9,
                 'reason_code' => 'DEFECTIVE',
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $failedAttempt = true;
             $this->assertStringContainsString('تتجاوز صافي الكمية المسلمة', $e->getMessage());
         }
@@ -293,7 +298,7 @@ class CustomerReturnAndQualityTest extends TestCase
                 'quantity_returned' => 8.0001,
                 'reason_code' => 'DEFECTIVE',
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $failedPrecision = true;
         }
         $this->assertTrue($failedPrecision, 'Return of 8.0001 should be rejected when remaining returnable quantity is 8.');
@@ -311,5 +316,30 @@ class CustomerReturnAndQualityTest extends TestCase
         $returnService->receiveReturnedGoods($ret2, $this->manager);
         $this->assertEquals('RECEIVED', $ret2->status);
         $this->assertEquals(0.0, $returnService->getNetDeliveredQuantity($po));
+    }
+
+    public function test_customer_return_physical_receipt_is_idempotent_with_stale_requests(): void
+    {
+        $service = app(CustomerReturnService::class);
+        $customerReturn = $service->reportReturn($this->productionOrder, $this->manager, [
+            'delivery_order_id' => $this->deliveryOrder->id,
+            'quantity' => 1,
+            'reason_code' => 'PRODUCT_DEFECT',
+        ]);
+        $staleReturn = CustomerReturn::findOrFail($customerReturn->id);
+
+        $service->receiveReturnedGoods($customerReturn, $this->manager);
+
+        try {
+            $service->receiveReturnedGoods($staleReturn, $this->manager);
+            $this->fail('A stale second customer-return receipt must be rejected.');
+        } catch (Exception $exception) {
+            $this->assertStringContainsString('مسبقاً', $exception->getMessage());
+        }
+
+        $this->assertSame(1, FinishedGoodsMovement::where('customer_return_id', $customerReturn->id)
+            ->where('movement_type', 'CUSTOMER_RETURN')
+            ->count());
+        $this->assertSame('RECEIVED', $customerReturn->fresh()->status);
     }
 }

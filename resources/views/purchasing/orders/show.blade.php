@@ -64,16 +64,38 @@
                             @foreach($purchaseOrder->lines as $line)
                             <tr>
                                 <td class="fw-bold text-dark">
-                                    {{ $line->material?->name_ar }}
-                                    @if($line->fabricColor)<div class="text-info fs-8">لون: {{ $line->fabricColor->color_name_ar }}</div>@endif
+                                    <div>{{ $line->material?->name_ar }}</div>
+                                    @php
+                                        $spec = $line->material?->fabricSpec;
+                                        $colorCode = $line->fabric_color_code ?? $line->fabricColor?->color_code;
+                                        $supplierColor = $line->fabric_supplier_color_code ?? $line->fabricColor?->supplier_color_code;
+                                        $catalogNo = $spec?->catalog_number;
+                                        $supplierName = $spec?->supplier?->name ?? $purchaseOrder->supplier?->name;
+                                    @endphp
+                                    @if($colorCode || $supplierColor || $catalogNo)
+                                        <div class="mt-1 d-flex flex-wrap gap-1 fs-8">
+                                            @if($colorCode)
+                                                <span class="badge bg-light text-dark border">داخلي: {{ $colorCode }}</span>
+                                            @endif
+                                            @if($supplierColor)
+                                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 font-monospace">كود المورد: {{ $supplierColor }}</span>
+                                            @endif
+                                            @if($catalogNo)
+                                                <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25">كتالوج: {{ $catalogNo }}</span>
+                                            @endif
+                                            @if($supplierName)
+                                                <span class="badge bg-secondary bg-opacity-10 text-secondary border">مورد: {{ $supplierName }}</span>
+                                            @endif
+                                        </div>
+                                    @endif
                                 </td>
                                 <td>{{ number_format($line->ordered_quantity, 2) }} {{ $line->purchaseUnit?->name_ar }}</td>
                                 <td class="fw-bold">{{ number_format($line->unit_price, 2) }} SAR</td>
                                 <td class="fw-bold text-dark">{{ number_format($line->line_total, 2) }} SAR</td>
-                                <td><span class="badge bg-success fs-7">{{ number_format($line->received_base_quantity, 2) }} {{ $line->material?->unitOfMeasure?->name_ar }}</span></td>
+                                <td><span class="badge bg-success fs-7">{{ number_format($line->received_base_quantity, 2) }} {{ $line->material?->baseUnit?->name_ar }}</span></td>
                                 <td>
                                     @if($line->remaining_base_quantity > 0)
-                                    <span class="badge bg-warning text-dark fs-7">{{ number_format($line->remaining_base_quantity, 2) }} {{ $line->material?->unitOfMeasure?->name_ar }}</span>
+                                    <span class="badge bg-warning text-dark fs-7">{{ number_format($line->remaining_base_quantity, 2) }} {{ $line->material?->baseUnit?->name_ar }}</span>
                                     @else
                                     <span class="badge bg-secondary">مكتمل الاستلام</span>
                                     @endif

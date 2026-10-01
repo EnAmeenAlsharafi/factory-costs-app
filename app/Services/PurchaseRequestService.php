@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\FabricColor;
 use App\Models\Material;
 use App\Models\ProductionOrder;
 use App\Models\PurchaseRequest;
@@ -42,10 +43,24 @@ class PurchaseRequestService
                 $unitCost = isset($lineData['estimated_unit_cost']) ? (float) $lineData['estimated_unit_cost'] : null;
                 $totalCost = $unitCost !== null ? round($qty * $unitCost, 4) : null;
 
+                $colorId = $lineData['fabric_color_id'] ?? null;
+                $colorCode = $lineData['fabric_color_code'] ?? null;
+                $supplierColorCode = $lineData['fabric_supplier_color_code'] ?? null;
+
+                if ($colorId) {
+                    $color = FabricColor::find($colorId);
+                    if ($color) {
+                        $colorCode = $color->color_code;
+                        $supplierColorCode = $color->supplier_color_code;
+                    }
+                }
+
                 PurchaseRequestLine::create([
                     'purchase_request_id' => $request->id,
                     'material_id' => $material->id,
-                    'fabric_color_id' => $lineData['fabric_color_id'] ?? null,
+                    'fabric_color_id' => $colorId,
+                    'fabric_color_code' => $colorCode,
+                    'fabric_supplier_color_code' => $supplierColorCode,
                     'requested_quantity' => $qty,
                     'base_unit_id' => $material->base_unit_id,
                     'preferred_purchase_unit_id' => $lineData['preferred_purchase_unit_id'] ?? $material->purchase_unit_id ?? $material->base_unit_id,

@@ -166,6 +166,14 @@ class RoleAndPermissionSeeder extends Seeder
             ['name' => 'reports.financial', 'display_name' => 'عرض التقارير المالية والربحية', 'module' => 'reports'],
             ['name' => 'reports.production', 'display_name' => 'عرض تقارير كفاءة الإنتاج والهدر', 'module' => 'reports'],
             ['name' => 'reports.inventory', 'display_name' => 'عرض تقارير حركة المخزون واللوت', 'module' => 'reports'],
+            // Stage 14 management reporting (profitability is never granted to operational roles by default)
+            ['name' => 'reports.profitability', 'display_name' => 'عرض تقارير المساهمة التشغيلية والربحية التشغيلية', 'module' => 'reports'],
+            ['name' => 'reports.sales', 'display_name' => 'عرض ملخصات المبيعات التجارية (بدون التكلفة)', 'module' => 'reports'],
+            ['name' => 'reports.procurement', 'display_name' => 'عرض تقارير المشتريات والموردين', 'module' => 'reports'],
+            ['name' => 'reports.quality', 'display_name' => 'عرض تقارير الجودة والهدر وإعادة العمل', 'module' => 'reports'],
+            ['name' => 'reports.delivery', 'display_name' => 'عرض تقارير التوصيل والمنتجات الجاهزة', 'module' => 'reports'],
+            ['name' => 'reports.receivables', 'display_name' => 'عرض تقارير الذمم والتحصيل', 'module' => 'reports'],
+            ['name' => 'reports.export', 'display_name' => 'تصدير التقارير (CSV)', 'module' => 'reports'],
 
             // Sales Channels
             ['name' => 'sales_channels.view', 'display_name' => 'عرض قنوات البيع', 'module' => 'sales_channels'],
@@ -252,6 +260,9 @@ class RoleAndPermissionSeeder extends Seeder
             'reports.view',
             'reports.production',
             'reports.inventory',
+            'reports.quality',
+            'reports.delivery',
+            'reports.procurement',
             'sales_channels.view',
             'customer_types.view',
             'units.view',
@@ -315,6 +326,7 @@ class RoleAndPermissionSeeder extends Seeder
             'suppliers.view',
             'production.view',
             'reports.inventory',
+            'reports.view',
             'units.view',
             'departments.view',
             'recipes.view',
@@ -364,6 +376,7 @@ class RoleAndPermissionSeeder extends Seeder
             'orders.view',
             'orders.create',
             'reports.view',
+            'reports.sales',
             'sales_channels.view',
             'customer_types.view',
         ];
@@ -381,6 +394,8 @@ class RoleAndPermissionSeeder extends Seeder
             'materials.view',
             'suppliers.view',
             'inventory.view',
+            'reports.view',
+            'reports.procurement',
         ];
         $roles['purchasing_user']->permissions()->syncWithoutDetaching(
             collect($purchasingUserPerms)->map(fn ($p) => $permissions[$p]->id)->toArray()
@@ -399,6 +414,7 @@ class RoleAndPermissionSeeder extends Seeder
             'customers.view',
             'orders.view',
             'reports.view',
+            'reports.receivables',
         ];
         $roles['receivables_user']->permissions()->syncWithoutDetaching(
             collect($receivablesUserPerms)->map(fn ($p) => $permissions[$p]->id)->toArray()

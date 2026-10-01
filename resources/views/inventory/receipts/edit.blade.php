@@ -37,7 +37,7 @@
         </div>
     @endif
 
-    <form action="{{ route('inventory.receipts.update', $receipt) }}" method="POST" id="receiptEditForm">
+    <form action="{{ route('inventory.receipts.update', $receipt) }}" method="POST" id="receiptEditForm" data-unsaved-warning>
         @csrf
         @method('PUT')
 
@@ -104,7 +104,7 @@
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-bordered align-middle mb-0">
+                    <table class="table table-bordered align-middle mb-0 table-stack-sm">
                         <thead class="bg-light">
                             <tr>
                                 <th style="width: 22%;">المادة الخام <span class="text-danger">*</span></th>
@@ -120,7 +120,11 @@
                         <tbody>
                             <template x-for="(line, index) in lines" :key="index">
                                 <tr>
-                                    <td>
+                                    <td class="stack-head stack-only">
+                                        <span>البند <span x-text="index + 1"></span></span>
+                                        <button type="button" @click="removeLine(index)" class="btn btn-sm btn-outline-danger" :disabled="lines.length === 1" aria-label="حذف البند"><i class="fas fa-trash-alt" aria-hidden="true"></i> حذف</button>
+                                    </td>
+                                    <td data-label="المادة الخام *">
                                         <select :name="`lines[${index}][material_id]`" x-model="line.material_id" @change="onMaterialChange(index)" class="form-select form-select-sm" required>
                                             <option value="">-- اختر المادة --</option>
                                             @foreach($materials as $mat)
@@ -134,7 +138,7 @@
                                             @endforeach
                                         </select>
                                     </td>
-                                    <td>
+                                    <td data-label="رقم / كود اللون (مطلوب للأقمشة)" :class="line.is_fabric ? '' : 'stack-hide-sm'">
                                         <div x-show="line.is_fabric">
                                             <input type="text" 
                                                    :name="`lines[${index}][fabric_color_code]`" 
@@ -153,10 +157,10 @@
                                             <span class="badge bg-light text-muted border-0">—</span>
                                         </div>
                                     </td>
-                                    <td>
-                                        <input type="number" step="0.0001" :name="`lines[${index}][quantity_received]`" x-model.number="line.quantity" class="form-control form-control-sm fw-mono text-center" min="0.0001" required>
+                                    <td data-label="الكمية *" class="stack-half">
+                                        <input type="number" step="0.0001" inputmode="decimal" :name="`lines[${index}][quantity_received]`" x-model.number="line.quantity" class="form-control form-control-sm fw-mono text-center" min="0.0001" required>
                                     </td>
-                                    <td>
+                                    <td data-label="وحدة القياس *" class="stack-half">
                                         <select :name="`lines[${index}][purchase_unit_id]`" x-model="line.unit_id" class="form-select form-select-sm" required>
                                             <option value="">-- اختر الوحدة --</option>
                                             @foreach($units as $unit)
@@ -164,16 +168,16 @@
                                             @endforeach
                                         </select>
                                     </td>
-                                    <td>
-                                        <input type="number" step="0.000001" :name="`lines[${index}][unit_cost_purchase]`" x-model.number="line.unit_cost" class="form-control form-control-sm fw-mono text-end" min="0" required>
+                                    <td data-label="سعر الوحدة (ر.س) *" class="stack-half">
+                                        <input type="number" step="0.000001" inputmode="decimal" :name="`lines[${index}][unit_cost_purchase]`" x-model.number="line.unit_cost" class="form-control form-control-sm fw-mono text-end" min="0" required>
                                     </td>
-                                    <td>
+                                    <td data-label="رقم الدفعة (Lot)" class="stack-half">
                                         <input type="text" :name="`lines[${index}][lot_reference]`" x-model="line.lot_reference" class="form-control form-control-sm fw-mono" placeholder="تلقائي إن ترك فارغاً">
                                     </td>
-                                    <td class="text-end fw-mono fw-bold">
+                                    <td data-label="الإجمالي" class="text-end fw-mono fw-bold">
                                         <span x-text="formatNumber(line.quantity * line.unit_cost)"></span> ر.س
                                     </td>
-                                    <td class="text-center">
+                                    <td class="text-center stack-hide-sm">
                                         <button type="button" @click="removeLine(index)" class="btn btn-sm btn-outline-danger border-0" :disabled="lines.length === 1">
                                             <i class="fas fa-trash-alt"></i>
                                         </button>
@@ -187,7 +191,7 @@
                                 <td class="text-end fw-mono fw-bold text-primary fs-6">
                                     <span x-text="formatNumber(calculateTotal())"></span> ر.س
                                 </td>
-                                <td></td>
+                                <td class="stack-hide-sm"></td>
                             </tr>
                         </tfoot>
                     </table>
@@ -196,14 +200,14 @@
         </div>
 
         <!-- Submission Actions -->
-        <div class="d-flex justify-content-end gap-3 mb-5">
+        <x-mobile-action-bar class="mb-4">
             <button type="submit" name="action" value="draft" class="btn btn-outline-primary px-4">
                 <i class="fas fa-save me-1"></i> حفظ التعديلات كـ مسودة (Draft)
             </button>
-            <button type="submit" name="action" value="post" class="btn btn-success px-4">
-                <i class="fas fa-check-circle me-1"></i> حفظ وترحيل للمخزون فوراً (Post)
+            <button type="submit" name="action" value="post" class="btn btn-success px-4" data-confirm="ترحيل سند الاستلام الآن؟ ستُضاف الكميات للمخزون ولا يمكن تعديل السند بعد الترحيل.">
+                <i class="fas fa-check-circle me-1"></i> ترحيل سند الاستلام
             </button>
-        </div>
+        </x-mobile-action-bar>
     </form>
 </div>
 

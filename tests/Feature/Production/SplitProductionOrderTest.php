@@ -9,7 +9,9 @@ use App\Models\ProductionOrder;
 use App\Models\Role;
 use App\Models\SalesChannel;
 use App\Models\User;
+use App\Services\ProductionOrderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class SplitProductionOrderTest extends TestCase
@@ -81,5 +83,23 @@ class SplitProductionOrderTest extends TestCase
         ]);
         $res3->assertSessionHasErrors(['released_quantity']);
         $this->assertDatabaseCount('production_orders', 2);
+    }
+
+    public function test_stale_split_release_requests_cannot_exceed_order_line_ceiling(): void
+    {
+        $firstRequestLine = CustomerOrderLine::findOrFail($this->orderLine->id);
+        $staleSecondRequestLine = CustomerOrderLine::findOrFail($this->orderLine->id);
+        $service = app(ProductionOrderService::class);
+
+        $service->createFromOrderLine($firstRequestLine, ['released_quantity' => 12]);
+
+        try {
+            $service->createFromOrderLine($staleSecondRequestLine, ['released_quantity' => 9]);
+            $this->fail('The second stale release must be rejected after the first consumes the ceiling.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('released_quantity', $exception->errors());
+        }
+
+        $this->assertSame(12, (int) ProductionOrder::where('customer_order_line_id', $this->orderLine->id)->sum('released_quantity'));
     }
 }

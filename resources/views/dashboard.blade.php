@@ -1,134 +1,70 @@
 @extends('layouts.app')
 
 @section('title', 'لوحة التحكم - مصنع مفروشات سدير')
-@section('page-title', 'لوحة التحكم الرئيسية')
+@section('page-title', 'لوحة التحكم')
 
 @section('content')
 <div class="d-flex flex-column gap-4">
-    @include('partials.page-header', [
-        'title' => 'لوحة التحكم الرئيسية',
-        'subtitle' => 'وصول سريع إلى السجلات المتاحة لك وفق صلاحيات حسابك.',
-        'icon' => 'fas fa-gauge-high',
-        'breadcrumbs' => [
-            ['title' => 'لوحة التحكم']
-        ]
-    ])
+    <div class="page-header-card">
+        <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+            <i class="fas fa-gauge-high text-warning fs-5" aria-hidden="true"></i>
+            <span>مرحباً {{ auth()->user()->name }}</span>
+        </h1>
+        <p class="page-header-subtitle text-muted mb-0 fs-7">ما الذي يحتاج إلى إجراء منك الآن؟ اضغط على أي بطاقة للانتقال مباشرة إلى العمل.</p>
+    </div>
 
-    @php
-        $hasCurrentModuleAccess = auth()->user()->can('users.view')
-            || auth()->user()->can('roles.view')
-            || auth()->user()->can('customers.view')
-            || auth()->user()->can('suppliers.view')
-            || auth()->user()->can('sales_channels.view')
-            || auth()->user()->can('customer_types.view')
-            || auth()->user()->can('units.view')
-            || auth()->user()->can('departments.view');
-    @endphp
-
-    @if ($hasCurrentModuleAccess)
-        <section aria-labelledby="available-records-heading">
-            <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
-                <div>
-                    <h2 id="available-records-heading" class="h5 fw-bold mb-1">السجلات المتاحة</h2>
-                    <p class="text-muted fs-7 mb-0">الأرقام أدناه مأخوذة من البيانات الأساسية الحالية.</p>
-                </div>
-            </div>
-
-            <div class="row g-3">
-                @can('users.view')
-                    <div class="col-12 col-sm-6 col-xl-3">
-                        <a href="{{ route('users.index') }}" class="card-factory d-flex align-items-center gap-3 h-100 p-3 text-decoration-none text-dark">
-                            <span class="bg-primary bg-opacity-10 text-primary rounded-3 p-3"><i class="fas fa-users-gear" aria-hidden="true"></i></span>
-                            <span><small class="d-block text-muted">المستخدمون النشطون</small><strong class="fs-4">{{ number_format($masterDataStats['users_count']) }}</strong></span>
-                        </a>
-                    </div>
-                @endcan
-                @can('customers.view')
-                    <div class="col-12 col-sm-6 col-xl-3">
-                        <a href="{{ route('customers.index') }}" class="card-factory d-flex align-items-center gap-3 h-100 p-3 text-decoration-none text-dark">
-                            <span class="bg-info bg-opacity-10 text-info rounded-3 p-3"><i class="fas fa-users" aria-hidden="true"></i></span>
-                            <span><small class="d-block text-muted">العملاء</small><strong class="fs-4">{{ number_format($masterDataStats['customers_count']) }}</strong></span>
-                        </a>
-                    </div>
-                @endcan
-                @can('suppliers.view')
-                    <div class="col-12 col-sm-6 col-xl-3">
-                        <a href="{{ route('suppliers.index') }}" class="card-factory d-flex align-items-center gap-3 h-100 p-3 text-decoration-none text-dark">
-                            <span class="bg-success bg-opacity-10 text-success rounded-3 p-3"><i class="fas fa-truck" aria-hidden="true"></i></span>
-                            <span><small class="d-block text-muted">الموردون</small><strong class="fs-4">{{ number_format($masterDataStats['suppliers_count']) }}</strong></span>
-                        </a>
-                    </div>
-                @endcan
-                @can('departments.view')
-                    <div class="col-12 col-sm-6 col-xl-3">
-                        <a href="{{ route('departments.index') }}" class="card-factory d-flex align-items-center gap-3 h-100 p-3 text-decoration-none text-dark">
-                            <span class="bg-warning bg-opacity-25 text-dark rounded-3 p-3"><i class="fas fa-building" aria-hidden="true"></i></span>
-                            <span><small class="d-block text-muted">الأقسام النشطة</small><strong class="fs-4">{{ number_format($masterDataStats['departments_count']) }}</strong></span>
-                        </a>
-                    </div>
-                @endcan
-                @can('units.view')
-                    <div class="col-12 col-sm-6 col-xl-3">
-                        <a href="{{ route('units.index') }}" class="card-factory d-flex align-items-center gap-3 h-100 p-3 text-decoration-none text-dark">
-                            <span class="bg-secondary bg-opacity-10 text-secondary rounded-3 p-3"><i class="fas fa-ruler-combined" aria-hidden="true"></i></span>
-                            <span><small class="d-block text-muted">وحدات القياس النشطة</small><strong class="fs-4">{{ number_format($masterDataStats['units_count']) }}</strong></span>
-                        </a>
-                    </div>
-                @endcan
-                @can('sales_channels.view')
-                    <div class="col-12 col-sm-6 col-xl-3">
-                        <a href="{{ route('sales-channels.index') }}" class="card-factory d-flex align-items-center gap-3 h-100 p-3 text-decoration-none text-dark">
-                            <span class="bg-primary bg-opacity-10 text-primary rounded-3 p-3"><i class="fas fa-store" aria-hidden="true"></i></span>
-                            <span><small class="d-block text-muted">قنوات البيع النشطة</small><strong class="fs-4">{{ number_format($masterDataStats['sales_channels_count']) }}</strong></span>
-                        </a>
-                    </div>
-                @endcan
-                @can('customer_types.view')
-                    <div class="col-12 col-sm-6 col-xl-3">
-                        <a href="{{ route('customer-types.index') }}" class="card-factory d-flex align-items-center gap-3 h-100 p-3 text-decoration-none text-dark">
-                            <span class="bg-info bg-opacity-10 text-info rounded-3 p-3"><i class="fas fa-id-badge" aria-hidden="true"></i></span>
-                            <span><small class="d-block text-muted">أنواع العملاء</small><strong>فتح السجل</strong></span>
-                        </a>
-                    </div>
-                @endcan
-                @can('roles.view')
-                    <div class="col-12 col-sm-6 col-xl-3">
-                        <a href="{{ route('roles.index') }}" class="card-factory d-flex align-items-center gap-3 h-100 p-3 text-decoration-none text-dark">
-                            <span class="bg-danger bg-opacity-10 text-danger rounded-3 p-3"><i class="fas fa-shield-halved" aria-hidden="true"></i></span>
-                            <span><small class="d-block text-muted">الأدوار والصلاحيات</small><strong>فتح الدليل</strong></span>
-                        </a>
-                    </div>
-                @endcan
-            </div>
-        </section>
-    @else
-        <div class="card-factory empty-state" role="status">
-            <i class="fas fa-circle-info fs-2 mb-3 text-secondary" aria-hidden="true"></i>
-            <h2 class="h5 fw-bold">لا توجد سجلات متاحة لحسابك حاليًا</h2>
-            <p class="mb-0">ستظهر هنا الوحدات التي تسمح بها صلاحيات دورك عند تفعيلها.</p>
-        </div>
-    @endif
-
-    @if ($metrics->isNotEmpty())
-        <section aria-labelledby="operational-metrics-heading">
-            <h2 id="operational-metrics-heading" class="h5 fw-bold mb-3">المؤشرات التشغيلية</h2>
-            <div class="row g-3">
-                @foreach($metrics as $metric)
-                    <div class="col-12 col-sm-6 col-xl-4">
-                        <a href="{{ route($metric['route']) }}" class="card-factory d-flex align-items-center gap-3 h-100 p-3 text-decoration-none text-dark">
-                            <span class="bg-{{ $metric['class'] }} bg-opacity-10 text-{{ $metric['class'] }} rounded-3 p-3">
-                                <i class="fas fa-{{ $metric['icon'] }}" aria-hidden="true"></i>
-                            </span>
-                            <span>
-                                <small class="d-block text-muted">{{ $metric['label'] }}</small>
-                                <strong class="fs-4">{{ number_format($metric['value']) }}</strong>
-                                <small class="text-muted">{{ $metric['unit'] }}</small>
+    @forelse ($sections as $section)
+        <section aria-labelledby="dash-{{ $section['key'] }}">
+            <h2 id="dash-{{ $section['key'] }}" class="h6 fw-bold mb-2 d-flex align-items-center gap-2 text-dark">
+                <i class="fas {{ $section['icon'] }} text-warning" aria-hidden="true"></i>
+                {{ $section['title'] }}
+            </h2>
+            <div class="row g-2 g-md-3">
+                @foreach ($section['tiles'] as $tile)
+                    <div class="col-6 col-md-4 col-xl-3">
+                        <a href="{{ $tile['url'] }}"
+                           class="metric-tile {{ $tile['attention'] ? 'is-attention' : '' }} {{ (float) $tile['value'] === 0.0 ? 'is-zero' : '' }}"
+                           data-dashboard-tile="{{ $section['key'] }}">
+                            <span class="metric-tile-icon tone-bg-{{ $tile['tone'] }}" aria-hidden="true"><i class="fas {{ $tile['icon'] }}"></i></span>
+                            <span class="min-w-0">
+                                <span class="metric-tile-value d-block">{{ $tile['display'] }}</span>
+                                <span class="metric-tile-label">{{ $tile['label'] }}</span>
                             </span>
                         </a>
                     </div>
                 @endforeach
             </div>
         </section>
+    @empty
+        <div class="card-factory empty-state" role="status">
+            <i class="fas fa-circle-info fs-2 mb-3 text-secondary" aria-hidden="true"></i>
+            <h2 class="h5 fw-bold">لا توجد مهام تشغيلية مرتبطة بدورك</h2>
+            <p class="mb-0">لم تُمنح صلاحيات على أعمال يومية بعد. استخدم القائمة للوصول إلى السجلات المتاحة لك، أو تواصل مع مدير النظام.</p>
+        </div>
+    @endforelse
+
+    @if (count($masterDataStats) > 0)
+        <details class="card-factory p-3" @if (count($sections) === 0) open @endif>
+            <summary class="fw-bold text-dark d-flex align-items-center gap-2" style="min-height: 44px; cursor: pointer;">
+                <i class="fas fa-database text-secondary" aria-hidden="true"></i>
+                السجلات الأساسية
+            </summary>
+            <div class="row g-2 g-md-3 mt-1">
+                @foreach ($masterDataStats as $stat)
+                    <div class="col-6 col-md-4 col-xl-3">
+                        <a href="{{ route($stat['route']) }}" class="metric-tile">
+                            <span class="metric-tile-icon tone-bg-secondary" aria-hidden="true"><i class="fas {{ $stat['icon'] }}"></i></span>
+                            <span class="min-w-0">
+                                @if ($stat['value'] !== null)
+                                    <span class="metric-tile-value d-block">{{ number_format($stat['value']) }}</span>
+                                @endif
+                                <span class="metric-tile-label">{{ $stat['label'] }}</span>
+                            </span>
+                        </a>
+                    </div>
+                @endforeach
+            </div>
+        </details>
     @endif
 </div>
 @endsection

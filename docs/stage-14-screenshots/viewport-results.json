@@ -1,0 +1,782 @@
+[
+  {
+    "name": "center",
+    "scroll": 375,
+    "title": "مركز التقارير",
+    "width": 390
+  },
+  {
+    "name": "dashboard",
+    "scroll": 375,
+    "title": "لوحة الإدارة",
+    "width": 390
+  },
+  {
+    "name": "order-profitability",
+    "scroll": 375,
+    "title": "ربحية الطلبات التشغيلية",
+    "width": 390
+  },
+  {
+    "name": "model-profitability",
+    "scroll": 375,
+    "title": "ربحية الموديلات والمقاسات",
+    "width": 390
+  },
+  {
+    "name": "profitability-detail",
+    "scroll": 375,
+    "title": "تفصيل مساهمة الطلب ORD-QA14-LOSS",
+    "width": 390
+  },
+  {
+    "name": "production-variance",
+    "scroll": 375,
+    "title": "انحراف تكلفة الإنتاج",
+    "width": 390
+  },
+  {
+    "name": "waste",
+    "scroll": 375,
+    "title": "الهدر وإعادة العمل والجودة",
+    "width": 390
+  },
+  {
+    "name": "inventory",
+    "scroll": 375,
+    "title": "أرصدة المواد الخام",
+    "width": 390
+  },
+  {
+    "name": "procurement",
+    "scroll": 375,
+    "title": "المشتريات والموردون",
+    "width": 390
+  },
+  {
+    "name": "supplier-analysis",
+    "scroll": 375,
+    "title": "المشتريات والموردون",
+    "width": 390
+  },
+  {
+    "name": "delivery",
+    "scroll": 375,
+    "title": "تحليل التوصيل",
+    "width": 390
+  },
+  {
+    "name": "receivables",
+    "scroll": 375,
+    "title": "الذمم والأعمار والتحصيل",
+    "width": 390
+  },
+  {
+    "name": "exceptions",
+    "scroll": 375,
+    "title": "الاستثناءات التشغيلية",
+    "width": 390
+  },
+  {
+    "name": "center",
+    "scroll": 345,
+    "title": "مركز التقارير",
+    "width": 360
+  },
+  {
+    "name": "dashboard",
+    "scroll": 345,
+    "title": "لوحة الإدارة",
+    "width": 360
+  },
+  {
+    "name": "order-profitability",
+    "scroll": 345,
+    "title": "ربحية الطلبات التشغيلية",
+    "width": 360
+  },
+  {
+    "name": "model-profitability",
+    "scroll": 345,
+    "title": "ربحية الموديلات والمقاسات",
+    "width": 360
+  },
+  {
+    "name": "profitability-detail",
+    "scroll": 345,
+    "title": "تفصيل مساهمة الطلب ORD-QA14-LOSS",
+    "width": 360
+  },
+  {
+    "name": "production-variance",
+    "scroll": 345,
+    "title": "انحراف تكلفة الإنتاج",
+    "width": 360
+  },
+  {
+    "name": "waste",
+    "scroll": 345,
+    "title": "الهدر وإعادة العمل والجودة",
+    "width": 360
+  },
+  {
+    "name": "inventory",
+    "scroll": 345,
+    "title": "أرصدة المواد الخام",
+    "width": 360
+  },
+  {
+    "name": "procurement",
+    "scroll": 345,
+    "title": "المشتريات والموردون",
+    "width": 360
+  },
+  {
+    "name": "supplier-analysis",
+    "scroll": 345,
+    "title": "المشتريات والموردون",
+    "width": 360
+  },
+  {
+    "name": "delivery",
+    "scroll": 345,
+    "title": "تحليل التوصيل",
+    "width": 360
+  },
+  {
+    "name": "receivables",
+    "scroll": 345,
+    "title": "الذمم والأعمار والتحصيل",
+    "width": 360
+  },
+  {
+    "name": "exceptions",
+    "scroll": 345,
+    "title": "الاستثناءات التشغيلية",
+    "width": 360
+  },
+  {
+    "name": "center",
+    "scroll": 360,
+    "title": "مركز التقارير",
+    "width": 375
+  },
+  {
+    "name": "dashboard",
+    "scroll": 360,
+    "title": "لوحة الإدارة",
+    "width": 375
+  },
+  {
+    "name": "order-profitability",
+    "scroll": 360,
+    "title": "ربحية الطلبات التشغيلية",
+    "width": 375
+  },
+  {
+    "name": "model-profitability",
+    "scroll": 360,
+    "title": "ربحية الموديلات والمقاسات",
+    "width": 375
+  },
+  {
+    "name": "profitability-detail",
+    "scroll": 360,
+    "title": "تفصيل مساهمة الطلب ORD-QA14-LOSS",
+    "width": 375
+  },
+  {
+    "name": "production-variance",
+    "scroll": 360,
+    "title": "انحراف تكلفة الإنتاج",
+    "width": 375
+  },
+  {
+    "name": "waste",
+    "scroll": 360,
+    "title": "الهدر وإعادة العمل والجودة",
+    "width": 375
+  },
+  {
+    "name": "inventory",
+    "scroll": 360,
+    "title": "أرصدة المواد الخام",
+    "width": 375
+  },
+  {
+    "name": "procurement",
+    "scroll": 360,
+    "title": "المشتريات والموردون",
+    "width": 375
+  },
+  {
+    "name": "supplier-analysis",
+    "scroll": 360,
+    "title": "المشتريات والموردون",
+    "width": 375
+  },
+  {
+    "name": "delivery",
+    "scroll": 360,
+    "title": "تحليل التوصيل",
+    "width": 375
+  },
+  {
+    "name": "receivables",
+    "scroll": 360,
+    "title": "الذمم والأعمار والتحصيل",
+    "width": 375
+  },
+  {
+    "name": "exceptions",
+    "scroll": 360,
+    "title": "الاستثناءات التشغيلية",
+    "width": 375
+  },
+  {
+    "name": "center",
+    "scroll": 397,
+    "title": "مركز التقارير",
+    "width": 412
+  },
+  {
+    "name": "dashboard",
+    "scroll": 397,
+    "title": "لوحة الإدارة",
+    "width": 412
+  },
+  {
+    "name": "order-profitability",
+    "scroll": 397,
+    "title": "ربحية الطلبات التشغيلية",
+    "width": 412
+  },
+  {
+    "name": "model-profitability",
+    "scroll": 397,
+    "title": "ربحية الموديلات والمقاسات",
+    "width": 412
+  },
+  {
+    "name": "profitability-detail",
+    "scroll": 397,
+    "title": "تفصيل مساهمة الطلب ORD-QA14-LOSS",
+    "width": 412
+  },
+  {
+    "name": "production-variance",
+    "scroll": 397,
+    "title": "انحراف تكلفة الإنتاج",
+    "width": 412
+  },
+  {
+    "name": "waste",
+    "scroll": 397,
+    "title": "الهدر وإعادة العمل والجودة",
+    "width": 412
+  },
+  {
+    "name": "inventory",
+    "scroll": 397,
+    "title": "أرصدة المواد الخام",
+    "width": 412
+  },
+  {
+    "name": "procurement",
+    "scroll": 397,
+    "title": "المشتريات والموردون",
+    "width": 412
+  },
+  {
+    "name": "supplier-analysis",
+    "scroll": 397,
+    "title": "المشتريات والموردون",
+    "width": 412
+  },
+  {
+    "name": "delivery",
+    "scroll": 397,
+    "title": "تحليل التوصيل",
+    "width": 412
+  },
+  {
+    "name": "receivables",
+    "scroll": 397,
+    "title": "الذمم والأعمار والتحصيل",
+    "width": 412
+  },
+  {
+    "name": "exceptions",
+    "scroll": 397,
+    "title": "الاستثناءات التشغيلية",
+    "width": 412
+  },
+  {
+    "name": "center",
+    "scroll": 415,
+    "title": "مركز التقارير",
+    "width": 430
+  },
+  {
+    "name": "dashboard",
+    "scroll": 415,
+    "title": "لوحة الإدارة",
+    "width": 430
+  },
+  {
+    "name": "order-profitability",
+    "scroll": 415,
+    "title": "ربحية الطلبات التشغيلية",
+    "width": 430
+  },
+  {
+    "name": "model-profitability",
+    "scroll": 415,
+    "title": "ربحية الموديلات والمقاسات",
+    "width": 430
+  },
+  {
+    "name": "profitability-detail",
+    "scroll": 415,
+    "title": "تفصيل مساهمة الطلب ORD-QA14-LOSS",
+    "width": 430
+  },
+  {
+    "name": "production-variance",
+    "scroll": 415,
+    "title": "انحراف تكلفة الإنتاج",
+    "width": 430
+  },
+  {
+    "name": "waste",
+    "scroll": 415,
+    "title": "الهدر وإعادة العمل والجودة",
+    "width": 430
+  },
+  {
+    "name": "inventory",
+    "scroll": 415,
+    "title": "أرصدة المواد الخام",
+    "width": 430
+  },
+  {
+    "name": "procurement",
+    "scroll": 415,
+    "title": "المشتريات والموردون",
+    "width": 430
+  },
+  {
+    "name": "supplier-analysis",
+    "scroll": 415,
+    "title": "المشتريات والموردون",
+    "width": 430
+  },
+  {
+    "name": "delivery",
+    "scroll": 415,
+    "title": "تحليل التوصيل",
+    "width": 430
+  },
+  {
+    "name": "receivables",
+    "scroll": 415,
+    "title": "الذمم والأعمار والتحصيل",
+    "width": 430
+  },
+  {
+    "name": "exceptions",
+    "scroll": 415,
+    "title": "الاستثناءات التشغيلية",
+    "width": 430
+  },
+  {
+    "name": "center",
+    "scroll": 753,
+    "title": "مركز التقارير",
+    "width": 768
+  },
+  {
+    "name": "dashboard",
+    "scroll": 753,
+    "title": "لوحة الإدارة",
+    "width": 768
+  },
+  {
+    "name": "order-profitability",
+    "scroll": 753,
+    "title": "ربحية الطلبات التشغيلية",
+    "width": 768
+  },
+  {
+    "name": "model-profitability",
+    "scroll": 753,
+    "title": "ربحية الموديلات والمقاسات",
+    "width": 768
+  },
+  {
+    "name": "profitability-detail",
+    "scroll": 753,
+    "title": "تفصيل مساهمة الطلب ORD-QA14-LOSS",
+    "width": 768
+  },
+  {
+    "name": "production-variance",
+    "scroll": 753,
+    "title": "انحراف تكلفة الإنتاج",
+    "width": 768
+  },
+  {
+    "name": "waste",
+    "scroll": 753,
+    "title": "الهدر وإعادة العمل والجودة",
+    "width": 768
+  },
+  {
+    "name": "inventory",
+    "scroll": 753,
+    "title": "أرصدة المواد الخام",
+    "width": 768
+  },
+  {
+    "name": "procurement",
+    "scroll": 753,
+    "title": "المشتريات والموردون",
+    "width": 768
+  },
+  {
+    "name": "supplier-analysis",
+    "scroll": 753,
+    "title": "المشتريات والموردون",
+    "width": 768
+  },
+  {
+    "name": "delivery",
+    "scroll": 753,
+    "title": "تحليل التوصيل",
+    "width": 768
+  },
+  {
+    "name": "receivables",
+    "scroll": 753,
+    "title": "الذمم والأعمار والتحصيل",
+    "width": 768
+  },
+  {
+    "name": "exceptions",
+    "scroll": 753,
+    "title": "الاستثناءات التشغيلية",
+    "width": 768
+  },
+  {
+    "name": "center",
+    "scroll": 805,
+    "title": "مركز التقارير",
+    "width": 820
+  },
+  {
+    "name": "dashboard",
+    "scroll": 805,
+    "title": "لوحة الإدارة",
+    "width": 820
+  },
+  {
+    "name": "order-profitability",
+    "scroll": 805,
+    "title": "ربحية الطلبات التشغيلية",
+    "width": 820
+  },
+  {
+    "name": "model-profitability",
+    "scroll": 805,
+    "title": "ربحية الموديلات والمقاسات",
+    "width": 820
+  },
+  {
+    "name": "profitability-detail",
+    "scroll": 805,
+    "title": "تفصيل مساهمة الطلب ORD-QA14-LOSS",
+    "width": 820
+  },
+  {
+    "name": "production-variance",
+    "scroll": 805,
+    "title": "انحراف تكلفة الإنتاج",
+    "width": 820
+  },
+  {
+    "name": "waste",
+    "scroll": 805,
+    "title": "الهدر وإعادة العمل والجودة",
+    "width": 820
+  },
+  {
+    "name": "inventory",
+    "scroll": 805,
+    "title": "أرصدة المواد الخام",
+    "width": 820
+  },
+  {
+    "name": "procurement",
+    "scroll": 805,
+    "title": "المشتريات والموردون",
+    "width": 820
+  },
+  {
+    "name": "supplier-analysis",
+    "scroll": 805,
+    "title": "المشتريات والموردون",
+    "width": 820
+  },
+  {
+    "name": "delivery",
+    "scroll": 820,
+    "title": "تحليل التوصيل",
+    "width": 820
+  },
+  {
+    "name": "receivables",
+    "scroll": 805,
+    "title": "الذمم والأعمار والتحصيل",
+    "width": 820
+  },
+  {
+    "name": "exceptions",
+    "scroll": 805,
+    "title": "الاستثناءات التشغيلية",
+    "width": 820
+  },
+  {
+    "name": "center",
+    "scroll": 1351,
+    "title": "مركز التقارير",
+    "width": 1366
+  },
+  {
+    "name": "dashboard",
+    "scroll": 1351,
+    "title": "لوحة الإدارة",
+    "width": 1366
+  },
+  {
+    "name": "order-profitability",
+    "scroll": 1351,
+    "title": "ربحية الطلبات التشغيلية",
+    "width": 1366
+  },
+  {
+    "name": "model-profitability",
+    "scroll": 1351,
+    "title": "ربحية الموديلات والمقاسات",
+    "width": 1366
+  },
+  {
+    "name": "profitability-detail",
+    "scroll": 1351,
+    "title": "تفصيل مساهمة الطلب ORD-QA14-LOSS",
+    "width": 1366
+  },
+  {
+    "name": "production-variance",
+    "scroll": 1351,
+    "title": "انحراف تكلفة الإنتاج",
+    "width": 1366
+  },
+  {
+    "name": "waste",
+    "scroll": 1351,
+    "title": "الهدر وإعادة العمل والجودة",
+    "width": 1366
+  },
+  {
+    "name": "inventory",
+    "scroll": 1351,
+    "title": "أرصدة المواد الخام",
+    "width": 1366
+  },
+  {
+    "name": "procurement",
+    "scroll": 1351,
+    "title": "المشتريات والموردون",
+    "width": 1366
+  },
+  {
+    "name": "supplier-analysis",
+    "scroll": 1351,
+    "title": "المشتريات والموردون",
+    "width": 1366
+  },
+  {
+    "name": "delivery",
+    "scroll": 1351,
+    "title": "تحليل التوصيل",
+    "width": 1366
+  },
+  {
+    "name": "receivables",
+    "scroll": 1351,
+    "title": "الذمم والأعمار والتحصيل",
+    "width": 1366
+  },
+  {
+    "name": "exceptions",
+    "scroll": 1351,
+    "title": "الاستثناءات التشغيلية",
+    "width": 1366
+  },
+  {
+    "name": "center",
+    "scroll": 1425,
+    "title": "مركز التقارير",
+    "width": 1440
+  },
+  {
+    "name": "dashboard",
+    "scroll": 1425,
+    "title": "لوحة الإدارة",
+    "width": 1440
+  },
+  {
+    "name": "order-profitability",
+    "scroll": 1425,
+    "title": "ربحية الطلبات التشغيلية",
+    "width": 1440
+  },
+  {
+    "name": "model-profitability",
+    "scroll": 1425,
+    "title": "ربحية الموديلات والمقاسات",
+    "width": 1440
+  },
+  {
+    "name": "profitability-detail",
+    "scroll": 1425,
+    "title": "تفصيل مساهمة الطلب ORD-QA14-LOSS",
+    "width": 1440
+  },
+  {
+    "name": "production-variance",
+    "scroll": 1425,
+    "title": "انحراف تكلفة الإنتاج",
+    "width": 1440
+  },
+  {
+    "name": "waste",
+    "scroll": 1425,
+    "title": "الهدر وإعادة العمل والجودة",
+    "width": 1440
+  },
+  {
+    "name": "inventory",
+    "scroll": 1425,
+    "title": "أرصدة المواد الخام",
+    "width": 1440
+  },
+  {
+    "name": "procurement",
+    "scroll": 1425,
+    "title": "المشتريات والموردون",
+    "width": 1440
+  },
+  {
+    "name": "supplier-analysis",
+    "scroll": 1425,
+    "title": "المشتريات والموردون",
+    "width": 1440
+  },
+  {
+    "name": "delivery",
+    "scroll": 1425,
+    "title": "تحليل التوصيل",
+    "width": 1440
+  },
+  {
+    "name": "receivables",
+    "scroll": 1425,
+    "title": "الذمم والأعمار والتحصيل",
+    "width": 1440
+  },
+  {
+    "name": "exceptions",
+    "scroll": 1425,
+    "title": "الاستثناءات التشغيلية",
+    "width": 1440
+  },
+  {
+    "name": "center",
+    "scroll": 1905,
+    "title": "مركز التقارير",
+    "width": 1920
+  },
+  {
+    "name": "dashboard",
+    "scroll": 1905,
+    "title": "لوحة الإدارة",
+    "width": 1920
+  },
+  {
+    "name": "order-profitability",
+    "scroll": 1905,
+    "title": "ربحية الطلبات التشغيلية",
+    "width": 1920
+  },
+  {
+    "name": "model-profitability",
+    "scroll": 1905,
+    "title": "ربحية الموديلات والمقاسات",
+    "width": 1920
+  },
+  {
+    "name": "profitability-detail",
+    "scroll": 1920,
+    "title": "تفصيل مساهمة الطلب ORD-QA14-LOSS",
+    "width": 1920
+  },
+  {
+    "name": "production-variance",
+    "scroll": 1920,
+    "title": "انحراف تكلفة الإنتاج",
+    "width": 1920
+  },
+  {
+    "name": "waste",
+    "scroll": 1920,
+    "title": "الهدر وإعادة العمل والجودة",
+    "width": 1920
+  },
+  {
+    "name": "inventory",
+    "scroll": 1905,
+    "title": "أرصدة المواد الخام",
+    "width": 1920
+  },
+  {
+    "name": "procurement",
+    "scroll": 1905,
+    "title": "المشتريات والموردون",
+    "width": 1920
+  },
+  {
+    "name": "supplier-analysis",
+    "scroll": 1905,
+    "title": "المشتريات والموردون",
+    "width": 1920
+  },
+  {
+    "name": "delivery",
+    "scroll": 1920,
+    "title": "تحليل التوصيل",
+    "width": 1920
+  },
+  {
+    "name": "receivables",
+    "scroll": 1920,
+    "title": "الذمم والأعمار والتحصيل",
+    "width": 1920
+  },
+  {
+    "name": "exceptions",
+    "scroll": 1905,
+    "title": "الاستثناءات التشغيلية",
+    "width": 1920
+  }
+]
