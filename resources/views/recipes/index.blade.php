@@ -92,7 +92,7 @@
                                             موديل: {{ $recipe->productConfiguration->productModel?->name_ar }}
                                             ({{ $recipe->productConfiguration->width_cm }} × {{ $recipe->productConfiguration->length_cm }} سم)
                                             @if($recipe->productConfiguration->has_storage)
-                                                <span class="badge bg-warning text-dark me-1">سحارة</span>
+                                                <span class="badge bg-warning text-dark me-1">مع تخزين</span>
                                             @endif
                                         </small>
                                     @elseif($recipe->target_type === 'SEMI_FINISHED_COMPONENT' && $recipe->semiFinishedComponent)

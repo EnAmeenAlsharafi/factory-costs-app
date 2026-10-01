@@ -114,7 +114,7 @@
                         @endif
                     </div>
                     <div class="task-card-meta">
-                        <span><i class="fas fa-ruler-combined" aria-hidden="true"></i><span class="ltr-isolate">{{ (int) $po->requested_width_cm }}×{{ (int) $po->requested_length_cm }}</span> سم{{ $po->has_storage ? ' — سحارة' : '' }}</span>
+                        <span><i class="fas fa-ruler-combined" aria-hidden="true"></i><span class="ltr-isolate">{{ (int) $po->requested_width_cm }}×{{ (int) $po->requested_length_cm }}</span> سم{{ $po->has_storage ? ' — مع تخزين' : '' }}</span>
                         @if ($po->fabricMaterial)
                             <span><i class="fas fa-scroll" aria-hidden="true"></i>{{ $po->fabricMaterial->name_ar }}</span>
                         @endif
@@ -163,7 +163,7 @@
                             <tr @class(['table-warning' => $isRework])>
                                 <td>
                                     <div class="fw-bold text-dark">{{ $po->is_custom_design ? $po->custom_design_name : $po->productModel?->name_ar }}</div>
-                                    <small class="text-muted d-block"><span class="ltr-isolate">{{ (int) $po->requested_width_cm }}×{{ (int) $po->requested_length_cm }}</span> سم {{ $po->has_storage ? '(سحارة)' : '' }}</small>
+                                    <small class="text-muted d-block"><span class="ltr-isolate">{{ (int) $po->requested_width_cm }}×{{ (int) $po->requested_length_cm }}</span> سم {{ $po->has_storage ? '(مع تخزين)' : '' }}</small>
                                     <a href="{{ route('production.orders.show', $po) }}" class="fs-8 font-monospace text-decoration-none">{{ $po->production_order_number }}</a>
                                     @if ($isRework)
                                         <span class="rework-flag ms-1"><i class="fas fa-rotate" aria-hidden="true"></i> إعادة عمل</span>

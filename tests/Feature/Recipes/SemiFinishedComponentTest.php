@@ -82,7 +82,7 @@ class SemiFinishedComponentTest extends TestCase
 
         $this->boxStorage = SemiFinishedComponent::create([
             'component_code' => 'SFC-BOX-160-STR',
-            'name_ar' => 'بوكس 160×200 سحارة',
+            'name_ar' => 'بوكس 160×200 مع تخزين',
             'width_cm' => 160.00,
             'length_cm' => 200.00,
             'has_storage' => true,
@@ -163,7 +163,7 @@ class SemiFinishedComponentTest extends TestCase
             ->post(route('recipes.store'), [
                 'target_type' => 'PRODUCT_CONFIGURATION',
                 'product_configuration_id' => $this->configStorage->id,
-                'name' => 'وصفة ميلان 160×200 سحارة',
+                'name' => 'وصفة ميلان 160×200 مع تخزين',
                 'items' => [
                     [
                         'item_type' => 'SEMI_FINISHED_COMPONENT',

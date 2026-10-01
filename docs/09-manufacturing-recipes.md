@@ -5,7 +5,7 @@
 
 تعتمد المعمارية على التمييز الصارم بين المفاهيم التالية:
 - **الموديل (`ProductModel`)**: ماهية المنتج وتصميمه (مثل: موديل أڤالون).
-- **التكوين المصنعي (`ProductConfiguration`)**: الأبعاد والمقاسات الخشبية وخيار السحارة (مثل: 160×200 سحارة).
+- **التكوين المصنعي (`ProductConfiguration`)**: الأبعاد والمقاسات الخشبية وخيار التخزين (مثل: 160×200 مع تخزين).
 - **وصفة التصنيع (`ManufacturingRecipe`)**: الكيفية والمواد والمكونات اللازمة لبناء هذا التكوين تحديداً.
 
 ---
@@ -15,7 +15,7 @@
 ### 1. `semi_finished_components` (المكونات نصف المصنعة)
 - `id` (PK)
 - `component_code` (string, unique) - كود تلقائي آمن `SFC-XXXXXX`
-- `name_ar` (string) - `بوكس 160×200 سحارة`
+- `name_ar` (string) - `بوكس 160×200 مع تخزين`
 - `name_en` (string, nullable)
 - `width_cm` (decimal 8,2, nullable)
 - `length_cm` (decimal 8,2, nullable)

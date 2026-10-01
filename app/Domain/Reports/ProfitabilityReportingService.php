@@ -336,7 +336,7 @@ class ProfitabilityReportingService
             $label = $isCustom ? 'تصاميم خاصة (بدون موديل)' : ($names['models'][$row->model_key] ?? 'موديل #'.$row->model_key);
 
             if ($groupBy === 'configuration' && ! $isCustom) {
-                $label .= ' — '.($names['configurations'][$row->configuration_key] ?? 'مقاس غير قياسي').((int) $row->has_storage ? ' — بسحارة' : ' — بدون سحارة');
+                $label .= ' — '.($names['configurations'][$row->configuration_key] ?? 'مقاس غير قياسي').((int) $row->has_storage ? ' — مع تخزين' : ' — بدون تخزين');
             }
 
             $drillParams = array_merge($period->toQuery(), ['group' => 'configuration'], $isCustom ? [] : ['product_model_id' => $row->model_key]);

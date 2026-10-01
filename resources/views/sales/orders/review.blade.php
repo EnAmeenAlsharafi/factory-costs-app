@@ -62,7 +62,7 @@
                                 @endif
                                 @if ($line->productConfiguration)
                                     &bull; التكوين: <span class="ltr-isolate">{{ (int) $line->productConfiguration->width_cm }}×{{ (int) $line->productConfiguration->length_cm }}</span>
-                                    {{ $line->productConfiguration->has_storage ? '— بسحارة' : '— بدون سحارة' }}
+                                    {{ $line->productConfiguration->has_storage ? '— مع تخزين' : '— بدون تخزين' }}
                                 @endif
                             </div>
                         </div>

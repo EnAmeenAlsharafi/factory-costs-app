@@ -97,7 +97,7 @@
                                 <td>
                                     <small class="text-muted d-block">{{ (int)$po->requested_width_cm }} × {{ (int)$po->requested_length_cm }} سم</small>
                                     @if($po->has_storage)
-                                        <span class="badge bg-light text-dark border">سحارة</span>
+                                        <span class="badge bg-light text-dark border">مع تخزين</span>
                                     @endif
                                 </td>
                                 <td class="text-center">

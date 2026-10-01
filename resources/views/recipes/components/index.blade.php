@@ -9,7 +9,7 @@
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
         <div>
             <h1 class="h3 mb-1 text-dark fw-bold">المكونات نصف المصنعة (Semi-Finished Components)</h1>
-            <p class="text-muted mb-0 fs-7">تعريف أجزاء الإنتاج التجميعية المعاد استخدامها (مثل بوكسات الأسرّة العادية والسحارة)</p>
+            <p class="text-muted mb-0 fs-7">تعريف أجزاء الإنتاج التجميعية المعاد استخدامها (مثل بوكسات الأسرّة العادية والمزودة بتخزين)</p>
         </div>
         <div>
             @can('semi_finished_components.manage')
@@ -59,7 +59,7 @@
                             <th class="ps-3">كود المكون</th>
                             <th>اسم المكون</th>
                             <th>الأبعاد سم</th>
-                            <th>سحارة (تخزين)</th>
+                            <th>خيار التخزين</th>
                             <th>الوصفة التصنيعية الخاصة</th>
                             <th>الحالة</th>
                             <th class="pe-3 text-end">الإجراءات</th>
@@ -79,9 +79,9 @@
                                 </td>
                                 <td>
                                     @if($comp->has_storage)
-                                        <span class="badge bg-warning text-dark">سحارة</span>
+                                        <span class="badge bg-warning text-dark">مع تخزين</span>
                                     @else
-                                        <span class="badge bg-light text-muted border">عادي</span>
+                                        <span class="badge bg-light text-muted border">بدون تخزين</span>
                                     @endif
                                 </td>
                                 <td>
@@ -168,7 +168,7 @@
                         </div>
                         <div class="form-check form-switch mb-3">
                             <input class="form-check-input" type="checkbox" name="has_storage" value="1" id="createHasStorage">
-                            <label class="form-check-label fw-bold fs-7" for="createHasStorage">يحتوي سحارة / تخزين هيدروليكي</label>
+                            <label class="form-check-label fw-bold fs-7" for="createHasStorage">يتضمن تخزين هيدروليكي</label>
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold fs-7">ملاحظات</label>
@@ -216,7 +216,7 @@
                         </div>
                         <div class="form-check form-switch mb-3">
                             <input class="form-check-input" type="checkbox" name="has_storage" value="1" :checked="editComponent.has_storage">
-                            <label class="form-check-label fw-bold fs-7">يحتوي سحارة / تخزين هيدروليكي</label>
+                            <label class="form-check-label fw-bold fs-7">يتضمن تخزين هيدروليكي</label>
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold fs-7">ملاحظات</label>

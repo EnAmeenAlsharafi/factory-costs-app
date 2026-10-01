@@ -70,7 +70,7 @@ class ProductConfigurationTest extends TestCase
                 'width_cm' => 160.0,
                 'length_cm' => 200.0,
                 'has_storage' => true,
-                'configuration_name' => '160×200 سحارة',
+                'configuration_name' => '160×200 مع تخزين',
             ]);
 
         $response2->assertRedirect(route('products.models.show', $this->model));

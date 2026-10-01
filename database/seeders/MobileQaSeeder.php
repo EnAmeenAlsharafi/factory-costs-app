@@ -102,7 +102,7 @@ class MobileQaSeeder extends Seeder
         $productionLine = $this->approvedOrderLine(self::MARKER_ORDER, $customer, $salesChannel, $manager, $configuration, $fabric, $fabricSupplier, $color, 3, 'FULL_BEFORE_PRODUCTION');
         $productionOrders = app(ProductionOrderService::class);
         $po = $productionOrders->createFromOrderLine($productionLine, ['released_quantity' => 3, 'manufacturing_recipe_version_id' => $productionLine->recipe_version?->id]);
-        $po->update(['planned_completion_date' => now()->addDays(5), 'production_notes' => 'تثبيت السحارة بمفصلات مزدوجة.']);
+        $po->update(['planned_completion_date' => now()->addDays(5), 'production_notes' => 'تثبيت صندوق التخزين بمفصلات مزدوجة.']);
         $productionOrders->releaseProductionOrder($po, ProductionRouting::orderBy('id')->firstOrFail(), $manager);
 
         // 2. Warehouse: a second fabric lot in colour 204, then a submitted material request needing both lots.

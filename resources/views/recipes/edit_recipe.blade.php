@@ -111,7 +111,7 @@
                             <option value="">-- اختر التكوين المصنعي --</option>
                             @foreach($configurations as $cfg)
                                 <option value="{{ $cfg->id }}">
-                                    {{ $cfg->productModel?->name_ar }} | {{ $cfg->width_cm }} × {{ $cfg->length_cm }} سم - {{ $cfg->has_storage ? 'سحارة' : 'بدون تخزين' }} ({{ $cfg->configuration_code }})
+                                    {{ $cfg->productModel?->name_ar }} | {{ $cfg->width_cm }} × {{ $cfg->length_cm }} سم - {{ $cfg->has_storage ? 'مع تخزين' : 'بدون تخزين' }} ({{ $cfg->configuration_code }})
                                 </option>
                             @endforeach
                         </select>

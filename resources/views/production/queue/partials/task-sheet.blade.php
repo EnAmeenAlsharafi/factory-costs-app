@@ -39,7 +39,7 @@
                         @if ($po->reference_width_cm && ((int) $po->reference_width_cm !== (int) $po->requested_width_cm || (int) $po->reference_length_cm !== (int) $po->requested_length_cm))
                             <div><dt>المقاس المرجعي للتصنيع</dt><dd><span class="ltr-isolate">{{ (int) $po->reference_width_cm }}×{{ (int) $po->reference_length_cm }}</span> سم</dd></div>
                         @endif
-                        <div><dt>السحارة</dt><dd>{{ $po->has_storage ? 'مع سحارة' : 'بدون سحارة' }}</dd></div>
+                        <div><dt>خيار التخزين</dt><dd>{{ $po->has_storage ? 'مع تخزين' : 'بدون تخزين' }}</dd></div>
                         <div><dt>القماش</dt><dd>{{ $po->fabricMaterial?->name_ar ?? '—' }}</dd></div>
                         <div><dt>مورد القماش</dt><dd>{{ $po->fabricSupplier?->name ?? '—' }}</dd></div>
                         <div>

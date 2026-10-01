@@ -41,7 +41,7 @@ class ProductConfigurationRequest extends FormRequest
             'product_model_id' => 'موديل المنتج',
             'width_cm' => 'العرض (سم)',
             'length_cm' => 'الطول (سم)',
-            'has_storage' => 'خيار التخزين (سحارة/صندوق)',
+            'has_storage' => 'خيار التخزين',
         ];
     }
 }

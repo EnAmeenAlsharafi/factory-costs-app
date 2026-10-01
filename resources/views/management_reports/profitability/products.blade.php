@@ -23,7 +23,7 @@
 
 @section('content')
 <div class="report-workspace d-flex flex-column gap-3">
-    <x-report.header :title="$group === 'model' ? 'ربحية الموديلات' : 'ربحية التكوينات (الموديل × المقاس × السحارة)'" icon="fa-bed" :period="$period" basis="تاريخ طلب العميل" exportable
+    <x-report.header :title="$group === 'model' ? 'ربحية الموديلات' : 'ربحية التكوينات (الموديل × المقاس × خيار التخزين)'" icon="fa-bed" :period="$period" basis="تاريخ طلب العميل" exportable
         subtitle="التحليل حسب الموديل الداخلي (أسماء العملاء البديلة لا تُجزئ التحليل). التصاميم الخاصة فئة مستقلة. المساهمة للبنود المكتملة تكلفةً فقط."
         :filters="['الفترة' => $period->label(), 'التجميع' => $group === 'model' ? 'الموديل' : 'التكوين']" />
 
@@ -46,11 +46,11 @@
             </select>
         </div>
         <div class="col-6 col-lg-2">
-            <label for="f-storage" class="form-label fs-7">السحارة</label>
+            <label for="f-storage" class="form-label fs-7">خيار التخزين</label>
             <select id="f-storage" name="has_storage" class="form-select">
                 <option value="">الكل</option>
-                <option value="1" @selected(request('has_storage') === '1')>بسحارة</option>
-                <option value="0" @selected(request('has_storage') === '0')>بدون سحارة</option>
+                <option value="1" @selected(request('has_storage') === '1')>مع تخزين</option>
+                <option value="0" @selected(request('has_storage') === '0')>بدون تخزين</option>
             </select>
         </div>
         <div class="col-6 col-lg-2">
@@ -66,7 +66,7 @@
 
     <nav class="segment-tabs report-no-print" aria-label="مستوى التجميع">
         <a href="{{ route('reports.profitability.products', array_merge(request()->except(['group', 'page']), ['group' => 'model'])) }}" class="segment-tab {{ $group === 'model' ? 'active' : '' }}">حسب الموديل</a>
-        <a href="{{ route('reports.profitability.products', array_merge(request()->except(['group', 'page']), ['group' => 'configuration'])) }}" class="segment-tab {{ $group === 'configuration' ? 'active' : '' }}">حسب التكوين (مقاس + سحارة)</a>
+        <a href="{{ route('reports.profitability.products', array_merge(request()->except(['group', 'page']), ['group' => 'configuration'])) }}" class="segment-tab {{ $group === 'configuration' ? 'active' : '' }}">حسب التكوين (مقاس + تخزين)</a>
     </nav>
 
     @if ($chart->isNotEmpty())

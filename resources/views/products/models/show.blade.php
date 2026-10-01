@@ -97,7 +97,7 @@
         <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
             <div>
                 <h5 class="card-title fw-bold mb-0 text-dark"><i class="fas fa-ruler-combined text-primary me-2"></i>تكوينات التصنيع القياسية (Product Configurations)</h5>
-                <small class="text-muted">المقاسات وخيارات الهيكل المصنعي (مثل التخزين / السحارة) المتاحة لهذا الموديل</small>
+                <small class="text-muted">المقاسات وخيارات الهيكل المصنعي (مثل خيار التخزين) المتاحة لهذا الموديل</small>
             </div>
             @can('products.manage')
                 <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addConfigurationModal">
@@ -112,7 +112,7 @@
                         <tr>
                             <th class="ps-3">كود التكوين</th>
                             <th>المقاس المصنعي (العرض × الطول)</th>
-                            <th>خيار التخزين (السحارة)</th>
+                            <th>خيار التخزين</th>
                             <th>اسم التكوين العرضي</th>
                             <th class="text-center">الحالة</th>
                             @can('products.manage')
@@ -132,9 +132,9 @@
                                 </td>
                                 <td>
                                     @if($cfg->has_storage)
-                                        <span class="badge bg-warning bg-opacity-10 text-dark fw-bold px-3 py-1"><i class="fas fa-box-archive me-1"></i> يتضمن تخزين (سحارة)</span>
+                                        <span class="badge bg-warning bg-opacity-10 text-dark fw-bold px-3 py-1"><i class="fas fa-box-archive me-1"></i> يتضمن تخزين</span>
                                     @else
-                                        <span class="badge bg-light text-muted border px-3 py-1">بدون تخزين (عادي)</span>
+                                        <span class="badge bg-light text-muted border px-3 py-1">بدون تخزين</span>
                                     @endif
                                 </td>
                                 <td>{{ $cfg->configuration_name ?? '-' }}</td>
@@ -300,12 +300,12 @@
 
                     <div class="form-check form-switch mb-3">
                         <input class="form-check-input" type="checkbox" name="has_storage" id="cfg_has_storage" value="1">
-                        <label class="form-check-label fw-semibold ms-2" for="cfg_has_storage">يتضمن سحارة / تخزين (Storage Box)</label>
+                        <label class="form-check-label fw-semibold ms-2" for="cfg_has_storage">يتضمن تخزين (Storage Box)</label>
                     </div>
 
                     <div class="mb-3">
                         <label for="cfg_name" class="form-label fw-semibold">اسم التكوين الإيضاحي (اختياري)</label>
-                        <input type="text" name="configuration_name" id="cfg_name" class="form-control" placeholder="مثل: 160×200 سحارة">
+                        <input type="text" name="configuration_name" id="cfg_name" class="form-control" placeholder="مثل: 160×200 مع تخزين">
                     </div>
                 </div>
                 <div class="modal-footer bg-light py-2">

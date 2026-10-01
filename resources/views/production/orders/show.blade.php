@@ -179,12 +179,12 @@
                                     <td class="fw-bold">{{ (int)$order->requested_width_cm }} × {{ (int)$order->requested_length_cm }} سم</td>
                                 </tr>
                                 <tr>
-                                    <td class="text-muted">السحارات:</td>
+                                    <td class="text-muted">خيار التخزين:</td>
                                     <td>
                                         @if($order->has_storage)
-                                            <span class="badge bg-success">يحتوي على سحارة تخزين</span>
+                                            <span class="badge bg-success">يتضمن تخزين</span>
                                         @else
-                                            <span class="badge bg-light text-dark border">بدون سحارة</span>
+                                            <span class="badge bg-light text-dark border">بدون تخزين</span>
                                         @endif
                                     </td>
                                 </tr>

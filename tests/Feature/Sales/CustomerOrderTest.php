@@ -164,7 +164,7 @@ class CustomerOrderTest extends TestCase
                     'product_configuration_id' => $config->id,
                     'quantity' => 2,
                     'unit_price' => 1500.00,
-                    'notes' => 'بند سحارة مزدوج 180x200',
+                    'notes' => 'بند مع تخزين مزدوج 180x200',
                 ],
             ],
         ];

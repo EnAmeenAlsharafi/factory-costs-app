@@ -72,7 +72,7 @@ class ReportsCenterController extends Controller
             ]],
             ['title' => 'التحليل التجاري', 'icon' => 'fa-coins', 'reports' => [
                 ['title' => 'ربحية الطلبات التشغيلية', 'purpose' => 'القيمة التجارية مقابل تكلفة المواد الفعلية لكل طلب، مع حالة اكتمال التكلفة.', 'icon' => 'fa-file-invoice-dollar', 'route' => 'reports.profitability.orders', 'any' => ['reports.profitability']],
-                ['title' => 'ربحية الموديلات والمقاسات', 'purpose' => 'المبيعات والمساهمة حسب الموديل أو التكوين (المقاس والسحارة)، مع ترتيب الأعلى.', 'icon' => 'fa-bed', 'route' => 'reports.profitability.products', 'any' => ['reports.profitability', 'reports.sales']],
+                ['title' => 'ربحية الموديلات والمقاسات', 'purpose' => 'المبيعات والمساهمة حسب الموديل أو التكوين (المقاس وخيار التخزين)، مع ترتيب الأعلى.', 'icon' => 'fa-bed', 'route' => 'reports.profitability.products', 'any' => ['reports.profitability', 'reports.sales']],
                 ['title' => 'تحليل قنوات البيع', 'purpose' => 'الطلبات والقيمة ومتوسط الطلب والمساهمة لكل قناة بيع.', 'icon' => 'fa-store', 'route' => 'reports.profitability.channels', 'any' => ['reports.profitability', 'reports.sales']],
                 ['title' => 'تحليل العملاء', 'purpose' => 'قيمة الطلبات والمساهمة وأرصدة العملاء حسب الصلاحية.', 'icon' => 'fa-users', 'route' => 'reports.profitability.customers', 'any' => ['reports.profitability', 'reports.sales']],
             ]],

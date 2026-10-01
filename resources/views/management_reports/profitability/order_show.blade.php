@@ -47,7 +47,7 @@
                             <td>
                                 {{ $line->custom_design ? ($line->custom_design_name ?: 'تصميم خاص') : ($line->productModel?->name_ar ?? '—') }}
                                 @if ($line->productConfiguration)
-                                    <span class="text-muted fs-8">— <span class="ltr-isolate">{{ (float) $line->productConfiguration->width_cm }}×{{ (float) $line->productConfiguration->length_cm }}</span> {{ $line->has_storage ? 'بسحارة' : 'بدون سحارة' }}</span>
+                                    <span class="text-muted fs-8">— <span class="ltr-isolate">{{ (float) $line->productConfiguration->width_cm }}×{{ (float) $line->productConfiguration->length_cm }}</span> {{ $line->has_storage ? 'مع تخزين' : 'بدون تخزين' }}</span>
                                 @endif
                             </td>
                             <td class="text-end">{{ $qty($line->quantity) }}</td>
