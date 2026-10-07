@@ -51,9 +51,69 @@ Alpine.data('appShell', () => ({
         });
         // Close the drawer immediately when a destination is tapped (the page then navigates).
         document.getElementById('app-sidebar')?.addEventListener('click', (e) => {
-            if (this.mobileSidebarOpen && e.target.closest('a[href]')) {
+            const link = e.target.closest('a[href]');
+            const menu = document.getElementById('sidebar-menu') || document.querySelector('#app-sidebar .sidebar-menu');
+            if (link && menu) {
+                try {
+                    window.sessionStorage.setItem('sadir-sidebar-scroll', String(menu.scrollTop));
+                } catch (err) {}
+            }
+            if (this.mobileSidebarOpen && link) {
                 this.mobileSidebarOpen = false;
             }
+        });
+
+        // Restore & persist desktop/tablet sidebar scroll position
+        const menu = document.getElementById('sidebar-menu') || document.querySelector('#app-sidebar .sidebar-menu');
+        if (menu) {
+            let scrollTimer;
+            menu.addEventListener('scroll', () => {
+                clearTimeout(scrollTimer);
+                scrollTimer = setTimeout(() => {
+                    try {
+                        window.sessionStorage.setItem('sadir-sidebar-scroll', String(menu.scrollTop));
+                    } catch (err) {}
+                }, 50);
+            }, { passive: true });
+        }
+
+        window.addEventListener('beforeunload', () => {
+            const currentMenu = document.getElementById('sidebar-menu') || document.querySelector('#app-sidebar .sidebar-menu');
+            if (currentMenu) {
+                try {
+                    window.sessionStorage.setItem('sadir-sidebar-scroll', String(currentMenu.scrollTop));
+                } catch (err) {}
+            }
+        });
+
+        const restoreSidebarScroll = () => {
+            const currentMenu = document.getElementById('sidebar-menu') || document.querySelector('#app-sidebar .sidebar-menu');
+            if (!currentMenu) return;
+
+            try {
+                const savedScroll = window.sessionStorage.getItem('sadir-sidebar-scroll');
+                if (savedScroll !== null) {
+                    currentMenu.scrollTop = parseInt(savedScroll, 10);
+                }
+            } catch (err) {}
+
+            const active = document.querySelector('#app-sidebar .sidebar-nav-link.active');
+            if (active && currentMenu) {
+                const menuRect = currentMenu.getBoundingClientRect();
+                const activeRect = active.getBoundingClientRect();
+                const isVisible = (activeRect.top >= menuRect.top + 20 && activeRect.bottom <= menuRect.bottom - 20);
+                if (!isVisible) {
+                    active.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'auto' });
+                    try {
+                        window.sessionStorage.setItem('sadir-sidebar-scroll', String(currentMenu.scrollTop));
+                    } catch (err) {}
+                }
+            }
+        };
+
+        this.$nextTick(() => {
+            restoreSidebarScroll();
+            setTimeout(restoreSidebarScroll, 120);
         });
     },
 

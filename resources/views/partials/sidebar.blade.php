@@ -34,7 +34,7 @@
     </div>
 
     <!-- Navigation Menu -->
-    <div class="sidebar-menu custom-scrollbar">
+    <div id="sidebar-menu" class="sidebar-menu custom-scrollbar">
         <div class="d-flex flex-column gap-2 mb-0">
 
             <!-- Section 1: Main -->
@@ -686,6 +686,17 @@
 
         </div>
     </div>
+    <script>
+        (function() {
+            try {
+                var menu = document.getElementById('sidebar-menu');
+                var saved = window.sessionStorage.getItem('sadir-sidebar-scroll');
+                if (menu && saved !== null) {
+                    menu.scrollTop = parseInt(saved, 10);
+                }
+            } catch(e) {}
+        })();
+    </script>
 
     <!-- Footer Profile Info & Logout -->
     @auth
