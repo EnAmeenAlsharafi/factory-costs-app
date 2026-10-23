@@ -26,7 +26,7 @@ use Illuminate\Database\Eloquent\Builder;
  */
 class OperationalDashboardService
 {
-    public const ACTIVE_OPERATION_STATUSES = ['READY', 'IN_PROGRESS', 'PARTIALLY_COMPLETED'];
+    public const ACTIVE_OPERATION_STATUSES = ['READY', 'ASSIGNED', 'IN_PROGRESS', 'PARTIALLY_COMPLETED', 'BLOCKED'];
 
     public const ACTIVE_DELIVERY_STATUSES = ['READY_FOR_DELIVERY', 'ASSIGNED', 'OUT_FOR_DELIVERY', 'DELIVERED'];
 

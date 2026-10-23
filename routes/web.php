@@ -29,8 +29,11 @@ use App\Http\Controllers\PaymentAllocationController;
 use App\Http\Controllers\PaymentControlOverrideController;
 use App\Http\Controllers\ProcurementPlanningController;
 use App\Http\Controllers\ProductConfigurationController;
+use App\Http\Controllers\ProductionAssignmentController;
 use App\Http\Controllers\ProductionBoardController;
 use App\Http\Controllers\ProductionMaterialRequestController;
+use App\Http\Controllers\ProductionMyTasksController;
+use App\Http\Controllers\ProductionOperationController;
 use App\Http\Controllers\ProductionOrderController;
 use App\Http\Controllers\ProductionReportController;
 use App\Http\Controllers\ProductionReviewController;
@@ -163,6 +166,18 @@ Route::middleware('auth')->group(function () {
         Route::get('/queue', [DepartmentQueueController::class, 'index'])->name('queue.index');
         Route::post('/operations/{operation}/progress', [DepartmentQueueController::class, 'updateProgress'])->name('operations.progress');
         Route::post('/operations/{operation}/correct', [DepartmentQueueController::class, 'correctProgress'])->name('operations.correct');
+
+        // Stage 16.5: Shop-floor execution — claim/start/complete/block/unblock/assign
+        Route::post('/operations/{operation}/claim', [ProductionOperationController::class, 'claim'])->name('operations.claim');
+        Route::post('/operations/{operation}/start', [ProductionOperationController::class, 'start'])->name('operations.start');
+        Route::post('/operations/{operation}/complete', [ProductionOperationController::class, 'complete'])->name('operations.complete');
+        Route::post('/operations/{operation}/block', [ProductionOperationController::class, 'block'])->name('operations.block');
+        Route::post('/operations/{operation}/resolve-block', [ProductionOperationController::class, 'resolveBlock'])->name('operations.resolve-block');
+        Route::post('/operations/{operation}/assign', [ProductionOperationController::class, 'assign'])->name('operations.assign');
+
+        // Stage 16.5: Assignment board & employee "my tasks"
+        Route::get('/assignment', [ProductionAssignmentController::class, 'index'])->name('assignment.index');
+        Route::get('/my-tasks', [ProductionMyTasksController::class, 'index'])->name('my-tasks');
 
         // Production Routings
         Route::get('/routings', [ProductionRoutingController::class, 'index'])->name('routings.index');

@@ -12,6 +12,8 @@ use App\Models\ProductModel;
 use App\Models\SalesChannel;
 use App\Models\Supplier;
 use App\Services\CustomerOrderService;
+use App\Services\OrderTimelineService;
+use App\Services\OrderTrackingService;
 use Exception;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,7 +21,11 @@ use Illuminate\View\View;
 
 class CustomerOrderController extends Controller
 {
-    public function __construct(protected CustomerOrderService $customerOrderService) {}
+    public function __construct(
+        protected CustomerOrderService $customerOrderService,
+        protected OrderTrackingService $trackingService,
+        protected OrderTimelineService $timelineService,
+    ) {}
 
     public function index(Request $request): View
     {
@@ -89,7 +95,10 @@ class CustomerOrderController extends Controller
             'changes.approvedBy',
         ]);
 
-        return view('sales.orders.show', compact('order'));
+        $trackingSummary = $this->trackingService->summary($order);
+        $timeline = $this->timelineService->forCustomerOrder($order, 50, $request->user()->role?->name);
+
+        return view('sales.orders.show', compact('order', 'trackingSummary', 'timeline'));
     }
 
     public function edit(Request $request, CustomerOrder $order): View

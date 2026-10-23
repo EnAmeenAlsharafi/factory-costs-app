@@ -53,6 +53,8 @@ class DepartmentQueueController extends Controller
                 'productionOrder.fabricSupplier',
                 'productionOrder.fabricColor',
                 'workCenter.department',
+                'assignedUser',
+                'activeBlock',
                 'targetReworkActions' => fn ($r) => $r->whereNotIn('status', ['COMPLETED', 'CANCELLED'])->with('qualityIncident'),
             ])
             ->orderByRaw("CASE (SELECT priority FROM production_orders WHERE production_orders.id = production_order_operations.production_order_id) WHEN 'VIP' THEN 0 WHEN 'URGENT' THEN 1 ELSE 2 END")
@@ -86,7 +88,7 @@ class DepartmentQueueController extends Controller
             $query = $this->dashboardService->operationsQueryFor($user);
 
             match ($tab) {
-                'waiting' => $query->where('status', 'READY'),
+                'waiting' => $query->whereIn('status', ['READY', 'ASSIGNED']),
                 'in_progress' => $query->whereIn('status', ['IN_PROGRESS', 'PARTIALLY_COMPLETED']),
                 'rework' => $query->whereIn('status', OperationalDashboardService::ACTIVE_OPERATION_STATUSES)
                     ->whereHas('targetReworkActions', fn ($r) => $r->whereNotIn('status', ['COMPLETED', 'CANCELLED'])),

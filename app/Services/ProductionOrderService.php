@@ -13,6 +13,11 @@ use Illuminate\Validation\ValidationException;
 
 class ProductionOrderService
 {
+    public function __construct(
+        protected ProductionDependencyService $dependencies,
+        protected ProductionEventService $events,
+    ) {}
+
     /**
      * Create a new Production Order from a Customer Order Line.
      */
@@ -129,10 +134,9 @@ class ProductionOrderService
             $po->released_at = now();
             $po->save();
 
-            $opMap = [];
-
             foreach ($routingOps as $rOp) {
                 $hasDependencies = $rOp->dependencies->isNotEmpty();
+                $isReady = ! $hasDependencies;
 
                 $poOp = ProductionOrderOperation::create([
                     'production_order_id' => $po->id,
@@ -146,11 +150,14 @@ class ProductionOrderService
                     'started_quantity' => 0,
                     'completed_quantity' => 0,
                     'rejected_quantity' => 0,
-                    'status' => $hasDependencies ? 'PENDING' : 'READY',
+                    'status' => $isReady ? 'READY' : 'PENDING',
+                    'ready_at' => $isReady ? now() : null,
                     'notes' => null,
                 ]);
 
-                $opMap[$rOp->id] = $poOp;
+                if ($isReady) {
+                    $this->events->record($poOp, 'READY', ['to' => 'READY', 'user' => $user]);
+                }
             }
 
             return $po->fresh('operations.workCenter');
@@ -167,6 +174,12 @@ class ProductionOrderService
         if (in_array($po->status, ['ON_HOLD', 'CANCELLED', 'COMPLETED'])) {
             throw ValidationException::withMessages([
                 'operation' => "لا يمكن تحديث الإنجاز، أمر الإنتاج في حالة: {$po->status_arabic}.",
+            ]);
+        }
+
+        if ($op->status === 'BLOCKED') {
+            throw ValidationException::withMessages([
+                'operation' => 'لا يمكن تسجيل تقدم على عملية متوقفة. يجب حل العائق أولاً.',
             ]);
         }
 
@@ -189,15 +202,15 @@ class ProductionOrderService
 
         if ($newCompleted > $op->required_quantity) {
             throw ValidationException::withMessages([
-                'quantity' => "الكمية المنجزة الكلية ({$newCompleted}) تتجاوز الكمية المطلوبة للعملية ({$op->required_quantity}).",
+                'quantity' => "لا يمكن تسجيل كمية أكبر من المتبقي (المتبقي: {$op->remaining_quantity}).",
             ]);
         }
 
         // Validate join dependencies limit
-        $maxEligible = $this->calculateMaxEligibleQuantity($op);
+        $maxEligible = $this->dependencies->maxEligibleQuantity($op);
         if ($newCompleted > $maxEligible) {
             throw ValidationException::withMessages([
-                'quantity' => "الكمية المنجزة المتاحة لهذه العملية محددة باكتمل المراحل السابقة (الحد الأقصى المتاح حالياً: {$maxEligible}).",
+                'quantity' => "الكمية المنجزة المتاحة لهذه العملية محددة باكتمال المراحل السابقة (الحد الأقصى المتاح حالياً: {$maxEligible}).",
             ]);
         }
 
@@ -207,19 +220,22 @@ class ProductionOrderService
 
             if ($newCompleted > $lockedOp->required_quantity) {
                 throw ValidationException::withMessages([
-                    'quantity' => "الكمية المنجزة الكلية ({$newCompleted}) تتجاوز الكمية المطلوبة للعملية ({$lockedOp->required_quantity}).",
+                    'quantity' => "لا يمكن تسجيل كمية أكبر من المتبقي (المتبقي: {$lockedOp->remaining_quantity}).",
                 ]);
             }
 
             // Validate join dependencies limit
-            $maxEligible = $this->calculateMaxEligibleQuantity($lockedOp);
+            $maxEligible = $this->dependencies->maxEligibleQuantity($lockedOp);
             if ($newCompleted > $maxEligible) {
                 throw ValidationException::withMessages([
-                    'quantity' => "الكمية المنجزة المتاحة لهذه العملية محددة باكتمل المراحل السابقة (الحد الأقصى المتاح حالياً: {$maxEligible}).",
+                    'quantity' => "الكمية المنجزة المتاحة لهذه العملية محددة باكتمال المراحل السابقة (الحد الأقصى المتاح حالياً: {$maxEligible}).",
                 ]);
             }
 
             $prevCompleted = $lockedOp->completed_quantity;
+            $prevStatus = $lockedOp->status;
+            $wasNotStarted = $lockedOp->started_at === null;
+
             $lockedOp->completed_quantity = $newCompleted;
             $lockedOp->started_quantity = max($lockedOp->started_quantity, $newCompleted);
 
@@ -238,7 +254,7 @@ class ProductionOrderService
 
             $lockedOp->save();
 
-            // Log event
+            // Quantity ledger (existing, unchanged).
             ProductionOperationProgress::create([
                 'production_order_operation_id' => $lockedOp->id,
                 'event_type' => $eventType,
@@ -250,8 +266,28 @@ class ProductionOrderService
                 'occurred_at' => now(),
             ]);
 
-            // Re-evaluate downstream operations
-            $this->evaluateDownstreamOperations($po);
+            // Execution/timeline audit (append-only).
+            if ($wasNotStarted) {
+                $this->events->record($lockedOp, 'STARTED', ['from' => $prevStatus, 'to' => 'IN_PROGRESS', 'user' => $user]);
+            }
+            $this->events->record($lockedOp, 'PROGRESS_RECORDED', [
+                'from' => $prevStatus,
+                'to' => $lockedOp->status,
+                'quantity' => $addedQty,
+                'note' => $notes,
+                'user' => $user,
+            ]);
+            if ($lockedOp->status === 'COMPLETED') {
+                $this->events->record($lockedOp, 'COMPLETED', [
+                    'from' => $prevStatus,
+                    'to' => 'COMPLETED',
+                    'quantity' => $lockedOp->completed_quantity,
+                    'user' => $user,
+                ]);
+            }
+
+            // Re-evaluate downstream operations (centralized dependency engine).
+            $this->promoteReadyOperations($po, $user);
 
             // Re-evaluate overall Production Order completion
             $this->evaluateProductionOrderCompletion($po);
@@ -275,6 +311,7 @@ class ProductionOrderService
 
         return DB::transaction(function () use ($op, $po, $newTotalQty, $notes, $user) {
             $prevCompleted = $op->completed_quantity;
+            $prevStatus = $op->status;
             $op->completed_quantity = $newTotalQty;
             $op->started_quantity = max($op->started_quantity, $newTotalQty);
 
@@ -300,7 +337,16 @@ class ProductionOrderService
                 'occurred_at' => now(),
             ]);
 
-            $this->evaluateDownstreamOperations($po);
+            $this->events->record($op, 'PROGRESS_RECORDED', [
+                'from' => $prevStatus,
+                'to' => $op->status,
+                'quantity' => $newTotalQty - $prevCompleted,
+                'note' => "تصحيح كمية الإنجاز: {$notes}",
+                'user' => $user,
+                'meta' => ['correction' => true],
+            ]);
+
+            $this->promoteReadyOperations($po, $user);
             $this->evaluateProductionOrderCompletion($po);
 
             return $op->fresh();
@@ -369,56 +415,21 @@ class ProductionOrderService
 
     /**
      * Calculate maximum quantity an operation is allowed to complete based on upstream dependencies.
+     *
+     * @deprecated Prefer ProductionDependencyService::maxEligibleQuantity(); retained for backward compatibility.
      */
     public function calculateMaxEligibleQuantity(ProductionOrderOperation $op): int
     {
-        if (! $op->routing_operation_id) {
-            return $op->required_quantity;
-        }
-
-        $rOp = $op->routingOperation;
-        if (! $rOp) {
-            return $op->required_quantity;
-        }
-
-        $dependencyIds = DB::table('production_routing_dependencies')
-            ->where('operation_id', $rOp->id)
-            ->pluck('depends_on_operation_id')
-            ->toArray();
-
-        if (empty($dependencyIds)) {
-            return $op->required_quantity;
-        }
-
-        $upstreamOrderOps = ProductionOrderOperation::where('production_order_id', $op->production_order_id)
-            ->whereIn('routing_operation_id', $dependencyIds)
-            ->get();
-
-        if ($upstreamOrderOps->isEmpty()) {
-            return $op->required_quantity;
-        }
-
-        return (int) $upstreamOrderOps->min('completed_quantity');
+        return $this->dependencies->maxEligibleQuantity($op);
     }
 
     /**
-     * Evaluate downstream operations after progress update.
+     * Promote WAITING operations whose dependencies are satisfied to READY, logging events.
      */
-    protected function evaluateDownstreamOperations(ProductionOrder $po): void
+    protected function promoteReadyOperations(ProductionOrder $po, User $user): void
     {
-        $ops = $po->operations()->with('routingOperation')->get();
-
-        foreach ($ops as $op) {
-            if (in_array($op->status, ['COMPLETED', 'SKIPPED', 'BLOCKED'])) {
-                continue;
-            }
-
-            $maxEligible = $this->calculateMaxEligibleQuantity($op);
-
-            if ($maxEligible > 0 && $op->status === 'PENDING') {
-                $op->status = 'READY';
-                $op->save();
-            }
+        foreach ($this->dependencies->evaluateReadiness($po) as $readyOp) {
+            $this->events->record($readyOp, 'READY', ['to' => 'READY', 'user' => $user]);
         }
     }
 

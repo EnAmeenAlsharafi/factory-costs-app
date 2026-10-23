@@ -473,6 +473,31 @@ code { max-width: 100%; overflow-wrap: anywhere; }
 .qty-trio .is-remaining { background: #fffbeb; border-color: #fde68a; }
 .qty-trio .is-remaining strong { color: #92400e; }
 
+/* ---- Order/production process tracker (stage-by-stage mini pills) ---- */
+.process-tracker { display: flex; flex-wrap: wrap; gap: .5rem; }
+.process-tracker-step {
+    display: flex; flex-direction: column; align-items: flex-start; gap: .2rem;
+    padding: .5rem .65rem; min-width: 110px;
+    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: .6rem;
+}
+
+/* ---- Unified order/production timeline ---- */
+.order-timeline { list-style: none; margin: 0; padding: 0; }
+.order-timeline-item { display: flex; gap: .75rem; padding-bottom: 1rem; position: relative; }
+.order-timeline-item:not(:last-child)::before {
+    content: ''; position: absolute; top: 2rem; bottom: 0; inset-inline-start: .9rem;
+    width: 2px; background: var(--factory-border);
+}
+.order-timeline-icon {
+    flex-shrink: 0; width: 1.9rem; height: 1.9rem; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--tone-primary-bg); color: var(--tone-primary); font-size: .8rem;
+}
+.order-timeline-body { min-width: 0; }
+.order-timeline-label { font-weight: 700; color: var(--factory-text); font-size: .9rem; }
+.order-timeline-meta { font-size: .75rem; color: var(--factory-muted); }
+.order-timeline-note { font-size: .82rem; color: #334155; margin-top: .15rem; }
+
 /* ---- Responsive details list (label/value) ---- */
 .detail-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .75rem 1rem; margin: 0; }
 .detail-list > div { min-width: 0; }

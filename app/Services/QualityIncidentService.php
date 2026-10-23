@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\DB;
 
 class QualityIncidentService
 {
+    public function __construct(protected ProductionEventService $events) {}
+
     /**
      * Create a new quality incident for a production order.
      */
@@ -117,6 +119,17 @@ class QualityIncidentService
 
             $incident->update(['status' => 'ACTION_REQUIRED']);
 
+            if ($rework->source_operation_id) {
+                $sourceOp = ProductionOrderOperation::find($rework->source_operation_id);
+                if ($sourceOp) {
+                    $this->events->record($sourceOp, 'REWORK_CREATED', [
+                        'note' => $rework->notes,
+                        'user' => $user,
+                        'meta' => ['rework_id' => $rework->id, 'rework_number' => $rework->rework_number, 'quantity' => $rework->quantity],
+                    ]);
+                }
+            }
+
             return $rework;
         });
     }
@@ -126,7 +139,7 @@ class QualityIncidentService
      */
     public function completeReworkAction(ProductionReworkAction $rework, User $user): ProductionReworkAction
     {
-        return DB::transaction(function () use ($rework) {
+        return DB::transaction(function () use ($rework, $user) {
             if ($rework->status === 'COMPLETED') {
                 return $rework;
             }
@@ -141,6 +154,14 @@ class QualityIncidentService
                 $op = ProductionOrderOperation::find($rework->source_operation_id);
                 if ($op && $op->status === 'BLOCKED') {
                     $op->update(['status' => 'IN_PROGRESS']);
+                }
+
+                if ($op) {
+                    $this->events->record($op, 'REWORK_COMPLETED', [
+                        'note' => $rework->notes,
+                        'user' => $user,
+                        'meta' => ['rework_id' => $rework->id, 'rework_number' => $rework->rework_number],
+                    ]);
                 }
             }
 

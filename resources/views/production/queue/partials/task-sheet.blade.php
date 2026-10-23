@@ -2,15 +2,16 @@
     $po = $op->productionOrder;
     $productName = $po->is_custom_design ? $po->custom_design_name : ($po->productModel?->name_ar ?? 'منتج');
     $remaining = max(0, $op->required_quantity - $op->completed_quantity);
-    $canRecord = auth()->user()->can('production.update_progress') && $remaining > 0 && $op->status !== 'COMPLETED';
+    $user = auth()->user();
+    $canRecord = $user->can('production.update_progress') && $remaining > 0 && ! in_array($op->status, ['COMPLETED', 'BLOCKED', 'SKIPPED'], true);
+    $canClaim = $user->can('production.operation.claim') && $op->status === 'READY' && ! $op->assigned_user_id;
+    $canStart = $user->can('production.operation.start') && in_array($op->status, ['READY', 'ASSIGNED'], true);
+    $canBlock = $user->can('production.operation.block') && ! in_array($op->status, ['COMPLETED', 'SKIPPED', 'BLOCKED'], true);
     $colorCode = $po->fabric_color_code ?? $po->fabricColor?->color_code;
 @endphp
 <div class="modal fade" id="task-sheet-{{ $op->id }}" tabindex="-1" aria-labelledby="task-sheet-title-{{ $op->id }}" aria-hidden="true">
     <div class="modal-dialog modal-dialog-scrollable modal-fullscreen-sm-down modal-lg">
-        <form action="{{ route('production.operations.progress', $op) }}" method="POST" class="modal-content"
-              x-data="{ qty: {{ $remaining > 0 ? 1 : 0 }}, remaining: {{ $remaining }} }"
-              :data-confirm="Number(qty) >= remaining ? 'سيتم تسجيل كامل الكمية المتبقية وإكمال هذه العملية. هل تريد المتابعة؟' : null">
-            @csrf
+        <div class="modal-content" x-data="{ qty: {{ $remaining > 0 ? 1 : 0 }}, remaining: {{ $remaining }} }">
             <div class="modal-header">
                 <div class="min-w-0">
                     <h2 class="modal-title h5 fw-bold mb-0" id="task-sheet-title-{{ $op->id }}">{{ $productName }}</h2>
@@ -22,6 +23,9 @@
             <div class="modal-body d-flex flex-column gap-3">
                 <div class="d-flex flex-wrap gap-2">
                     <x-status-badge domain="operation" :status="$op->status" size="lg" />
+                    @if ($op->assignedUser)
+                        <span class="status-chip status-chip-secondary status-chip-lg"><i class="fas fa-user-check" aria-hidden="true"></i> {{ $op->assignedUser->name }}</span>
+                    @endif
                     @if ($op->targetReworkActions->isNotEmpty())
                         <span class="rework-flag"><i class="fas fa-rotate" aria-hidden="true"></i> إعادة عمل — ليست إنتاجاً عادياً</span>
                     @endif
@@ -29,6 +33,37 @@
                         <span class="status-chip status-chip-danger status-chip-lg"><i class="fas fa-bolt" aria-hidden="true"></i> {{ $priorityLabels[$po->priority] ?? $po->priority }}</span>
                     @endif
                 </div>
+
+                @if ($op->status === 'BLOCKED' && $op->activeBlock)
+                    <div class="alert alert-danger mb-0 py-2" role="alert">
+                        <i class="fas fa-hand me-1" aria-hidden="true"></i>
+                        <strong>متوقف:</strong> {{ $op->activeBlock->reason_arabic }}
+                        @if ($op->activeBlock->note) — {{ $op->activeBlock->note }} @endif
+                    </div>
+                @endif
+
+                {{-- Quick actions: claim / start / block — each its own tiny form (spec §63–64). --}}
+                @if ($canClaim || $canStart || $canBlock)
+                    <div class="d-flex flex-wrap gap-2">
+                        @if ($canClaim)
+                            <form action="{{ route('production.operations.claim', $op) }}" method="POST">
+                                @csrf
+                                <button type="submit" class="btn btn-primary fw-bold"><i class="fas fa-hand-pointer" aria-hidden="true"></i> استلام المهمة</button>
+                            </form>
+                        @endif
+                        @if ($canStart)
+                            <form action="{{ route('production.operations.start', $op) }}" method="POST">
+                                @csrf
+                                <button type="submit" class="btn btn-warning text-dark fw-bold"><i class="fas fa-play" aria-hidden="true"></i> بدء العمل</button>
+                            </form>
+                        @endif
+                        @if ($canBlock)
+                            <button type="button" class="btn btn-outline-danger fw-bold" data-bs-toggle="modal" data-bs-target="#block-sheet-{{ $op->id }}">
+                                <i class="fas fa-hand" aria-hidden="true"></i> يوجد عائق
+                            </button>
+                        @endif
+                    </div>
+                @endif
 
                 {{-- Manufacturing specs --}}
                 <section aria-labelledby="task-specs-{{ $op->id }}">
@@ -84,31 +119,41 @@
                 </section>
 
                 @if ($canRecord)
-                    <div>
-                        <label for="added-qty-{{ $op->id }}" class="form-label">الكمية المنجزة الآن <span class="text-danger">*</span></label>
-                        <div class="input-group input-group-lg">
-                            <button type="button" class="btn btn-outline-secondary" style="min-width: 52px;" @click="qty = Math.max(1, Number(qty) - 1)" aria-label="إنقاص الكمية">
-                                <i class="fas fa-minus" aria-hidden="true"></i>
-                            </button>
-                            <input type="number" id="added-qty-{{ $op->id }}" name="added_quantity" x-model.number="qty"
-                                   class="form-control text-center fw-bold" inputmode="numeric" pattern="[0-9]*"
-                                   min="1" max="{{ $remaining }}" step="1" required>
-                            <button type="button" class="btn btn-outline-secondary" style="min-width: 52px;" @click="qty = Math.min(remaining, Number(qty) + 1)" aria-label="زيادة الكمية">
-                                <i class="fas fa-plus" aria-hidden="true"></i>
-                            </button>
+                    <form id="progress-form-{{ $op->id }}" action="{{ route('production.operations.progress', $op) }}" method="POST"
+                          class="d-flex flex-column gap-3">
+                        @csrf
+                        <div>
+                            <label for="added-qty-{{ $op->id }}" class="form-label">الكمية المنجزة الآن <span class="text-danger">*</span></label>
+                            <div class="input-group input-group-lg">
+                                <button type="button" class="btn btn-outline-secondary" style="min-width: 52px;" @click="qty = Math.max(1, Number(qty) - 1)" aria-label="إنقاص الكمية">
+                                    <i class="fas fa-minus" aria-hidden="true"></i>
+                                </button>
+                                <input type="number" id="added-qty-{{ $op->id }}" name="added_quantity" x-model.number="qty"
+                                       class="form-control text-center fw-bold" inputmode="numeric" pattern="[0-9]*"
+                                       min="1" max="{{ $remaining }}" step="1" required>
+                                <button type="button" class="btn btn-outline-secondary" style="min-width: 52px;" @click="qty = Math.min(remaining, Number(qty) + 1)" aria-label="زيادة الكمية">
+                                    <i class="fas fa-plus" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mt-2 gap-2">
+                                <small class="text-muted">الحد الأقصى المتاح: {{ $remaining }}</small>
+                                <button type="button" class="btn btn-sm btn-outline-primary" @click="qty = remaining">إنجاز كامل المتبقي ({{ $remaining }})</button>
+                            </div>
+                            <p class="text-danger fs-7 mt-1 mb-0" x-show="Number(qty) > remaining" x-cloak role="alert">
+                                الكمية المدخلة تتجاوز المتبقي ({{ $remaining }}).
+                            </p>
                         </div>
-                        <div class="d-flex justify-content-between align-items-center mt-2 gap-2">
-                            <small class="text-muted">الحد الأقصى المتاح: {{ $remaining }}</small>
-                            <button type="button" class="btn btn-sm btn-outline-primary" @click="qty = remaining">إنجاز كامل المتبقي ({{ $remaining }})</button>
+                        <div>
+                            <label for="progress-notes-{{ $op->id }}" class="form-label">ملاحظات (اختياري)</label>
+                            <input type="text" id="progress-notes-{{ $op->id }}" name="notes" class="form-control" maxlength="500" autocomplete="off" placeholder="أي ملاحظة فنية...">
                         </div>
-                        <p class="text-danger fs-7 mt-1 mb-0" x-show="Number(qty) > remaining" x-cloak role="alert">
-                            الكمية المدخلة تتجاوز المتبقي ({{ $remaining }}).
-                        </p>
-                    </div>
-                    <div>
-                        <label for="progress-notes-{{ $op->id }}" class="form-label">ملاحظات (اختياري)</label>
-                        <input type="text" id="progress-notes-{{ $op->id }}" name="notes" class="form-control" maxlength="500" autocomplete="off" placeholder="أي ملاحظة فنية...">
-                    </div>
+                    </form>
+
+                    <form action="{{ route('production.operations.complete', $op) }}" method="POST"
+                          data-confirm="سيتم تسجيل اكتمال كامل الكمية المتبقية ({{ $remaining }}) لعملية «{{ $op->operation_name_snapshot }}». هل تريد المتابعة؟">
+                        @csrf
+                        <button type="submit" class="btn btn-outline-success fw-bold"><i class="fas fa-flag-checkered" aria-hidden="true"></i> تم التنفيذ بالكامل</button>
+                    </form>
                 @elseif ($remaining === 0)
                     <div class="alert alert-success mb-0" role="status"><i class="fas fa-circle-check" aria-hidden="true"></i> اكتملت هذه العملية.</div>
                 @endif
@@ -117,11 +162,17 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-light border" data-bs-dismiss="modal">إغلاق</button>
                 @if ($canRecord)
-                    <button type="submit" class="btn btn-success fw-bold" :disabled="Number(qty) < 1 || Number(qty) > remaining">
+                    <button type="submit" form="progress-form-{{ $op->id }}" class="btn btn-success fw-bold"
+                            :disabled="Number(qty) < 1 || Number(qty) > remaining"
+                            :data-confirm="Number(qty) >= remaining ? 'سيتم تسجيل كامل الكمية المتبقية وإكمال هذه العملية. هل تريد المتابعة؟' : null">
                         <i class="fas fa-check-circle" aria-hidden="true"></i> تسجيل التقدم
                     </button>
                 @endif
             </div>
-        </form>
+        </div>
     </div>
 </div>
+
+@if ($canBlock)
+    @include('production.partials.block-sheet', ['op' => $op])
+@endif

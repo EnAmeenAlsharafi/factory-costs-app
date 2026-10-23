@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class ProductionOrderOperation extends Model
 {
@@ -24,9 +25,12 @@ class ProductionOrderOperation extends Model
         'completed_quantity',
         'rejected_quantity',
         'status',
+        'ready_at',
         'started_at',
         'completed_at',
         'assigned_user_id',
+        'assigned_at',
+        'assigned_by_user_id',
         'notes',
     ];
 
@@ -36,8 +40,10 @@ class ProductionOrderOperation extends Model
         'started_quantity' => 'integer',
         'completed_quantity' => 'integer',
         'rejected_quantity' => 'integer',
+        'ready_at' => 'datetime',
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
+        'assigned_at' => 'datetime',
     ];
 
     public function productionOrder(): BelongsTo
@@ -60,9 +66,29 @@ class ProductionOrderOperation extends Model
         return $this->belongsTo(User::class, 'assigned_user_id');
     }
 
+    public function assignedByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_by_user_id');
+    }
+
     public function progressLogs(): HasMany
     {
         return $this->hasMany(ProductionOperationProgress::class)->orderBy('occurred_at', 'desc');
+    }
+
+    public function events(): HasMany
+    {
+        return $this->hasMany(ProductionOperationEvent::class)->orderBy('occurred_at', 'desc');
+    }
+
+    public function blocks(): HasMany
+    {
+        return $this->hasMany(ProductionOperationBlock::class)->orderBy('blocked_at', 'desc');
+    }
+
+    public function activeBlock(): HasOne
+    {
+        return $this->hasOne(ProductionOperationBlock::class)->where('is_active', true);
     }
 
     public function qualityIncidents(): HasMany
@@ -88,13 +114,30 @@ class ProductionOrderOperation extends Model
         return $this->hasMany(ProductionReworkAction::class, 'target_operation_id');
     }
 
+    /**
+     * Remaining quantity still to complete for this operation.
+     */
+    public function getRemainingQuantityAttribute(): int
+    {
+        return max(0, (int) $this->required_quantity - (int) $this->completed_quantity);
+    }
+
+    /**
+     * Whether this operation is effectively assigned to an employee.
+     */
+    public function getIsAssignedAttribute(): bool
+    {
+        return $this->assigned_user_id !== null;
+    }
+
     public function getStatusBadgeClassAttribute(): string
     {
         return match ($this->status) {
             'PENDING' => 'bg-secondary',
             'READY' => 'bg-info text-dark',
+            'ASSIGNED' => 'bg-primary',
             'IN_PROGRESS' => 'bg-warning text-dark',
-            'PARTIALLY_COMPLETED' => 'bg-primary',
+            'PARTIALLY_COMPLETED' => 'bg-warning text-dark',
             'COMPLETED' => 'bg-success',
             'BLOCKED' => 'bg-danger',
             'SKIPPED' => 'bg-dark text-white',
@@ -105,13 +148,14 @@ class ProductionOrderOperation extends Model
     public function getStatusArabicAttribute(): string
     {
         return match ($this->status) {
-            'PENDING' => 'في الانتظار',
-            'READY' => 'جاهز للبدء',
+            'PENDING' => 'بانتظار المرحلة السابقة',
+            'READY' => 'جاهز للتنفيذ',
+            'ASSIGNED' => 'تم الإسناد',
             'IN_PROGRESS' => 'قيد التنفيذ',
             'PARTIALLY_COMPLETED' => 'منجز جزئياً',
             'COMPLETED' => 'مكتمل',
-            'BLOCKED' => 'محظور / متوقف',
-            'SKIPPED' => 'متخطي',
+            'BLOCKED' => 'متوقف',
+            'SKIPPED' => 'ملغي',
             default => $this->status,
         };
     }

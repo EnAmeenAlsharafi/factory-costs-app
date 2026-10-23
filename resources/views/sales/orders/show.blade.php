@@ -93,6 +93,11 @@
         </div>
     @endif
 
+    {{-- Stage 16.5: Order Tracking Summary — "أين وصل الطلب؟" --}}
+    @if ($order->status === 'APPROVED_FOR_PRODUCTION')
+        <x-order-tracking-summary :order="$order" />
+    @endif
+
     {{-- Summary Cards --}}
     <div class="row g-3 mb-4">
         <div class="col-md-3">
@@ -540,6 +545,18 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- Stage 16.5: Unified order journey --}}
+    @if ($order->status === 'APPROVED_FOR_PRODUCTION')
+        <div class="card border-0 shadow-sm rounded-3 mt-4">
+            <div class="card-header bg-white py-3">
+                <h2 class="h6 card-title mb-0 fw-bold text-dark"><i class="fas fa-timeline text-primary me-2" aria-hidden="true"></i> سجل رحلة الطلب</h2>
+            </div>
+            <div class="card-body">
+                <x-order-timeline :timeline="$timeline" />
             </div>
         </div>
     @endif

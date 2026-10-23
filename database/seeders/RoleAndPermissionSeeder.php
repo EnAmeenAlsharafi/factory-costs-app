@@ -126,6 +126,14 @@ class RoleAndPermissionSeeder extends Seeder
             ['name' => 'production.record_waste', 'display_name' => 'تسجيل هدر الإنتاج', 'module' => 'production'],
             ['name' => 'production.approve_waste', 'display_name' => 'اعتماد سجلات هدر الإنتاج', 'module' => 'production'],
 
+            // Stage 16.5 — Shop-floor execution & assignment
+            ['name' => 'production.assignment.view', 'display_name' => 'عرض لوحة المتابعة وإسناد العمليات', 'module' => 'production'],
+            ['name' => 'production.assignment.manage', 'display_name' => 'إسناد وإعادة إسناد عمليات الإنتاج للموظفين', 'module' => 'production'],
+            ['name' => 'production.operation.start', 'display_name' => 'بدء تنفيذ عملية إنتاجية مسندة', 'module' => 'production'],
+            ['name' => 'production.operation.claim', 'display_name' => 'استلام مهمة من قائمة أعمال القسم', 'module' => 'production'],
+            ['name' => 'production.operation.block', 'display_name' => 'تسجيل عائق يوقف عملية إنتاجية', 'module' => 'production'],
+            ['name' => 'production.operation.unblock', 'display_name' => 'حل العوائق واستئناف العمليات المتوقفة', 'module' => 'production'],
+
             // Inventory
             ['name' => 'inventory.view', 'display_name' => 'عرض أرصدة وحركات المستودع', 'module' => 'inventory'],
             ['name' => 'inventory.receive', 'display_name' => 'تسجيل استلام توريد خامات', 'module' => 'inventory'],
@@ -245,6 +253,12 @@ class RoleAndPermissionSeeder extends Seeder
             'production.manage_routing',
             'production.hold',
             'production.correct_progress',
+            'production.assignment.view',
+            'production.assignment.manage',
+            'production.operation.start',
+            'production.operation.claim',
+            'production.operation.block',
+            'production.operation.unblock',
             'production.manage_rework',
             'production.material_requests',
             'production.report_quality',
@@ -339,6 +353,10 @@ class RoleAndPermissionSeeder extends Seeder
         $productionWorkerPerms = [
             'production.view',
             'production.update_progress',
+            'production.assignment.view',
+            'production.operation.start',
+            'production.operation.claim',
+            'production.operation.block',
             'production.report_quality',
             'production.record_waste',
             'products.view',

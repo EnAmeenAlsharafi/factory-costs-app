@@ -20,6 +20,8 @@ class DeliveryOrder extends Model
         'scheduled_time_notes',
         'status',
         'assigned_user_id',
+        'assigned_at',
+        'assigned_by_user_id',
         'customer_name_snapshot',
         'customer_phone_snapshot',
         'city_snapshot',
@@ -39,6 +41,7 @@ class DeliveryOrder extends Model
     protected $casts = [
         'scheduled_delivery_date' => 'date',
         'installation_required' => 'boolean',
+        'assigned_at' => 'datetime',
         'dispatched_at' => 'datetime',
         'delivered_at' => 'datetime',
         'installed_at' => 'datetime',
@@ -72,6 +75,11 @@ class DeliveryOrder extends Model
     public function dispatchedByUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'dispatched_by_user_id');
+    }
+
+    public function assignedByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_by_user_id');
     }
 
     public function lines(): HasMany

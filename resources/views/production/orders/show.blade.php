@@ -150,6 +150,11 @@
                 <i class="fas fa-boxes me-1"></i> تسليم المنتج الجاهز للمخزن ({{ $order->finishedGoodsReceipts->count() }})
             </button>
         </li>
+        <li class="nav-item">
+            <button class="nav-link fw-bold" id="timeline-tab" data-bs-toggle="tab" data-bs-target="#timeline-pane" type="button">
+                <i class="fas fa-timeline me-1"></i> سجل رحلة الطلب
+            </button>
+        </li>
     </ul>
 
     <!-- Tab Contents -->
@@ -253,6 +258,7 @@
                                 @forelse($order->operations as $op)
                                     @php
                                         $opPct = $op->required_quantity > 0 ? round(($op->completed_quantity / $op->required_quantity) * 100) : 0;
+                                        $openRework = $op->targetReworkActions->isNotEmpty();
                                     @endphp
                                     <div class="list-group-item px-0 py-3">
                                         <div class="d-flex justify-content-between align-items-center mb-2">
@@ -263,19 +269,47 @@
                                                     <small class="text-muted"><i class="fas fa-building me-1"></i>{{ $op->workCenter?->name_ar }} ({{ $op->workCenter?->department?->name_ar }})</small>
                                                 </div>
                                             </div>
-                                            <div>
+                                            <div class="d-flex flex-wrap gap-1 justify-content-end">
+                                                @if ($openRework)
+                                                    <span class="rework-flag"><i class="fas fa-rotate" aria-hidden="true"></i> إعادة عمل</span>
+                                                @endif
                                                 <span class="badge {{ $op->status_badge_class }}">{{ $op->status_arabic }}</span>
                                             </div>
                                         </div>
 
-                                        <div class="d-flex align-items-center gap-3">
+                                        <div class="d-flex align-items-center gap-3 mb-2">
                                             <div class="progress flex-grow-1" style="height: 10px;">
                                                 <div class="progress-bar bg-success" style="width: {{ $opPct }}%"></div>
                                             </div>
                                             <div class="fw-bold fs-7" style="min-width: 100px; text-align: left;">
-                                                <span class="text-success fs-6">{{ $op->completed_quantity }}</span> / {{ $op->required_quantity }} قطعة
+                                                <span class="text-success fs-6 ltr-isolate">{{ $op->completed_quantity }}</span> / {{ $op->required_quantity }} قطعة
                                             </div>
                                         </div>
+
+                                        <div class="d-flex flex-wrap gap-3 fs-8 text-muted">
+                                            <span><i class="fas fa-user-check me-1" aria-hidden="true"></i>{{ $op->assignedUser?->name ?? 'غير مُسند' }}</span>
+                                            @if ($op->started_at)
+                                                <span><i class="fas fa-play me-1" aria-hidden="true"></i>بدء: {{ $op->started_at->format('Y-m-d H:i') }}</span>
+                                            @endif
+                                            @if ($op->completed_at)
+                                                <span><i class="fas fa-flag-checkered me-1" aria-hidden="true"></i>اكتمال: {{ $op->completed_at->format('Y-m-d H:i') }}</span>
+                                            @endif
+                                        </div>
+
+                                        @if ($op->status === 'BLOCKED' && $op->activeBlock)
+                                            <div class="alert alert-danger py-2 mt-2 mb-0 fs-8" role="alert">
+                                                <i class="fas fa-hand me-1" aria-hidden="true"></i>
+                                                <strong>متوقف:</strong> {{ $op->activeBlock->reason_arabic }}
+                                                @if ($op->activeBlock->note) — {{ $op->activeBlock->note }} @endif
+                                                @can('production.operation.unblock')
+                                                    <form action="{{ route('production.operations.resolve-block', $op) }}" method="POST" class="d-inline ms-2"
+                                                          data-confirm="تأكيد حل العائق واستئناف عملية «{{ $op->operation_name_snapshot }}»؟">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-unlock me-1" aria-hidden="true"></i> حل العائق</button>
+                                                    </form>
+                                                @endcan
+                                            </div>
+                                        @endif
                                     </div>
                                 @empty
                                     <div class="text-center py-4 text-muted">
@@ -587,6 +621,18 @@
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 7: Unified Timeline -->
+        <div class="tab-pane fade" id="timeline-pane">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h6 class="fw-bold mb-0 text-dark"><i class="fas fa-timeline text-primary me-2"></i> سجل رحلة أمر الإنتاج</h6>
+                </div>
+                <div class="card-body">
+                    <x-order-timeline :timeline="$timeline" empty-text="لا توجد أحداث تنفيذية مسجلة بعد لهذا الأمر." />
                 </div>
             </div>
         </div>

@@ -27,6 +27,7 @@ class StatusPresenter
         'operation' => [
             'PENDING' => ['label' => 'في الانتظار', 'tone' => 'secondary', 'icon' => 'fa-hourglass-start'],
             'READY' => ['label' => 'جاهز للبدء', 'tone' => 'info', 'icon' => 'fa-play'],
+            'ASSIGNED' => ['label' => 'تم الإسناد', 'tone' => 'primary', 'icon' => 'fa-user-check'],
             'IN_PROGRESS' => ['label' => 'قيد التنفيذ', 'tone' => 'warning', 'icon' => 'fa-gears'],
             'PARTIALLY_COMPLETED' => ['label' => 'منجز جزئياً', 'tone' => 'primary', 'icon' => 'fa-circle-half-stroke'],
             'COMPLETED' => ['label' => 'مكتمل', 'tone' => 'success', 'icon' => 'fa-circle-check'],

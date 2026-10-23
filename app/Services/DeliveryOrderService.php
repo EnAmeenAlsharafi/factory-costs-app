@@ -142,6 +142,8 @@ class DeliveryOrderService
             $oldStatus = $delivery->status;
             $delivery->update([
                 'assigned_user_id' => $assignedDriver->id,
+                'assigned_at' => now(),
+                'assigned_by_user_id' => $assigner->id,
                 'status' => 'ASSIGNED',
             ]);
 

@@ -84,6 +84,9 @@
                     if ($sidebarUser->can('production.update_progress')) {
                         $quickLinks[] = ['route' => 'production.queue.index', 'params' => [], 'active' => 'production.queue.*', 'icon' => 'fa-list-check', 'label' => 'مهام قسمي'];
                     }
+                    if ($sidebarUser->can('production.operation.start') || $sidebarUser->can('production.operation.claim')) {
+                        $quickLinks[] = ['route' => 'production.my-tasks', 'params' => [], 'active' => 'production.my-tasks', 'icon' => 'fa-user-check', 'label' => 'مهامي (الإنتاج)'];
+                    }
                     if ($sidebarUser->can('delivery.complete')) {
                         $quickLinks[] = ['route' => 'delivery.orders.my-tasks', 'params' => [], 'active' => 'delivery.orders.my-tasks', 'icon' => 'fa-truck-fast', 'label' => 'مهامي (التوصيل)'];
                     }
@@ -295,7 +298,7 @@
 
             <!-- Section 5: Manufacturing Execution -->
             @php
-                $isProductionActive = request()->routeIs('production.orders.*') || request()->routeIs('production.material-requests.*') || request()->routeIs('production.queue.*') || request()->routeIs('production.quality-incidents.*') || request()->routeIs('production.rework.*') || request()->routeIs('production.waste.*') || request()->routeIs('production.routings.*') || request()->routeIs('production.board.*') || request()->routeIs('production.reports.*');
+                $isProductionActive = request()->routeIs('production.orders.*') || request()->routeIs('production.material-requests.*') || request()->routeIs('production.queue.*') || request()->routeIs('production.my-tasks') || request()->routeIs('production.assignment.*') || request()->routeIs('production.quality-incidents.*') || request()->routeIs('production.rework.*') || request()->routeIs('production.waste.*') || request()->routeIs('production.routings.*') || request()->routeIs('production.board.*') || request()->routeIs('production.reports.*');
             @endphp
             @if (auth()->user() && auth()->user()->can('production.view'))
                 <div class="sidebar-section">
@@ -330,6 +333,22 @@
                                 <span class="sidebar-text">أعمال الأقسام (WIP)</span>
                             </a>
                         </li>
+                        @if (auth()->user()->can('production.operation.start') || auth()->user()->can('production.operation.claim'))
+                            <li class="nav-item">
+                                <a href="{{ route('production.my-tasks') }}" class="sidebar-nav-link {{ request()->routeIs('production.my-tasks') ? 'active' : '' }}" title="مهامي">
+                                    <span class="sidebar-icon"><i class="fas fa-user-check"></i></span>
+                                    <span class="sidebar-text">مهامي</span>
+                                </a>
+                            </li>
+                        @endif
+                        @can('production.assignment.view')
+                            <li class="nav-item">
+                                <a href="{{ route('production.assignment.index') }}" class="sidebar-nav-link {{ request()->routeIs('production.assignment.*') ? 'active' : '' }}" title="إسناد العمليات">
+                                    <span class="sidebar-icon"><i class="fas fa-user-gear"></i></span>
+                                    <span class="sidebar-text">إسناد العمليات</span>
+                                </a>
+                            </li>
+                        @endcan
                         <li class="nav-item">
                             <a href="{{ route('production.quality-incidents.index') }}" class="sidebar-nav-link {{ request()->routeIs('production.quality-incidents.*') ? 'active' : '' }}" title="حالات الجودة">
                                 <span class="sidebar-icon"><i class="fas fa-exclamation-triangle"></i></span>

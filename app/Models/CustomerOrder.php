@@ -92,6 +92,21 @@ class CustomerOrder extends Model
         return $this->hasMany(CustomerOrderLine::class);
     }
 
+    public function productionOrders(): HasMany
+    {
+        return $this->hasMany(ProductionOrder::class);
+    }
+
+    public function deliveryOrders(): HasMany
+    {
+        return $this->hasMany(DeliveryOrder::class);
+    }
+
+    public function finishedGoodsReceipts(): HasMany
+    {
+        return $this->hasMany(FinishedGoodsReceipt::class);
+    }
+
     public function changes(): HasMany
     {
         return $this->hasMany(CustomerOrderChange::class)->latest('id');

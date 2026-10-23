@@ -7,6 +7,7 @@ use App\Models\CustomerOrder;
 use App\Models\CustomerOrderLine;
 use App\Models\ProductionOrder;
 use App\Models\ProductionRouting;
+use App\Services\OrderTimelineService;
 use App\Services\ProductionCostService;
 use App\Services\ProductionOrderService;
 use Illuminate\Http\RedirectResponse;
@@ -15,7 +16,10 @@ use Illuminate\View\View;
 
 class ProductionOrderController extends Controller
 {
-    public function __construct(protected ProductionOrderService $productionOrderService) {}
+    public function __construct(
+        protected ProductionOrderService $productionOrderService,
+        protected OrderTimelineService $timelineService,
+    ) {}
 
     public function index(Request $request): View
     {
@@ -114,6 +118,9 @@ class ProductionOrderController extends Controller
             'routing',
             'operations.workCenter.department',
             'operations.progressLogs.user',
+            'operations.assignedUser',
+            'operations.activeBlock',
+            'operations.targetReworkActions' => fn ($r) => $r->whereNotIn('status', ['COMPLETED', 'CANCELLED']),
             'materialRequirements.material.baseUnit',
             'materialRequests.lines.material.baseUnit',
             'materialRequests.requestedFromDepartment',
@@ -131,8 +138,9 @@ class ProductionOrderController extends Controller
         $costService = app(ProductionCostService::class);
         $costSummary = $costService->calculateOrderMaterialCost($order);
         $canViewCost = $request->user()->can('costing.view');
+        $timeline = $this->timelineService->forProductionOrder($order);
 
-        return view('production.orders.show', compact('order', 'costSummary', 'canViewCost'));
+        return view('production.orders.show', compact('order', 'costSummary', 'canViewCost', 'timeline'));
     }
 
     public function releaseForm(Request $request, ProductionOrder $order): View

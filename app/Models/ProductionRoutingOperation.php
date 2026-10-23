@@ -20,12 +20,14 @@ class ProductionRoutingOperation extends Model
         'branch_key',
         'is_parallel',
         'is_required',
+        'expected_minutes',
     ];
 
     protected $casts = [
         'sequence_number' => 'integer',
         'is_parallel' => 'boolean',
         'is_required' => 'boolean',
+        'expected_minutes' => 'integer',
     ];
 
     public function routing(): BelongsTo
