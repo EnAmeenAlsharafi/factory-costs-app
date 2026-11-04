@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\CustomerOrderLine;
 use App\Models\FabricColor;
 use App\Models\InventoryAdjustment;
 use App\Models\InventoryLot;
@@ -698,6 +699,31 @@ class InventoryService
             ->where('remaining_quantity', '>', 0)
             ->get()
             ->sum(fn ($lot) => $lot->remaining_quantity * $lot->unit_cost);
+    }
+
+    /**
+     * On-hand / committed / available quantity for a sellable ready-stock
+     * product (Stage 16.6). Committed = quantity on READY_STOCK order lines
+     * belonging to non-cancelled customer orders.
+     *
+     * @return array{on_hand: float, committed: float, available: float}
+     */
+    public function getReadyProductAvailability(Material $material): array
+    {
+        $onHand = (float) InventoryLot::where('material_id', $material->id)
+            ->where('status', 'ACTIVE')
+            ->sum('remaining_quantity');
+
+        $committed = (float) CustomerOrderLine::where('material_id', $material->id)
+            ->where('line_type', 'READY_STOCK')
+            ->whereHas('customerOrder', fn ($q) => $q->where('status', '!=', 'CANCELLED'))
+            ->sum('quantity');
+
+        return [
+            'on_hand' => $onHand,
+            'committed' => $committed,
+            'available' => max(0.0, round($onHand - $committed, 4)),
+        ];
     }
 
     /**
