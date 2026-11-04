@@ -15,6 +15,7 @@ class CustomerOrderLine extends Model
         'customer_order_id',
         'product_model_id',
         'product_configuration_id',
+        'approved_recipe_version_id',
         'customer_product_alias_id',
         'custom_design',
         'custom_design_name',
