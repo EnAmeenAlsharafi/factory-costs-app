@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Department;
 use App\Models\ProductionOrder;
+use App\Models\ProductionOrderOperation;
 use App\Models\ProductionWasteReason;
 use App\Models\ProductionWasteRecord;
 use App\Models\QualityIncident;
@@ -95,5 +96,41 @@ class ProductionReportController extends Controller
         $byDepartment = $incidents->groupBy(fn ($i) => $i->responsibleDepartment?->name_ar ?? 'غير محدد')->map->count();
 
         return view('production.reports.quality_summary', compact('incidents', 'bySeverity', 'byStatus', 'byDisposition', 'byDepartment'));
+    }
+
+    public function employeeProductivity(Request $request): View
+    {
+        abort_if(! $request->user()->can('production.view'), 403);
+
+        $query = ProductionOrderOperation::with(['assignedUser', 'workCenter.department'])
+            ->whereNotNull('assigned_user_id');
+
+        if ($request->filled('department_id')) {
+            $query->whereHas('workCenter', fn ($wc) => $wc->where('department_id', $request->department_id));
+        }
+
+        if ($request->filled('from_date')) {
+            $query->whereDate('assigned_at', '>=', $request->from_date);
+        }
+
+        if ($request->filled('to_date')) {
+            $query->whereDate('assigned_at', '<=', $request->to_date);
+        }
+
+        $operations = $query->get();
+
+        $byEmployee = $operations->groupBy('assigned_user_id')->map(function ($group) {
+            return [
+                'employee' => $group->first()->assignedUser,
+                'assigned_count' => $group->count(),
+                'completed_quantity' => $group->sum('completed_quantity'),
+                'in_progress_count' => $group->whereIn('status', ['IN_PROGRESS', 'PARTIALLY_COMPLETED'])->count(),
+                'blocked_count' => $group->where('status', 'BLOCKED')->count(),
+            ];
+        })->sortByDesc('completed_quantity');
+
+        $departments = Department::where('is_production_department', true)->get();
+
+        return view('production.reports.employee_productivity', compact('byEmployee', 'departments'));
     }
 }

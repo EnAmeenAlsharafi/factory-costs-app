@@ -2,9 +2,11 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Role;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class UserUpdateRequest extends FormRequest
 {
@@ -55,5 +57,17 @@ class UserUpdateRequest extends FormRequest
             'password.min' => 'يجب ألا تقل كلمة المرور عن 6 خانات عند التغيير.',
             'password.confirmed' => 'تأكيد كلمة المرور الجديدة غير متطابق.',
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            if ($this->filled('role_id') && ! $this->filled('department_id')) {
+                $roleName = Role::find($this->input('role_id'))?->name;
+                if ($roleName === 'production_worker') {
+                    $validator->errors()->add('department_id', 'القسم التشغيلي إلزامي لموظفي الإنتاج.');
+                }
+            }
+        });
     }
 }

@@ -217,6 +217,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/reports/cost', [ProductionReportController::class, 'actualVsPlannedCost'])->name('reports.cost');
         Route::get('/reports/waste', [ProductionReportController::class, 'wasteAnalysis'])->name('reports.waste');
         Route::get('/reports/quality', [ProductionReportController::class, 'qualitySummary'])->name('reports.quality');
+        Route::get('/reports/employee-productivity', [ProductionReportController::class, 'employeeProductivity'])->name('reports.employee-productivity');
     });
 
     Route::prefix('inventory')->name('inventory.')->group(function () {

@@ -6,11 +6,14 @@ use App\Models\Customer;
 use App\Models\CustomerOrder;
 use App\Models\CustomerOrderLine;
 use App\Models\CustomerType;
+use App\Models\DeliveryOrder;
 use App\Models\ProductionOrder;
 use App\Models\ProductModel;
 use App\Models\Role;
 use App\Models\SalesChannel;
 use App\Models\User;
+use App\Models\Warehouse;
+use App\Services\FinishedGoodsService;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -176,6 +179,50 @@ class DeliveryPermissionsTest extends TestCase
 
         $this->actingAs($deliveryUser)
             ->get(route('recipes.create'))
+            ->assertStatus(403);
+    }
+
+    public function test_delivery_dispatcher_can_assign_without_full_production_manager_powers(): void
+    {
+        $dispatcherRole = Role::where('name', 'delivery_dispatcher')->first();
+        $dispatcher = User::factory()->create(['role_id' => $dispatcherRole->id, 'is_active' => true]);
+
+        $deliveryRole = Role::where('name', 'delivery_user')->first();
+        $driver = User::factory()->create(['role_id' => $deliveryRole->id, 'is_active' => true]);
+
+        $warehouse = Warehouse::create(['code' => 'FG-PERM-TEST', 'name_ar' => 'مخزن منتجات جاهزة - اختبار', 'is_active' => true]);
+        $fgService = app(FinishedGoodsService::class);
+        $receipt = $fgService->createReceipt($this->productionOrder, $this->authorizedUser, [
+            'warehouse_id' => $warehouse->id,
+            'received_quantity' => 1,
+            'receipt_date' => now()->format('Y-m-d'),
+        ]);
+        $fgService->postReceipt($receipt, $this->authorizedUser);
+
+        $createResponse = $this->actingAs($this->authorizedUser)->post(route('delivery.orders.store'), [
+            'customer_order_id' => $this->customerOrder->id,
+            'customer_name_snapshot' => 'عميل الصلاحيات',
+            'customer_phone_snapshot' => '0599999999',
+            'scheduled_delivery_date' => now()->addDay()->format('Y-m-d'),
+            'action' => 'ready',
+            'lines' => [
+                ['production_order_id' => $this->productionOrder->id, 'quantity' => 1],
+            ],
+        ]);
+        $createResponse->assertSessionHasNoErrors();
+        $delivery = DeliveryOrder::first();
+        $this->assertNotNull($delivery, 'Delivery order was not created: '.session('error'));
+
+        // Dispatcher CAN assign a delivery order to a driver.
+        $this->actingAs($dispatcher)
+            ->post(route('delivery.orders.assign', $delivery), ['assigned_user_id' => $driver->id])
+            ->assertRedirect();
+
+        $this->assertEquals($driver->id, $delivery->fresh()->assigned_user_id);
+
+        // Dispatcher does NOT inherit full production_manager powers.
+        $this->actingAs($dispatcher)
+            ->get(route('recipes.index'))
             ->assertStatus(403);
     }
 }

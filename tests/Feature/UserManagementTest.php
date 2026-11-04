@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Department;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -24,12 +25,14 @@ class UserManagementTest extends TestCase
     {
         $admin = User::where('username', 'admin')->first();
         $role = Role::where('name', 'production_worker')->first();
+        $department = Department::where('code', 'CARPENTRY')->first();
 
         $response = $this->actingAs($admin)->post(route('users.store'), [
             'name' => 'نجار جديد',
             'username' => 'new.carpenter',
             'email' => 'carpenter@sadir-factory.com',
             'role_id' => $role->id,
+            'department_id' => $department->id,
             'password' => 'secret123',
             'password_confirmation' => 'secret123',
             'is_active' => '1',
@@ -40,8 +43,27 @@ class UserManagementTest extends TestCase
             'username' => 'new.carpenter',
             'name' => 'نجار جديد',
             'role_id' => $role->id,
+            'department_id' => $department->id,
             'is_active' => true,
         ]);
+    }
+
+    public function test_production_worker_requires_a_department(): void
+    {
+        $admin = User::where('username', 'admin')->first();
+        $role = Role::where('name', 'production_worker')->first();
+
+        $response = $this->actingAs($admin)->post(route('users.store'), [
+            'name' => 'نجار بلا قسم',
+            'username' => 'no.department.worker',
+            'role_id' => $role->id,
+            'password' => 'secret123',
+            'password_confirmation' => 'secret123',
+            'is_active' => '1',
+        ]);
+
+        $response->assertSessionHasErrors('department_id');
+        $this->assertDatabaseMissing('users', ['username' => 'no.department.worker']);
     }
 
     /**

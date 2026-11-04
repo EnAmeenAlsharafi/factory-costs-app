@@ -52,6 +52,12 @@ class RoleAndPermissionSeeder extends Seeder
                 'is_system' => true,
             ],
             [
+                'name' => 'delivery_dispatcher',
+                'display_name' => 'مسؤول إخراج الطلبات',
+                'description' => 'توزيع واعتماد إسناد طلبات التوصيل الجاهزة على مناديب التوصيل والتركيب الميدانيين.',
+                'is_system' => true,
+            ],
+            [
                 'name' => 'sales_user',
                 'display_name' => 'المبيعات',
                 'description' => 'إنشاء عروض الأسعار، متابعة مبيعات الجملة والمعارض والعملاء المباشرين.',
@@ -380,6 +386,16 @@ class RoleAndPermissionSeeder extends Seeder
         ];
         $roles['delivery_user']->permissions()->syncWithoutDetaching(
             collect($deliveryUserPerms)->map(fn ($p) => $permissions[$p]->id)->toArray()
+        );
+
+        // Delivery Dispatcher — assigns ready delivery orders to field delivery users.
+        $deliveryDispatcherPerms = [
+            'delivery.view',
+            'delivery.assign',
+            'orders.view',
+        ];
+        $roles['delivery_dispatcher']->permissions()->syncWithoutDetaching(
+            collect($deliveryDispatcherPerms)->map(fn ($p) => $permissions[$p]->id)->toArray()
         );
 
         // Sales / Commercial User

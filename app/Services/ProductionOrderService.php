@@ -191,6 +191,13 @@ class ProductionOrderService
                     'authorization' => 'غير مصرح لك بتحديث إنجاز عمليات خارج قسمك التشغيلي.',
                 ]);
             }
+
+            // An operation assigned to another employee cannot have progress recorded by this one.
+            if ($op->assigned_user_id && $op->assigned_user_id !== $user->id) {
+                throw ValidationException::withMessages([
+                    'authorization' => 'هذه المهمة مُسندة لموظف آخر، لا يمكنك تسجيل إنجاز عليها.',
+                ]);
+            }
         }
 
         if ($addedQty <= 0) {
@@ -217,6 +224,21 @@ class ProductionOrderService
 
         return DB::transaction(function () use ($op, $po, $addedQty, $eventType, $notes, $user) {
             $lockedOp = ProductionOrderOperation::where('id', $op->id)->lockForUpdate()->firstOrFail();
+
+            if (! $user->isAdministrator() && ! $user->hasRole('production_manager')) {
+                if ($lockedOp->assigned_user_id && $lockedOp->assigned_user_id !== $user->id) {
+                    throw ValidationException::withMessages([
+                        'authorization' => 'هذه المهمة مُسندة لموظف آخر، لا يمكنك تسجيل إنجاز عليها.',
+                    ]);
+                }
+            }
+
+            if ($lockedOp->assigned_user_id === null) {
+                $lockedOp->assigned_user_id = $user->id;
+                $lockedOp->assigned_at = now();
+                $lockedOp->assigned_by_user_id = $user->id;
+            }
+
             $newCompleted = $lockedOp->completed_quantity + $addedQty;
 
             if ($newCompleted > $lockedOp->required_quantity) {

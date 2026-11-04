@@ -5,6 +5,7 @@ namespace Tests\Feature\Production;
 use App\Models\Customer;
 use App\Models\CustomerOrder;
 use App\Models\CustomerOrderLine;
+use App\Models\Department;
 use App\Models\ManufacturingRecipe;
 use App\Models\ManufacturingRecipeVersion;
 use App\Models\ProductionOperationProgress;
@@ -122,5 +123,82 @@ class OperationProgressTest extends TestCase
 
         $this->assertSame(12, (int) $operation->fresh()->completed_quantity);
         $this->assertSame(1, ProductionOperationProgress::where('production_order_operation_id', $operation->id)->count());
+    }
+
+    public function test_recording_progress_auto_assigns_an_unassigned_operation_to_the_worker(): void
+    {
+        $carpentryOp = $this->po->operations->where('operation_code', 'OP_CARPENTRY')->first();
+        $department = Department::where('code', 'CARPENTRY')->first();
+        $workerRole = Role::where('name', 'production_worker')->first();
+        $worker = User::factory()->create(['role_id' => $workerRole->id, 'is_active' => true, 'department_id' => $department->id]);
+
+        $this->assertNull($carpentryOp->assigned_user_id);
+
+        $this->actingAs($worker)->post(route('production.operations.progress', $carpentryOp), [
+            'added_quantity' => 4,
+        ])->assertRedirect();
+
+        $carpentryOp->refresh();
+        $this->assertEquals($worker->id, $carpentryOp->assigned_user_id);
+        $this->assertEquals(4, $carpentryOp->completed_quantity);
+    }
+
+    public function test_worker_cannot_record_progress_on_a_colleagues_assigned_operation(): void
+    {
+        $carpentryOp = $this->po->operations->where('operation_code', 'OP_CARPENTRY')->first();
+        $department = Department::where('code', 'CARPENTRY')->first();
+        $workerRole = Role::where('name', 'production_worker')->first();
+        $workerA = User::factory()->create(['role_id' => $workerRole->id, 'is_active' => true, 'department_id' => $department->id]);
+        $workerB = User::factory()->create(['role_id' => $workerRole->id, 'is_active' => true, 'department_id' => $department->id]);
+
+        $this->actingAs($workerA)->post(route('production.operations.progress', $carpentryOp), [
+            'added_quantity' => 3,
+        ])->assertRedirect();
+
+        $carpentryOp->refresh();
+        $this->assertEquals($workerA->id, $carpentryOp->assigned_user_id);
+
+        $response = $this->actingAs($workerB)->post(route('production.operations.progress', $carpentryOp), [
+            'added_quantity' => 2,
+        ]);
+
+        $response->assertSessionHasErrors(['authorization']);
+        $this->assertEquals(3, $carpentryOp->fresh()->completed_quantity);
+    }
+
+    public function test_production_manager_can_record_progress_regardless_of_assignment(): void
+    {
+        $carpentryOp = $this->po->operations->where('operation_code', 'OP_CARPENTRY')->first();
+        $department = Department::where('code', 'CARPENTRY')->first();
+        $workerRole = Role::where('name', 'production_worker')->first();
+        $worker = User::factory()->create(['role_id' => $workerRole->id, 'is_active' => true, 'department_id' => $department->id]);
+
+        $this->actingAs($worker)->post(route('production.operations.progress', $carpentryOp), [
+            'added_quantity' => 2,
+        ])->assertRedirect();
+
+        $this->actingAs($this->manager)->post(route('production.operations.progress', $carpentryOp), [
+            'added_quantity' => 1,
+        ])->assertRedirect();
+
+        $this->assertEquals(3, $carpentryOp->fresh()->completed_quantity);
+    }
+
+    public function test_employee_productivity_report_shows_assigned_employee_totals(): void
+    {
+        $carpentryOp = $this->po->operations->where('operation_code', 'OP_CARPENTRY')->first();
+        $department = Department::where('code', 'CARPENTRY')->first();
+        $workerRole = Role::where('name', 'production_worker')->first();
+        $worker = User::factory()->create(['role_id' => $workerRole->id, 'name' => 'النجار سالم', 'is_active' => true, 'department_id' => $department->id]);
+
+        $this->actingAs($worker)->post(route('production.operations.progress', $carpentryOp), [
+            'added_quantity' => 6,
+        ])->assertRedirect();
+
+        $response = $this->actingAs($this->manager)->get(route('production.reports.employee-productivity'));
+
+        $response->assertOk();
+        $response->assertSee('النجار سالم');
+        $response->assertSee('6');
     }
 }

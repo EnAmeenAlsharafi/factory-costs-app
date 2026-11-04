@@ -58,6 +58,22 @@
                 </div>
             </div>
         </div>
+
+        <!-- Report 4: Employee Productivity -->
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4 text-center">
+                    <div class="bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                        <i class="fas fa-user-check fa-2x"></i>
+                    </div>
+                    <h5 class="fw-bold text-dark mb-2">إنتاجية الموظفين (Employee Productivity)</h5>
+                    <p class="text-muted fs-7 mb-4">عدد المهام المُسندة والكمية المنجزة لكل موظف، مع حالات قيد التنفيذ والعوائق، قابلة للتصفية حسب القسم والتاريخ.</p>
+                    <a href="{{ route('production.reports.employee-productivity') }}" class="btn btn-success w-100">
+                        <i class="fas fa-users me-1"></i> استعراض تقرير الإنتاجية
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 @endsection
