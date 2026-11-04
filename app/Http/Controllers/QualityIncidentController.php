@@ -7,6 +7,7 @@ use App\Models\Department;
 use App\Models\ProductionOrder;
 use App\Models\QualityIncident;
 use App\Services\QualityIncidentService;
+use Exception;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -67,10 +68,14 @@ class QualityIncidentController extends Controller
     {
         $productionOrder = ProductionOrder::findOrFail($request->production_order_id);
 
-        $incident = $this->incidentService->createIncident($productionOrder, $request->user(), $request->validated());
+        try {
+            $incident = $this->incidentService->createIncident($productionOrder, $request->user(), $request->validated());
 
-        return redirect()->route('production.quality-incidents.show', $incident)
-            ->with('success', "تم تسجيل بلاغ الجودة رقم {$incident->incident_number} بنجاح.");
+            return redirect()->route('production.quality-incidents.show', $incident)
+                ->with('success', "تم تسجيل بلاغ الجودة رقم {$incident->incident_number} بنجاح.");
+        } catch (Exception $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
     }
 
     public function show(Request $request, QualityIncident $qualityIncident): View

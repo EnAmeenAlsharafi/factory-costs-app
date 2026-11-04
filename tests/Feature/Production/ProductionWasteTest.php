@@ -118,4 +118,32 @@ class ProductionWasteTest extends TestCase
         $this->assertEquals(100.00, (float) $waste->total_cost);
         $this->assertEquals($this->productionOrder->id, $waste->production_order_id);
     }
+
+    public function test_recording_waste_against_a_lot_deducts_inventory_and_logs_movement(): void
+    {
+        $lot = InventoryLot::where('lot_code', 'LOT-WASTE-TEST')->first();
+
+        $response = $this->actingAs($this->manager)->post(route('production.waste.store'), [
+            'production_order_id' => $this->productionOrder->id,
+            'material_id' => $this->material->id,
+            'inventory_lot_id' => $lot->id,
+            'quantity' => 6,
+            'unit_id' => $this->material->base_unit_id,
+            'waste_reason_id' => $this->wasteReason->id,
+            'occurred_at' => now()->format('Y-m-d\TH:i'),
+        ]);
+
+        $response->assertRedirect(route('production.waste.index'));
+
+        $lot->refresh();
+        $this->assertEquals(44, (float) $lot->remaining_quantity);
+        $this->assertEquals('ACTIVE', $lot->status);
+
+        $this->assertDatabaseHas('inventory_movements', [
+            'movement_type' => 'ADJUSTMENT_OUT',
+            'direction' => 'OUT',
+            'inventory_lot_id' => $lot->id,
+            'quantity' => 6,
+        ]);
+    }
 }

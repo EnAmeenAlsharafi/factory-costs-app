@@ -20,6 +20,17 @@ class QualityIncidentService
     public function createIncident(ProductionOrder $productionOrder, User $user, array $data): QualityIncident
     {
         return DB::transaction(function () use ($productionOrder, $user, $data) {
+            if (! empty($data['production_order_operation_id'])) {
+                $duplicate = QualityIncident::where('production_order_operation_id', $data['production_order_operation_id'])
+                    ->where('incident_type', $data['incident_type'])
+                    ->whereNotIn('status', ['RESOLVED', 'CANCELLED'])
+                    ->first();
+
+                if ($duplicate) {
+                    throw new Exception("توجد بالفعل حالة جودة مفتوحة لنفس العملية ونفس نوع العيب [{$duplicate->incident_number}]. يرجى تحديث البلاغ الحالي بدلاً من إنشاء بلاغ جديد.");
+                }
+            }
+
             $incidentNumber = DocumentNumberService::generateIncidentNumber();
 
             $incident = QualityIncident::create([

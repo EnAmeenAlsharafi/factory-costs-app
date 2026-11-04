@@ -6,13 +6,20 @@ use App\Models\Customer;
 use App\Models\CustomerOrder;
 use App\Models\CustomerOrderLine;
 use App\Models\Department;
+use App\Models\Material;
+use App\Models\MaterialCategory;
 use App\Models\ProductionOrder;
+use App\Models\ProductionOrderOperation;
 use App\Models\ProductionReworkAction;
+use App\Models\ProductionWasteReason;
 use App\Models\QualityIncident;
 use App\Models\Role;
 use App\Models\SalesChannel;
+use App\Models\UnitOfMeasure;
 use App\Models\User;
+use App\Models\WorkCenter;
 use App\Services\QualityIncidentService;
+use Exception;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -115,6 +122,100 @@ class QualityIncidentAndReworkTest extends TestCase
         $service->completeReworkAction($rework, $this->manager);
 
         $this->assertEquals('COMPLETED', $rework->fresh()->status);
+        $this->assertEquals('RESOLVED', $incident->fresh()->status);
+        $this->assertNotNull($incident->fresh()->resolved_at);
+    }
+
+    public function test_worker_cannot_set_disposition_when_creating_incident(): void
+    {
+        $workerRole = Role::where('name', 'production_worker')->first();
+        $worker = User::factory()->create(['role_id' => $workerRole->id, 'is_active' => true, 'department_id' => $this->department->id]);
+
+        $response = $this->actingAs($worker)->post(route('production.quality-incidents.store'), [
+            'production_order_id' => $this->productionOrder->id,
+            'affected_quantity' => 1,
+            'detected_department_id' => $this->department->id,
+            'incident_type' => 'WRONG_DIMENSION',
+            'description' => 'خطأ اكتشفه النجار',
+            'severity' => 'HIGH',
+            'disposition' => 'ACCEPT_AS_IS',
+        ]);
+
+        $response->assertSessionHasErrors('disposition');
+        $this->assertDatabaseCount('quality_incidents', 0);
+    }
+
+    public function test_cannot_create_duplicate_open_incident_for_same_operation_and_type(): void
+    {
+        $service = app(QualityIncidentService::class);
+        $operation = ProductionOrderOperation::create([
+            'production_order_id' => $this->productionOrder->id,
+            'work_center_id' => WorkCenter::first()->id,
+            'operation_code' => 'OP_CARPENTRY',
+            'operation_name_snapshot' => 'النجارة',
+            'sequence_number' => 1,
+            'required_quantity' => 1,
+            'status' => 'IN_PROGRESS',
+        ]);
+
+        $service->createIncident($this->productionOrder, $this->manager, [
+            'production_order_operation_id' => $operation->id,
+            'affected_quantity' => 1,
+            'detected_department_id' => $this->department->id,
+            'incident_type' => 'WRONG_FABRIC',
+            'description' => 'قماش خاطئ - اكتشاف أول',
+            'severity' => 'MEDIUM',
+        ]);
+
+        $this->expectException(Exception::class);
+
+        $service->createIncident($this->productionOrder, $this->manager, [
+            'production_order_operation_id' => $operation->id,
+            'affected_quantity' => 1,
+            'detected_department_id' => $this->department->id,
+            'incident_type' => 'WRONG_FABRIC',
+            'description' => 'نفس العيب - اكتشاف ثانٍ من قسم آخر',
+            'severity' => 'MEDIUM',
+        ]);
+    }
+
+    public function test_recording_waste_linked_to_scrap_incident_resolves_it(): void
+    {
+        $service = app(QualityIncidentService::class);
+
+        $incident = $service->createIncident($this->productionOrder, $this->manager, [
+            'affected_quantity' => 1,
+            'detected_department_id' => $this->department->id,
+            'incident_type' => 'MATERIAL_DAMAGE',
+            'description' => 'تلف كامل يستوجب الإتلاف',
+            'severity' => 'HIGH',
+            'disposition' => 'SCRAP',
+        ]);
+
+        $this->assertEquals('SCRAP', $incident->disposition);
+        $this->assertEquals('ACTION_REQUIRED', $incident->status);
+
+        $category = MaterialCategory::firstOrCreate(['code' => 'WOOD'], ['name_ar' => 'خشب', 'is_active' => true]);
+        $unit = UnitOfMeasure::first();
+        $material = Material::create([
+            'code' => 'MAT-TEST-SCRAP-999',
+            'name_ar' => 'مادة اختبار الإتلاف',
+            'material_category_id' => $category->id,
+            'base_unit_id' => $unit->id,
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($this->manager)->post(route('production.waste.store'), [
+            'production_order_id' => $this->productionOrder->id,
+            'quality_incident_id' => $incident->id,
+            'material_id' => $material->id,
+            'quantity' => 1,
+            'unit_id' => $material->base_unit_id,
+            'waste_reason_id' => ProductionWasteReason::first()->id,
+            'occurred_at' => now()->format('Y-m-d\TH:i'),
+        ]);
+
+        $response->assertRedirect(route('production.waste.index'));
         $this->assertEquals('RESOLVED', $incident->fresh()->status);
         $this->assertNotNull($incident->fresh()->resolved_at);
     }

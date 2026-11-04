@@ -13,6 +13,7 @@ use App\Models\Role;
 use App\Models\SalesChannel;
 use App\Models\User;
 use App\Services\ProductionOrderService;
+use App\Services\QualityIncidentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -102,5 +103,38 @@ class ProductionCompletionTest extends TestCase
         $this->assertEquals(20, $this->po->completed_quantity);
         $this->assertEquals('COMPLETED', $this->po->status);
         $this->assertNotNull($this->po->completed_at);
+    }
+
+    public function test_full_quantity_with_open_quality_incident_stays_partially_completed(): void
+    {
+        $carpentry = $this->po->operations->where('operation_code', 'OP_CARPENTRY')->first();
+        $foam = $this->po->operations->where('operation_code', 'OP_FOAM')->first();
+        $upholstery = $this->po->operations->where('operation_code', 'OP_UPHOLSTERY')->first();
+        $boxProd = $this->po->operations->where('operation_code', 'OP_BOX_PROD')->first();
+        $boxPrep = $this->po->operations->where('operation_code', 'OP_BOX_PREP')->first();
+        $assembly = $this->po->operations->where('operation_code', 'OP_ASSEMBLY')->first();
+        $packaging = $this->po->operations->where('operation_code', 'OP_PACKAGING')->first();
+
+        $this->service->recordProgress($carpentry, 20, 'PROGRESS', null, $this->manager);
+        $this->service->recordProgress($foam, 20, 'PROGRESS', null, $this->manager);
+        $this->service->recordProgress($upholstery, 20, 'PROGRESS', null, $this->manager);
+        $this->service->recordProgress($boxProd, 20, 'PROGRESS', null, $this->manager);
+        $this->service->recordProgress($boxPrep, 20, 'PROGRESS', null, $this->manager);
+        $this->service->recordProgress($assembly, 20, 'PROGRESS', null, $this->manager);
+
+        app(QualityIncidentService::class)->createIncident($this->po, $this->manager, [
+            'affected_quantity' => 1,
+            'detected_department_id' => $packaging->workCenter->department_id,
+            'incident_type' => 'WORKMANSHIP_DEFECT',
+            'description' => 'عيب مكتشف قبل التغليف النهائي',
+            'severity' => 'MEDIUM',
+        ]);
+
+        $this->service->recordProgress($packaging, 20, 'PROGRESS', null, $this->manager);
+
+        $this->po->refresh();
+        $this->assertEquals(20, $this->po->completed_quantity);
+        $this->assertEquals('PARTIALLY_COMPLETED', $this->po->status);
+        $this->assertNull($this->po->completed_at);
     }
 }

@@ -17,6 +17,7 @@ class WasteRecordFormRequest extends FormRequest
             'production_order_id' => 'required|exists:production_orders,id',
             'production_order_operation_id' => 'nullable|exists:production_order_operations,id',
             'quality_incident_id' => 'nullable|exists:quality_incidents,id',
+            'material_issue_line_id' => 'nullable|exists:material_issue_lines,id',
             'material_id' => 'required|exists:materials,id',
             'fabric_color_id' => 'nullable|exists:fabric_colors,id',
             'inventory_lot_id' => 'nullable|exists:inventory_lots,id',

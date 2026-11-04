@@ -7,6 +7,7 @@ use App\Models\ProductionOperationProgress;
 use App\Models\ProductionOrder;
 use App\Models\ProductionOrderOperation;
 use App\Models\ProductionRouting;
+use App\Models\QualityIncident;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -448,7 +449,11 @@ class ProductionOrderService
 
         $po->completed_quantity = $finalOp->completed_quantity;
 
-        if ($po->completed_quantity >= $po->released_quantity) {
+        $hasOpenQualityIncidents = QualityIncident::where('production_order_id', $po->id)
+            ->whereNotIn('status', ['RESOLVED', 'CANCELLED'])
+            ->exists();
+
+        if ($po->completed_quantity >= $po->released_quantity && ! $hasOpenQualityIncidents) {
             $po->status = 'COMPLETED';
             $po->completed_at = now();
         } elseif ($po->completed_quantity > 0 || $ops->where('completed_quantity', '>', 0)->isNotEmpty()) {

@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 class QualityIncidentFormRequest extends FormRequest
 {
@@ -26,5 +27,14 @@ class QualityIncidentFormRequest extends FormRequest
             'disposition_notes' => 'nullable|string|max:1000',
             'notes' => 'nullable|string|max:1000',
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            if ($this->filled('disposition') && ! $this->user()?->can('production.manage_quality')) {
+                $validator->errors()->add('disposition', 'لا تملك صلاحية اتخاذ قرار معالجة الجودة عند إنشاء البلاغ. سجّل البلاغ أولاً ثم اطلب من مسؤول الجودة اتخاذ القرار.');
+            }
+        });
     }
 }
