@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
             StandardBedSizeSeeder::class,
             WorkCenterSeeder::class,
             DefaultBedRoutingSeeder::class,
+            StorageBedRoutingSeeder::class,
             ProductionWasteReasonSeeder::class,
         ]);
 

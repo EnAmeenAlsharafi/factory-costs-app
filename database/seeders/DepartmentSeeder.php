@@ -59,6 +59,15 @@ class DepartmentSeeder extends Seeder
                 'is_active' => true,
             ],
             [
+                'code' => 'HYDRAULIC',
+                'name_ar' => 'الهيدروليك',
+                'name_en' => 'Hydraulic Storage Mechanism',
+                'description' => 'قسم تركيب آلية التخزين الهيدروليكية وتجميع حواجز السرير المنجدة على قاعدتها.',
+                'sort_order' => 55,
+                'is_production_department' => true,
+                'is_active' => true,
+            ],
+            [
                 'code' => 'ASSEMBLY',
                 'name_ar' => 'التجميع',
                 'name_en' => 'Assembly',

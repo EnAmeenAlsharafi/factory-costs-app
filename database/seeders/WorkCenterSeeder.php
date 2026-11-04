@@ -19,6 +19,7 @@ class WorkCenterSeeder extends Seeder
             'UPHOLSTERY' => ['code' => 'WC_UPHOLSTERY', 'name_ar' => 'ورشة الخياطة والتنجيد', 'sort_order' => 30],
             'BOX_PRODUCTION' => ['code' => 'WC_BOX_PROD', 'name_ar' => 'خط تصنيع البوكسات القواعد', 'sort_order' => 40],
             'BOX_PREPARATION' => ['code' => 'WC_BOX_PREP', 'name_ar' => 'خط تجهيز وتلبيس البوكسات', 'sort_order' => 50],
+            'HYDRAULIC' => ['code' => 'WC_HYDRAULIC', 'name_ar' => 'ورشة تركيب آلية التخزين الهيدروليكية', 'sort_order' => 55],
             'ASSEMBLY' => ['code' => 'WC_ASSEMBLY', 'name_ar' => 'محطة التجميع النهائي', 'sort_order' => 60],
             'PACKAGING' => ['code' => 'WC_PACKAGING', 'name_ar' => 'محطة الفحص والتغليف', 'sort_order' => 70],
         ];
