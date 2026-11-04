@@ -38,6 +38,10 @@ class CustomerOrderRequest extends FormRequest
         $lines = $this->input('lines', []);
         if (is_array($lines)) {
             foreach ($lines as $i => $line) {
+                if (empty($line['line_type'])) {
+                    $lines[$i]['line_type'] = 'MANUFACTURED';
+                }
+
                 if (! empty($line['product_configuration_id']) && (empty($line['requested_width_cm']) || empty($line['requested_length_cm']))) {
                     $config = ProductConfiguration::find($line['product_configuration_id']);
                     if ($config) {
@@ -94,13 +98,15 @@ class CustomerOrderRequest extends FormRequest
             'production_notes' => 'nullable|string',
             'lines' => 'required|array|min:1',
             'lines.*.id' => 'nullable|integer',
+            'lines.*.line_type' => 'nullable|in:MANUFACTURED,READY_STOCK,BUNDLE',
+            'lines.*.material_id' => 'required_if:lines.*.line_type,READY_STOCK|nullable|exists:materials,id',
             'lines.*.custom_design' => 'nullable|boolean',
             'lines.*.custom_design_name' => 'required_if:lines.*.custom_design,1,true|nullable|string|max:255',
             'lines.*.product_model_id' => 'nullable|exists:product_models,id',
             'lines.*.product_configuration_id' => 'nullable|exists:product_configurations,id',
             'lines.*.customer_product_alias_id' => 'nullable|exists:customer_product_aliases,id',
-            'lines.*.requested_width_cm' => 'required|numeric|gt:0',
-            'lines.*.requested_length_cm' => 'required|numeric|gt:0',
+            'lines.*.requested_width_cm' => 'required_if:lines.*.line_type,MANUFACTURED|nullable|numeric|gt:0',
+            'lines.*.requested_length_cm' => 'required_if:lines.*.line_type,MANUFACTURED|nullable|numeric|gt:0',
             'lines.*.reference_width_cm' => 'nullable|numeric|gt:0',
             'lines.*.reference_length_cm' => 'nullable|numeric|gt:0',
             'lines.*.fabric_supplier_id' => 'nullable|exists:suppliers,id',

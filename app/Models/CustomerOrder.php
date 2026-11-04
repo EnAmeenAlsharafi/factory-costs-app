@@ -19,6 +19,17 @@ class CustomerOrder extends Model
         'sales_channel_id',
         'customer_reference',
         'external_order_reference',
+        'external_order_internal_id',
+        'external_payment_method',
+        'external_payment_status',
+        'import_batch_id',
+        'delivery_method',
+        'shipping_company_name',
+        'shipping_tracking_number',
+        'delivery_city',
+        'delivery_district',
+        'delivery_address',
+        'delivery_map_url',
         'order_date',
         'requested_delivery_date',
         'priority',
@@ -60,6 +71,11 @@ class CustomerOrder extends Model
     public function quotation(): BelongsTo
     {
         return $this->belongsTo(Quotation::class);
+    }
+
+    public function importBatch(): BelongsTo
+    {
+        return $this->belongsTo(SalesImportBatch::class, 'import_batch_id');
     }
 
     public function customer(): BelongsTo

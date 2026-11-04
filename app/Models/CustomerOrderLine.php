@@ -11,11 +11,22 @@ class CustomerOrderLine extends Model
 {
     use HasFactory;
 
+    protected $attributes = [
+        'line_type' => 'MANUFACTURED',
+    ];
+
     protected $fillable = [
         'customer_order_id',
+        'line_type',
         'product_model_id',
         'product_configuration_id',
         'approved_recipe_version_id',
+        'material_id',
+        'parent_line_id',
+        'external_line_reference',
+        'external_product_name',
+        'external_sku',
+        'is_incomplete',
         'customer_product_alias_id',
         'custom_design',
         'custom_design_name',
@@ -42,6 +53,7 @@ class CustomerOrderLine extends Model
     {
         return [
             'custom_design' => 'boolean',
+            'is_incomplete' => 'boolean',
             'has_storage' => 'boolean',
             'requested_width_cm' => 'decimal:2',
             'requested_length_cm' => 'decimal:2',
@@ -94,6 +106,21 @@ class CustomerOrderLine extends Model
         return $this->hasMany(ProductionOrder::class);
     }
 
+    public function material(): BelongsTo
+    {
+        return $this->belongsTo(Material::class);
+    }
+
+    public function parentLine(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_line_id');
+    }
+
+    public function children(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_line_id');
+    }
+
     public function getRecipeVersionAttribute(): ?ManufacturingRecipeVersion
     {
         if (! $this->product_configuration_id) {
@@ -112,6 +139,14 @@ class CustomerOrderLine extends Model
      */
     public function getDisplayNameAttribute(): string
     {
+        if ($this->line_type === 'READY_STOCK') {
+            return $this->external_product_name ?: ($this->material?->sales_display_name ?? $this->material?->name_ar ?? 'منتج جاهز غير محدد');
+        }
+
+        if ($this->line_type === 'BUNDLE') {
+            return $this->external_product_name ?: 'بكج منتجات';
+        }
+
         if ($this->custom_design) {
             return $this->custom_design_name ?: 'تصميم خاص للعميل';
         }
@@ -125,9 +160,14 @@ class CustomerOrderLine extends Model
 
     /**
      * Check if an APPROVED manufacturing recipe is available for this line.
+     * Only meaningful for MANUFACTURED lines.
      */
     public function getRecipeStatusAttribute(): string
     {
+        if ($this->line_type !== 'MANUFACTURED') {
+            return 'NOT_APPLICABLE';
+        }
+
         if ($this->custom_design) {
             return 'CUSTOM_DESIGN';
         }

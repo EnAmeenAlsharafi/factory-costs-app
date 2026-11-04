@@ -38,5 +38,15 @@ class WarehouseSeeder extends Seeder
                 'is_active' => true,
             ]
         );
+
+        Warehouse::updateOrCreate(
+            ['code' => 'READY_GOODS'],
+            [
+                'name_ar' => 'مستودع المنتجات الجاهزة',
+                'name_en' => 'Ready-Stock Products Warehouse',
+                'description' => 'مستودع المنتجات الجاهزة المشتراة والمباعة كما هي (مراتب، مخدات، حشوات) — منفصل عن مستودع المنتجات التامة المصنّعة داخلياً.',
+                'is_active' => true,
+            ]
+        );
     }
 }

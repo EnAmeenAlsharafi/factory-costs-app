@@ -77,6 +77,14 @@ class MaterialCategorySeeder extends Seeder
                 'sort_order' => 80,
                 'is_active' => true,
             ],
+            [
+                'code' => 'READY_GOODS',
+                'name_ar' => 'منتجات جاهزة للبيع',
+                'name_en' => 'Ready-Stock Sellable Products',
+                'description' => 'منتجات مشتراة جاهزة تُباع كما هي (مراتب، مخدات، حشوات، مفارش، واقيات).',
+                'sort_order' => 90,
+                'is_active' => true,
+            ],
         ];
 
         foreach ($categories as $category) {

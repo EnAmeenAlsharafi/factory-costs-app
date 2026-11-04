@@ -163,6 +163,13 @@ class RoleAndPermissionSeeder extends Seeder
             ['name' => 'costing.view', 'display_name' => 'عرض تقارير التكاليف وحساب الربحية', 'module' => 'costing'],
             ['name' => 'costing.manage', 'display_name' => 'إدارة معايير التكلفة والأسعار القياسية', 'module' => 'costing'],
 
+            // Sales Imports (Salla Excel intake, product/bundle mapping) — Stage 16.6
+            ['name' => 'sales_imports.view', 'display_name' => 'عرض دفعات استيراد طلبات سلة', 'module' => 'sales_imports'],
+            ['name' => 'sales_imports.manage', 'display_name' => 'رفع واستيراد طلبات سلة وإدارة المطابقة والبكجات', 'module' => 'sales_imports'],
+
+            // Ready-Stock Products
+            ['name' => 'ready_products.prepare', 'display_name' => 'تجهيز المنتجات الجاهزة لأوامر التوصيل', 'module' => 'ready_products'],
+
             // Delivery & Installation & Finished Goods
             ['name' => 'finished_goods.view', 'display_name' => 'عرض أرصدة وحركات المنتجات الجاهزة', 'module' => 'delivery'],
             ['name' => 'finished_goods.receive', 'display_name' => 'تسليم واستلام المنتجات الجاهزة من الورشة', 'module' => 'delivery'],
@@ -331,6 +338,8 @@ class RoleAndPermissionSeeder extends Seeder
             'delivery.view',
             'sales_channels.view',
             'customer_types.view',
+            'sales_imports.view',
+            'sales_imports.manage',
         ];
         $roles['customer_service']->permissions()->syncWithoutDetaching(
             collect($customerServicePerms)->map(fn ($p) => $permissions[$p]->id)->toArray()
@@ -350,6 +359,7 @@ class RoleAndPermissionSeeder extends Seeder
             'units.view',
             'departments.view',
             'recipes.view',
+            'ready_products.prepare',
         ];
         $roles['warehouse_keeper']->permissions()->syncWithoutDetaching(
             collect($warehouseKeeperPerms)->map(fn ($p) => $permissions[$p]->id)->toArray()

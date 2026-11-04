@@ -25,12 +25,16 @@ class Material extends Model
         'reorder_point',
         'is_active',
         'notes',
+        'is_sellable_ready_product',
+        'sales_sku',
+        'sales_display_name',
     ];
 
     protected $casts = [
         'min_stock_level' => 'decimal:4',
         'reorder_point' => 'decimal:4',
         'is_active' => 'boolean',
+        'is_sellable_ready_product' => 'boolean',
     ];
 
     /**
@@ -127,6 +131,11 @@ class Material extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    public function scopeSellableReady($query)
+    {
+        return $query->where('is_sellable_ready_product', true);
     }
 
     public function getSpecificationSummaryAttribute(): string

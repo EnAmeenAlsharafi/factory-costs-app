@@ -65,7 +65,7 @@ class ManufacturingRecipeController extends Controller
 
         $configurations = ProductConfiguration::with('productModel')->where('is_active', true)->get();
         $components = SemiFinishedComponent::where('is_active', true)->get();
-        $materials = Material::where('is_active', true)->orderBy('name_ar')->get();
+        $materials = Material::where('is_active', true)->where('is_sellable_ready_product', false)->orderBy('name_ar')->get();
         $units = UnitOfMeasure::orderBy('name_ar')->get();
         $templates = ManufacturingTemplate::where('is_active', true)->get();
 
@@ -169,7 +169,7 @@ class ManufacturingRecipeController extends Controller
         abort_if($version->status !== 'DRAFT', 403, 'يمكن تعديل الإصدارات في حالة مسودة فقط. للإصدارات المعتمدة يرجى نسخ الإصدار أولاً.');
 
         $version->load(['items.material', 'items.semiFinishedComponent', 'items.unit']);
-        $materials = Material::where('is_active', true)->orderBy('name_ar')->get();
+        $materials = Material::where('is_active', true)->where('is_sellable_ready_product', false)->orderBy('name_ar')->get();
         $components = SemiFinishedComponent::where('is_active', true)->get();
         $units = UnitOfMeasure::orderBy('name_ar')->get();
 

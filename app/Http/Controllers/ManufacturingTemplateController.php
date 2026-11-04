@@ -42,7 +42,7 @@ class ManufacturingTemplateController extends Controller
     {
         abort_if(! $request->user()->can('manufacturing_templates.manage'), 403, 'غير مصرح لك بإنشاء قالب تصنيع.');
 
-        $materials = Material::where('is_active', true)->orderBy('name_ar')->get();
+        $materials = Material::where('is_active', true)->where('is_sellable_ready_product', false)->orderBy('name_ar')->get();
         $components = SemiFinishedComponent::where('is_active', true)->get();
         $units = UnitOfMeasure::orderBy('name_ar')->get();
 
@@ -93,7 +93,7 @@ class ManufacturingTemplateController extends Controller
         abort_if(! $request->user()->can('manufacturing_templates.manage'), 403, 'غير مصرح لك بتعديل قالب التصنيع.');
 
         $template->load('items.material', 'items.semiFinishedComponent', 'items.unit');
-        $materials = Material::where('is_active', true)->orderBy('name_ar')->get();
+        $materials = Material::where('is_active', true)->where('is_sellable_ready_product', false)->orderBy('name_ar')->get();
         $components = SemiFinishedComponent::where('is_active', true)->get();
         $units = UnitOfMeasure::orderBy('name_ar')->get();
 
