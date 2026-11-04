@@ -167,6 +167,9 @@ $dbLinesData = $order->lines->map(function($l) {
 
     return [
         'id' => $l->id,
+        'line_type' => $l->line_type,
+        'material_id' => $l->material_id,
+        'material_label' => $l->material ? ($l->material->sales_display_name ?: $l->material->name_ar) : '',
         'product_model_id' => $l->product_model_id,
         'product_model_label' => $l->productModel ? $l->productModel->name_ar : '',
         'product_model_code' => $l->productModel ? $l->productModel->model_code : '',
@@ -210,18 +213,23 @@ if (!empty($rawOldLines)) {
     $colorIds = collect($rawOldLines)->pluck('fabric_color_id')->filter()->unique()->all();
     $colors = !empty($colorIds) ? \App\Models\FabricColor::whereIn('id', $colorIds)->get()->keyBy('id') : collect();
 
+    $readyMaterialIds = collect($rawOldLines)->pluck('material_id')->filter()->unique()->all();
+    $readyMaterials = !empty($readyMaterialIds) ? \App\Models\Material::whereIn('id', $readyMaterialIds)->get()->keyBy('id') : collect();
+
     foreach ($rawOldLines as $line) {
         $mid = $line['product_model_id'] ?? null;
         $cid = $line['product_configuration_id'] ?? null;
         $sid = $line['fabric_supplier_id'] ?? null;
         $fid = $line['fabric_material_id'] ?? null;
         $clid = $line['fabric_color_id'] ?? null;
+        $rmid = $line['material_id'] ?? null;
 
         $m = $mid ? $models->get($mid) : null;
         $c = $cid ? $configs->get($cid) : null;
         $f = $fid ? $materials->get($fid) : null;
         $s = $sid ? $suppliers->get($sid) : ($f?->fabricSpec?->supplier ?? null);
         $col = $clid ? $colors->get($clid) : null;
+        $rm = $rmid ? $readyMaterials->get($rmid) : null;
 
         $storageLabel = ($c && $c->has_storage) ? 'بتخزين' : 'بدون تخزين';
         $cLabel = $c ? "{$c->width_cm}×{$c->length_cm} — {$storageLabel}" : '';
@@ -239,6 +247,8 @@ if (!empty($rawOldLines)) {
             'fabric_color_id' => $line['fabric_color_id'] ?? ($col ? $col->id : ''),
             'fabric_color_code' => $line['fabric_color_code'] ?? ($col ? $col->color_code : ''),
             'fabric_supplier_color_code' => $line['fabric_supplier_color_code'] ?? ($col ? $col->supplier_color_code : ''),
+            'line_type' => $line['line_type'] ?? 'MANUFACTURED',
+            'material_label' => $line['material_label'] ?? ($rm ? ($rm->sales_display_name ?: $rm->name_ar) : ''),
         ]);
     }
 }
@@ -396,6 +406,10 @@ document.addEventListener('DOMContentLoaded', function () {
         const isCustom = data.custom_design ? 'checked' : '';
         const customName = data.custom_design_name || '';
         const customNameDisplay = data.custom_design ? '' : 'd-none';
+        const lineType = data.line_type || 'MANUFACTURED';
+        const materialId = data.material_id || '';
+        const materialLabel = data.material_label || '';
+        const isReadyStock = lineType === 'READY_STOCK';
 
         tr.innerHTML = `
             <td class="text-center font-monospace text-muted stack-head">
@@ -408,6 +422,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 </span>
             </td>
             <td data-label="الموديل / التصميم *">
+                <select name="lines[${lineIndex}][line_type]" class="form-select form-select-sm line-type-select mb-1">
+                    <option value="MANUFACTURED" ${!isReadyStock ? 'selected' : ''}>سرير مصنّع</option>
+                    <option value="READY_STOCK" ${isReadyStock ? 'selected' : ''}>منتج جاهز</option>
+                </select>
+                <div class="manufactured-fields ${isReadyStock ? 'd-none' : ''}">
                 <div class="typeahead-container model-wrapper mb-1" @click.outside="closeDropdown" x-data="typeaheadSelect({
                     name: 'lines[${lineIndex}][product_model_id]',
                     endpoint: '/api/search/product-models',
@@ -467,8 +486,65 @@ document.addEventListener('DOMContentLoaded', function () {
                     <label class="form-check-label fs-8 text-secondary" for="custom_${lineIndex}">تصميم خاص حسب الطلب</label>
                 </div>
                 <input type="text" name="lines[${lineIndex}][custom_design_name]" class="form-control form-control-sm custom-name-input ${customNameDisplay} mt-1" value="${customName.replace(/"/g, '&quot;')}" placeholder="اسم التصميم الخاص...">
+                </div>
+                <div class="ready-stock-fields ${isReadyStock ? '' : 'd-none'}">
+                    <div class="typeahead-container ready-wrapper mb-1" @click.outside="closeDropdown" x-data="typeaheadSelect({
+                        name: 'lines[${lineIndex}][material_id]',
+                        endpoint: '/api/search/ready-products',
+                        placeholder: 'ابحث عن منتج جاهز (SKU / اسم)...',
+                        initialId: '${materialId}',
+                        initialLabel: '${materialLabel.replace(/'/g, "\\'")}'
+                    })">
+                        <input type="hidden" name="lines[${lineIndex}][material_id]" :value="selectedId" class="material-id-input">
+                        <input type="hidden" name="lines[${lineIndex}][material_label]" :value="selectedLabel" class="material-label-input">
+                        <div class="input-group input-group-sm">
+                            <input type="text" inputmode="search" class="form-control form-control-sm"
+                                   x-ref="inputBox"
+                                   x-model="searchQuery"
+                                   role="combobox" aria-autocomplete="list" autocomplete="off" enterkeyhint="search"
+                                   :aria-expanded="isOpen.toString()" :aria-controls="listboxId" :aria-activedescendant="activeOptionId"
+                                   aria-label="المنتج الجاهز"
+                                   @focus="onFocus"
+                                   @input.debounce.250ms="onInput"
+                                   @keydown.arrow-down.prevent="navigateDown"
+                                   @keydown.arrow-up.prevent="navigateUp"
+                                   @keydown.enter.prevent.stop="selectHighlighted"
+                                   @keydown.escape="closeDropdown"
+                                   placeholder="ابحث عن منتج جاهز (SKU / اسم)...">
+                            <button class="btn btn-outline-secondary btn-sm" type="button" x-show="selectedId" @click="clearSelection" aria-label="مسح المنتج المختار">
+                                <i class="fas fa-times fs-8" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <div class="typeahead-dropdown" x-show="isOpen" :style="dropdownStyle" :class="{ 'is-above': dropUp }" :id="listboxId" role="listbox" aria-label="نتائج المنتجات الجاهزة" @mousedown.prevent x-cloak>
+                            <div x-show="loading" class="typeahead-status" role="status">
+                                <i class="fas fa-spinner fa-spin me-1" aria-hidden="true"></i> جاري البحث...
+                            </div>
+                            <template x-for="(item, index) in results" :key="item.id">
+                                <div class="typeahead-item" role="option" :id="optionId(index)" :aria-selected="(index === highlightedIndex).toString()"
+                                     :class="{ 'active': index === highlightedIndex }"
+                                     @mousedown.prevent="selectItem(item)">
+                                    <div class="d-flex justify-content-between align-items-center w-100 gap-2">
+                                        <span class="text-truncate fw-medium" dir="rtl" x-text="item.label"></span>
+                                        <span class="code-badge text-nowrap" dir="ltr" x-text="item.code"></span>
+                                    </div>
+                                </div>
+                            </template>
+                            <div x-show="!loading && errorMessage" class="typeahead-status is-error" role="alert">
+                                <span x-text="errorMessage"></span>
+                                <button type="button" class="btn btn-sm btn-outline-danger ms-2" @mousedown.prevent="retry()">إعادة المحاولة</button>
+                            </div>
+                            <div x-show="!loading && !errorMessage && hasSearched && results.length === 0" class="typeahead-status">
+                                لا توجد منتجات جاهزة مطابقة.
+                            </div>
+                            <div x-show="!loading && !errorMessage && !hasSearched && results.length === 0" class="typeahead-status">
+                                ابدأ بالكتابة للبحث...
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </td>
             <td data-label="التكوين / المقاس (سم)">
+                <div class="manufactured-fields ${isReadyStock ? 'd-none' : ''}">
                 <select name="lines[${lineIndex}][product_configuration_id]" class="form-select form-select-sm config-select mb-1" aria-label="التكوين / المقاس" ${!modelId ? 'disabled' : ''}>
                     <option value="">اختر المقاس...</option>
                     ${configId ? `<option value="${configId}" selected>${configLabel || 'المقاس المختار'}</option>` : ''}
@@ -483,8 +559,10 @@ document.addEventListener('DOMContentLoaded', function () {
                         <input type="number" step="0.1" inputmode="decimal" name="lines[${lineIndex}][requested_length_cm]" class="form-control form-control-sm length-input" value="${data.requested_length_cm || ''}" placeholder="طول سم" aria-label="الطول بالسنتيمتر">
                     </div>
                 </div>
+                </div>
             </td>
             <td data-label="القماش (المورد / الخامة / اللون)">
+                <div class="manufactured-fields ${isReadyStock ? 'd-none' : ''}">
                 <div class="fabric-spec-box d-flex flex-column gap-1">
                     <div class="typeahead-container fabric-wrapper" @click.outside="closeDropdown" x-data="typeaheadSelect({
                         name: 'lines[${lineIndex}][fabric_material_id]',
@@ -569,6 +647,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         <input type="hidden" name="lines[${lineIndex}][fabric_supplier_color_code]" class="supplier-color-code-input" value="${supplierColorCode}">
                     </div>
                 </div>
+                </div>
             </td>
             <td data-label="الكمية *" class="stack-half">
                 <input type="number" min="1" step="1" inputmode="numeric" name="lines[${lineIndex}][quantity]" class="form-control form-control-sm qty-input" value="${data.quantity || 1}" required aria-label="الكمية">
@@ -602,6 +681,13 @@ document.addEventListener('DOMContentLoaded', function () {
         const qtyInput = tr.querySelector('.qty-input');
         const priceInput = tr.querySelector('.price-input');
         const removeBtn = tr.querySelector('.remove-line-btn');
+        const lineTypeSelect = tr.querySelector('.line-type-select');
+
+        lineTypeSelect.addEventListener('change', function () {
+            const isReady = this.value === 'READY_STOCK';
+            tr.querySelectorAll('.manufactured-fields').forEach(el => el.classList.toggle('d-none', isReady));
+            tr.querySelectorAll('.ready-stock-fields').forEach(el => el.classList.toggle('d-none', !isReady));
+        });
 
         // Clean event delegation for typeahead selection changes
         tr.addEventListener('typeahead-select', function (e) {
@@ -748,6 +834,9 @@ document.addEventListener('DOMContentLoaded', function () {
             const colorSelectEl = tr.querySelector('.color-select');
             const colorOpt = colorSelectEl?.options[colorSelectEl.selectedIndex];
             const newTr = addLine({
+                line_type: lineTypeSelect.value,
+                material_id: tr.querySelector('.material-id-input')?.value || '',
+                material_label: tr.querySelector('.material-label-input')?.value || '',
                 product_model_id: tr.querySelector('.model-id-input')?.value || '',
                 product_model_label: tr.querySelector('.model-label-input')?.value || '',
                 product_configuration_id: configSelect.value || '',

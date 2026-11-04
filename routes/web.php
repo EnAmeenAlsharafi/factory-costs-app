@@ -55,6 +55,10 @@ use App\Http\Controllers\Reports\ProfitabilityReportController;
 use App\Http\Controllers\Reports\ReceivablesManagementReportController;
 use App\Http\Controllers\Reports\ReportsCenterController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\Sales\ReadyStockProductController;
+use App\Http\Controllers\Sales\SalesBundleDefinitionController;
+use App\Http\Controllers\Sales\SalesImportController;
+use App\Http\Controllers\Sales\SalesItemMappingController;
 use App\Http\Controllers\SalesChannelController;
 use App\Http\Controllers\SemiFinishedComponentController;
 use App\Http\Controllers\StandardBedSizeController;
@@ -127,6 +131,22 @@ Route::middleware('auth')->group(function () {
     // Master Data: Materials Catalog & Specs
     Route::post('/materials/{material}/toggle-status', [MaterialController::class, 'toggleStatus'])->name('materials.toggle-status');
     Route::resource('materials', MaterialController::class)->except(['destroy']);
+
+    // Stage 16.6: Salla Excel Import & Ready-Stock Products — Screens
+    Route::prefix('sales')->name('sales.')->group(function () {
+        Route::get('/ready-stock-products', [ReadyStockProductController::class, 'index'])->name('ready-stock-products.index');
+
+        Route::post('/bundles/{bundle}/toggle-status', [SalesBundleDefinitionController::class, 'toggleStatus'])->name('bundles.toggle-status');
+        Route::resource('bundles', SalesBundleDefinitionController::class)->except(['show', 'destroy']);
+
+        Route::post('/item-mappings/{item_mapping}/toggle-status', [SalesItemMappingController::class, 'toggleStatus'])->name('item-mappings.toggle-status');
+        Route::resource('item-mappings', SalesItemMappingController::class)->only(['index', 'store', 'update']);
+
+        Route::resource('imports', SalesImportController::class)->only(['index', 'create', 'store']);
+        Route::get('/imports/{batch}/preview', [SalesImportController::class, 'preview'])->name('imports.preview');
+        Route::post('/imports/{batch}/confirm', [SalesImportController::class, 'confirm'])->name('imports.confirm');
+        Route::get('/imports/{batch}/result', [SalesImportController::class, 'result'])->name('imports.result');
+    });
 
     // Material Extensions: Fabric Colors, Suppliers, Unit Conversions
     Route::post('/fabric-colors', [FabricColorController::class, 'store'])->name('fabric-colors.store');
@@ -490,5 +510,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/suppliers', [SearchApiController::class, 'suppliers'])->name('suppliers');
         Route::get('/fabric-materials', [SearchApiController::class, 'fabricMaterials'])->name('fabric-materials');
         Route::get('/fabric-materials/{material}/colors', [SearchApiController::class, 'fabricColors'])->name('fabric-colors');
+        Route::get('/ready-products', [SearchApiController::class, 'readyProducts'])->name('ready-products');
     });
 });

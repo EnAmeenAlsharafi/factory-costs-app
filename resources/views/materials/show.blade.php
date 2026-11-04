@@ -27,6 +27,14 @@
         <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0 d-flex justify-content-between align-items-center">
             <h5 class="fw-bold text-dark mb-0"><i class="fas fa-info-circle text-primary me-2"></i>معلومات المادة الخام</h5>
             <div>
+                @if ($material->is_sellable_ready_product)
+                    <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 px-3 py-1.5 fs-7 me-1">
+                        <i class="fas fa-store me-1"></i> منتج جاهز للبيع
+                        @if ($material->sales_sku)
+                            <code class="ms-1">{{ $material->sales_sku }}</code>
+                        @endif
+                    </span>
+                @endif
                 @if ($material->is_active)
                     <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-1.5 fs-7">
                         <i class="fas fa-check-circle me-1"></i> نشط

@@ -7,6 +7,7 @@ use App\Models\Material;
 use App\Models\ProductConfiguration;
 use App\Models\ProductModel;
 use App\Models\Supplier;
+use App\Services\InventoryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -236,6 +237,47 @@ class SearchApiController extends Controller
                 'hex_code' => $c->hex_code,
                 'pattern' => $c->pattern,
                 'label' => "{$c->color_code} - {$c->color_name_ar}{$supplierSuffix}",
+            ];
+        });
+
+        return response()->json($results);
+    }
+
+    /**
+     * Search sellable ready-stock materials by SKU, display name, internal name, or code.
+     */
+    public function readyProducts(Request $request, InventoryService $inventoryService): JsonResponse
+    {
+        $query = trim($request->input('q', ''));
+        $perPage = min(30, max(1, (int) $request->input('per_page', 20)));
+
+        $materials = Material::query()
+            ->sellableReady()
+            ->where('is_active', true)
+            ->when($query !== '', function ($q) use ($query) {
+                $q->where(function ($sub) use ($query) {
+                    $sub->where('sales_sku', 'like', "%{$query}%")
+                        ->orWhere('sales_display_name', 'like', "%{$query}%")
+                        ->orWhere('name_ar', 'like', "%{$query}%")
+                        ->orWhere('code', 'like', "%{$query}%");
+                });
+            })
+            ->orderBy('sales_display_name')
+            ->orderBy('name_ar')
+            ->limit($perPage)
+            ->get();
+
+        $results = $materials->map(function ($m) use ($inventoryService) {
+            $displayName = $m->sales_display_name ?: $m->name_ar;
+            $availability = $inventoryService->getReadyProductAvailability($m);
+
+            return [
+                'id' => $m->id,
+                'code' => $m->sales_sku ?: $m->code,
+                'sales_sku' => $m->sales_sku,
+                'name_ar' => $displayName,
+                'available' => $availability['available'],
+                'label' => "{$displayName} — متاح: {$availability['available']}",
             ];
         });
 

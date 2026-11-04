@@ -347,7 +347,14 @@
                             <tr>
                                 <td class="ps-3 font-monospace text-muted">{{ $index + 1 }}</td>
                                 <td>
-                                    @if($line->custom_design)
+                                    @if($line->line_type === 'READY_STOCK')
+                                        <span class="badge bg-success bg-opacity-10 text-success mb-1">منتج جاهز</span>
+                                        <div class="fw-bold text-dark">{{ $line->display_name }}</div>
+                                        <small class="text-muted">SKU: {{ $line->external_sku ?: ($line->material?->sales_sku ?? '-') }}</small>
+                                    @elseif($line->line_type === 'BUNDLE')
+                                        <span class="badge bg-info bg-opacity-10 text-info mb-1">بكج</span>
+                                        <div class="fw-bold text-dark">{{ $line->display_name }}</div>
+                                    @elseif($line->custom_design)
                                         <span class="badge bg-purple text-white mb-1" style="background-color: #6f42c1;">تصميم خاص</span>
                                         <div class="fw-bold text-dark">{{ $line->custom_design_name ?? 'تصميم خاص بدون اسم' }}</div>
                                     @else
@@ -418,7 +425,7 @@
                                 </td>
                                 <td class="text-end font-monospace text-dark">{{ $canSeeCommercial ? number_format($line->unit_price, 2).' ر.س' : '—' }}</td>
                                 <td class="text-end pe-3 font-monospace fw-bold text-primary fs-6">
-                                    <div>{{ $canSeeCommercial ? number_format($line->total_price, 2).' ر.س' : '—' }}</div>
+                                    <div>{{ $canSeeCommercial ? number_format($line->line_total, 2).' ر.س' : '—' }}</div>
                                     @if($order->status === 'APPROVED_FOR_PRODUCTION' && auth()->user()->can('production.release'))
                                         @if($line->quantity - $alreadyReleased > 0)
                                             <a href="{{ route('production.orders.create', ['line_id' => $line->id]) }}" class="btn btn-sm btn-success mt-1">

@@ -31,6 +31,9 @@ class MaterialRequest extends FormRequest
             'reorder_point' => ['nullable', 'numeric', 'min:0'],
             'is_active' => ['sometimes', 'boolean'],
             'notes' => ['nullable', 'string'],
+            'is_sellable_ready_product' => ['sometimes', 'boolean'],
+            'sales_sku' => ['nullable', 'string', 'max:100', Rule::unique('materials', 'sales_sku')->ignore($materialId)],
+            'sales_display_name' => ['nullable', 'string', 'max:255'],
         ];
 
         if ($category?->code === 'WOOD') {
@@ -91,6 +94,7 @@ class MaterialRequest extends FormRequest
             'supplier_id.required' => 'يرجى اختيار مورد الكتالوج.',
             'catalog_number.required' => 'يرجى إدخال رقم الكتالوج لدى المورد.',
             'catalog_number.unique' => 'رقم الكتالوج هذا مسجل مسبقاً لدى هذا المورد.',
+            'sales_sku.unique' => 'رمز SKU هذا مستخدم بالفعل لمادة أخرى.',
         ];
     }
 }

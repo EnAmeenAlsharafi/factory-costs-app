@@ -492,9 +492,9 @@
 
             <!-- Section 8: Commercial & Sales -->
             @php
-                $isSalesActive = request()->routeIs('sales.quotations.*') || request()->routeIs('sales.orders.*');
+                $isSalesActive = request()->routeIs('sales.quotations.*') || request()->routeIs('sales.orders.*') || request()->routeIs('sales.ready-stock-products.*') || request()->routeIs('sales.bundles.*') || request()->routeIs('sales.item-mappings.*') || request()->routeIs('sales.imports.*');
             @endphp
-            @if (auth()->user() && (auth()->user()->can('quotations.view') || auth()->user()->can('orders.view')))
+            @if (auth()->user() && (auth()->user()->can('quotations.view') || auth()->user()->can('orders.view') || auth()->user()->can('materials.view') || auth()->user()->can('sales_imports.view')))
                 <div class="sidebar-section">
                     <button type="button"
                             @click="toggleSection('sales', {{ $isSalesActive ? 'true' : 'false' }})"
@@ -523,6 +523,36 @@
                                 <a href="{{ route('sales.orders.index') }}" class="sidebar-nav-link {{ request()->routeIs('sales.orders.*') ? 'active' : '' }}" title="طلبات العملاء">
                                     <span class="sidebar-icon"><i class="fas fa-shopping-bag"></i></span>
                                     <span class="sidebar-text">طلبات العملاء</span>
+                                </a>
+                            </li>
+                        @endcan
+
+                        @can('materials.view')
+                            <li class="nav-item">
+                                <a href="{{ route('sales.ready-stock-products.index') }}" class="sidebar-nav-link {{ request()->routeIs('sales.ready-stock-products.*') ? 'active' : '' }}" title="المنتجات الجاهزة للبيع">
+                                    <span class="sidebar-icon"><i class="fas fa-store"></i></span>
+                                    <span class="sidebar-text">المنتجات الجاهزة للبيع</span>
+                                </a>
+                            </li>
+                        @endcan
+
+                        @can('sales_imports.view')
+                            <li class="nav-item">
+                                <a href="{{ route('sales.bundles.index') }}" class="sidebar-nav-link {{ request()->routeIs('sales.bundles.*') ? 'active' : '' }}" title="بكجات المبيعات">
+                                    <span class="sidebar-icon"><i class="fas fa-box-open"></i></span>
+                                    <span class="sidebar-text">بكجات المبيعات</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="{{ route('sales.item-mappings.index') }}" class="sidebar-nav-link {{ request()->routeIs('sales.item-mappings.*') ? 'active' : '' }}" title="مطابقة طلبات سلة">
+                                    <span class="sidebar-icon"><i class="fas fa-link"></i></span>
+                                    <span class="sidebar-text">مطابقة طلبات سلة</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="{{ route('sales.imports.index') }}" class="sidebar-nav-link {{ request()->routeIs('sales.imports.*') ? 'active' : '' }}" title="استيراد طلبات سلة">
+                                    <span class="sidebar-icon"><i class="fas fa-file-excel"></i></span>
+                                    <span class="sidebar-text">استيراد طلبات سلة</span>
                                 </a>
                             </li>
                         @endcan

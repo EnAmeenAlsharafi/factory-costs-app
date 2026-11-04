@@ -187,7 +187,7 @@
                                 </td>
                                 <td class="text-center fw-bold text-dark fs-6">{{ $line->quantity }}</td>
                                 <td class="text-end font-monospace text-dark">{{ number_format($line->unit_price, 2) }} ر.س</td>
-                                <td class="text-end pe-3 font-monospace fw-bold text-primary fs-6">{{ number_format($line->total_price, 2) }} ر.س</td>
+                                <td class="text-end pe-3 font-monospace fw-bold text-primary fs-6">{{ number_format($line->line_total, 2) }} ر.س</td>
                             </tr>
                         @endforeach
                     </tbody>

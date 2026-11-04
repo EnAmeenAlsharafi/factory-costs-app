@@ -85,6 +85,9 @@ class MaterialController extends Controller
                 'reorder_point' => $validated['reorder_point'] ?? 0,
                 'is_active' => $request->boolean('is_active', true),
                 'notes' => $validated['notes'] ?? null,
+                'is_sellable_ready_product' => $request->boolean('is_sellable_ready_product'),
+                'sales_sku' => $validated['sales_sku'] ?? null,
+                'sales_display_name' => $validated['sales_display_name'] ?? null,
             ]);
 
             if ($category) {
@@ -200,6 +203,9 @@ class MaterialController extends Controller
                 'reorder_point' => $validated['reorder_point'] ?? 0,
                 'is_active' => $request->boolean('is_active'),
                 'notes' => $validated['notes'] ?? null,
+                'is_sellable_ready_product' => $request->boolean('is_sellable_ready_product'),
+                'sales_sku' => $validated['sales_sku'] ?? null,
+                'sales_display_name' => $validated['sales_display_name'] ?? null,
             ]);
 
             $category = MaterialCategory::find($validated['material_category_id']);

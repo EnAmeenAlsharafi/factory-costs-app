@@ -130,6 +130,40 @@
             </div>
         </div>
 
+        <!-- Ready-Stock (Sales) Section -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0">
+                <h5 class="fw-bold text-dark mb-0"><i class="fas fa-store text-success me-2"></i>بيع كمنتج جاهز</h5>
+                <p class="text-muted fs-8 mb-0">فعّل هذا الخيار إن كانت المادة تُباع جاهزة للعميل مباشرة (بلا تصنيع)، مثل المراتب أو المفروشات الجاهزة.</p>
+            </div>
+            <div class="card-body p-4">
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="is_sellable_ready_product" name="is_sellable_ready_product" value="1" {{ old('is_sellable_ready_product', $material->is_sellable_ready_product) ? 'checked' : '' }}>
+                            <label class="form-check-label fw-semibold text-dark me-2" for="is_sellable_ready_product">هذه المادة منتج جاهز للبيع</label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 ready-product-field {{ old('is_sellable_ready_product', $material->is_sellable_ready_product) ? '' : 'd-none' }}">
+                        <label for="sales_sku" class="form-label fw-semibold text-dark">رمز SKU (في متجر سلة أو غيره)</label>
+                        <input type="text" name="sales_sku" id="sales_sku" class="form-control @error('sales_sku') is-invalid @enderror" value="{{ old('sales_sku', $material->sales_sku) }}" placeholder="مثال: RDY-0001" dir="ltr">
+                        @error('sales_sku')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="col-md-6 ready-product-field {{ old('is_sellable_ready_product', $material->is_sellable_ready_product) ? '' : 'd-none' }}">
+                        <label for="sales_display_name" class="form-label fw-semibold text-dark">الاسم المعروض للعميل</label>
+                        <input type="text" name="sales_display_name" id="sales_display_name" class="form-control @error('sales_display_name') is-invalid @enderror" value="{{ old('sales_display_name', $material->sales_display_name) }}" placeholder="اسم تسويقي يظهر في الطلبات، يختلف عن الاسم الداخلي عند الحاجة">
+                        @error('sales_display_name')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Wood Specs Section -->
         <div class="card border-0 shadow-sm mb-4 spec-section d-none" id="spec-wood">
             <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0">
@@ -355,6 +389,12 @@
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        const readyProductCheckbox = document.getElementById('is_sellable_ready_product');
+        const readyProductFields = document.querySelectorAll('.ready-product-field');
+        readyProductCheckbox.addEventListener('change', function () {
+            readyProductFields.forEach(el => el.classList.toggle('d-none', !this.checked));
+        });
+
         const categorySelect = document.getElementById('material_category_id');
         const specSections = {
             'WOOD': document.getElementById('spec-wood'),
