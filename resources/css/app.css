@@ -844,10 +844,95 @@ a.metric-tile:hover { color: var(--factory-text); border-color: #94a3b8; }
     .report-kpis .metric-tile-value { font-size: 1.15rem; }
 }
 
+/* =====================================================================
+   Customer portal — mobile-first shell (layouts/portal.blade.php)
+   Phone: sticky top bar + fixed bottom tab bar; a page's x-mobile-action-bar
+   stacks directly above the tab bar instead of covering it.
+   Tablet/desktop (>= 768px): the tab bar is replaced by the inline nav row.
+   ===================================================================== */
+.portal-shell { --portal-tabbar-height: 0px; display: flex; min-height: 100svh; flex-direction: column; background: var(--factory-bg, #f4f7fb); }
+
+.portal-topbar { position: sticky; top: 0; z-index: 1020; background: #fff; border-bottom: 1px solid var(--factory-border); }
+.portal-brand { display: flex; align-items: center; gap: .6rem; font-weight: 700; color: var(--factory-text); text-decoration: none; min-width: 0; }
+.portal-brand-mark { flex: 0 0 auto; width: 38px; height: 38px; display: grid; place-items: center; color: #fff; background: linear-gradient(145deg, #142d43, #285a72); border-radius: .7rem; }
+.portal-brand-name { display: block; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.portal-brand-sub { display: block; font-size: .75rem; font-weight: 400; color: var(--factory-muted); }
+
+/* Inline nav row (tablet/desktop): scrolls horizontally rather than wrapping into a tall stack. */
+.portal-nav { display: flex; gap: .4rem; overflow-x: auto; scrollbar-width: none; }
+.portal-nav::-webkit-scrollbar { display: none; }
+.portal-nav .portal-nav-link { flex: 0 0 auto; display: inline-flex; align-items: center; gap: .4rem; min-height: 42px; padding: .4rem .85rem; color: #334155; background: #f1f5f9; border-radius: 999px; font-size: .9rem; font-weight: 600; text-decoration: none; white-space: nowrap; }
+.portal-nav .portal-nav-link:hover { background: #e2e8f0; }
+.portal-nav .portal-nav-link.is-active { color: #fff; background: #1d4ed8; }
+
+/* Padding lives here, not in a Bootstrap `py-*` utility: those carry `!important`
+   and would override the bottom clearance the fixed bars need. */
+.portal-main { flex: 1 1 auto; padding-block: 1rem; }
+.portal-footer { color: var(--factory-muted); font-size: .8rem; }
+
+/* Bottom tab bar: hidden by default, shown on phones only. */
+.portal-tabbar { display: none; }
+.portal-tabbar-link { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .15rem; flex: 1 1 0; min-width: 0; min-height: 54px; padding: .3rem .2rem; color: #64748b; text-decoration: none; font-size: .7rem; font-weight: 600; border-radius: .6rem; }
+.portal-tabbar-link i { font-size: 1.05rem; }
+.portal-tabbar-link span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.portal-tabbar-link.is-active { color: #1d4ed8; background: #eff4ff; }
+
+/* Compact KPI tiles: 2-up on phones so the figures stay above the fold. */
+.portal-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: .75rem; }
+.portal-tile { padding: .85rem .95rem; background: #fff; border: 1px solid var(--factory-border); border-radius: .85rem; box-shadow: 0 2px 8px rgba(15,23,42,.045); }
+.portal-tile-label { display: flex; align-items: center; gap: .35rem; color: var(--factory-muted); font-size: .78rem; font-weight: 600; }
+.portal-tile-value { margin-top: .2rem; font-size: 1.3rem; font-weight: 700; color: var(--factory-text); line-height: 1.3; }
+.portal-tile.tone-danger .portal-tile-value { color: var(--tone-danger); }
+.portal-tile.tone-success .portal-tile-value { color: var(--tone-success); }
+
+/* Key/value grid: replaces run-on sentences of figures so each value is scannable. */
+.portal-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .6rem .9rem; margin: 0; }
+.portal-facts > div { min-width: 0; }
+.portal-facts dt { color: var(--factory-muted); font-size: .78rem; font-weight: 600; }
+.portal-facts dd { margin: .1rem 0 0; font-weight: 700; color: var(--factory-text); overflow-wrap: anywhere; }
+
+/* Delivered-quantity meter (text always carries the value; the bar only reinforces it). */
+.portal-meter { height: .5rem; background: #eef2f7; border-radius: 999px; overflow: hidden; }
+.portal-meter > span { display: block; height: 100%; background: #1d4ed8; border-radius: 999px; }
+
+@media (min-width: 768px) {
+    .portal-main { padding-block: 1.5rem; }
+}
+
+@media (max-width: 767.98px) {
+    .portal-shell { --portal-tabbar-height: calc(62px + env(safe-area-inset-bottom, 0px)); }
+    .portal-shell .portal-main { padding-bottom: calc(1rem + var(--portal-tabbar-height)); }
+    .portal-tabbar {
+        position: fixed;
+        inset-inline: 0;
+        bottom: 0;
+        z-index: 1040;
+        display: flex;
+        gap: .15rem;
+        padding: .3rem calc(.4rem + env(safe-area-inset-right, 0px)) calc(.3rem + env(safe-area-inset-bottom, 0px)) calc(.4rem + env(safe-area-inset-left, 0px));
+        background: rgba(255,255,255,.98);
+        border-top: 1px solid var(--factory-border);
+        box-shadow: 0 -6px 20px rgba(15,23,42,.08);
+    }
+    /* A page's primary action bar sits above the tab bar, never on top of it.
+       The spacer must clear the action bar only — `.portal-main` already clears the tab bar. */
+    .portal-shell .mobile-action-bar { bottom: var(--portal-tabbar-height); }
+    .portal-shell .mobile-action-bar-spacer { height: var(--mobile-action-bar-height); }
+    body.keyboard-open .portal-tabbar { display: none; }
+    body.keyboard-open .portal-shell .portal-main { padding-bottom: 0; }
+
+    .portal-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+    /* An odd last tile spans the row instead of leaving a gap beside it. */
+    .portal-tiles > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+    .portal-tile { padding: .65rem .7rem; border-radius: .75rem; }
+    .portal-tile-value { font-size: 1.05rem; }
+    .portal-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem .7rem; }
+}
+
 @media print {
     @page { size: A4 landscape; margin: 12mm; }
     body { background: #fff !important; font-size: 11px; }
-    .app-sidebar-column, .sidebar-wrapper, .top-header, .app-footer, .mobile-backdrop, .report-no-print,
+    .app-sidebar-column, .sidebar-wrapper, .top-header, .app-footer, .mobile-backdrop, .report-no-print, .portal-tabbar, .portal-nav,
     .mobile-action-bar, .mobile-action-bar-spacer, .network-banner, .table-scroll-hint, .alert-dismissible .btn-close { display: none !important; }
     .print-only { display: block !important; }
     .app-content-container { padding: 0 !important; }

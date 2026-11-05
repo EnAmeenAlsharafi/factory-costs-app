@@ -46,6 +46,27 @@ class StatusPresenter
             'POSTED' => ['label' => 'مُرحّل', 'tone' => 'success', 'icon' => 'fa-lock'],
             'CANCELLED' => ['label' => 'ملغى', 'tone' => 'secondary', 'icon' => 'fa-ban'],
         ],
+        /** Customer-facing wording for a portal request/offer (see CustomerPortalRequest::STATUSES). */
+        'portal_request' => [
+            'DRAFT' => ['label' => 'مسودة', 'tone' => 'secondary', 'icon' => 'fa-file-pen'],
+            'SUBMITTED' => ['label' => 'بانتظار المراجعة', 'tone' => 'warning', 'icon' => 'fa-hourglass-half'],
+            'OFFERED' => ['label' => 'بانتظار تأكيدك', 'tone' => 'info', 'icon' => 'fa-file-signature'],
+            'CHANGES_REQUESTED' => ['label' => 'بحاجة إلى تعديل', 'tone' => 'danger', 'icon' => 'fa-pen-to-square'],
+            'CONFIRMED' => ['label' => 'مؤكد ومحال للتنفيذ', 'tone' => 'success', 'icon' => 'fa-circle-check'],
+        ],
+        /** Customer-facing fulfilment stage of an approved order (see CustomerPortalAccountService::progress()). */
+        'portal_order' => [
+            'CANCELLED' => ['label' => 'ملغى', 'tone' => 'secondary', 'icon' => 'fa-ban'],
+            'DELIVERED' => ['label' => 'تم التسليم', 'tone' => 'success', 'icon' => 'fa-circle-check'],
+            'PARTIALLY_DELIVERED' => ['label' => 'تم التسليم جزئيًا', 'tone' => 'primary', 'icon' => 'fa-circle-half-stroke'],
+            'OUT_FOR_DELIVERY' => ['label' => 'خرج للتوصيل', 'tone' => 'warning', 'icon' => 'fa-truck-fast'],
+            'READY_FOR_DELIVERY' => ['label' => 'جاهز للتوصيل', 'tone' => 'info', 'icon' => 'fa-box'],
+            'IN_PRODUCTION' => ['label' => 'قيد التصنيع والتجهيز', 'tone' => 'warning', 'icon' => 'fa-gears'],
+            'PENDING_PRODUCTION_REVIEW' => ['label' => 'بانتظار اعتماد الإنتاج', 'tone' => 'info', 'icon' => 'fa-clipboard-check'],
+            'NEEDS_CHANGES' => ['label' => 'قيد مراجعة المواصفات', 'tone' => 'danger', 'icon' => 'fa-pen-to-square'],
+            'DRAFT' => ['label' => 'مسودة لدى المصنع', 'tone' => 'secondary', 'icon' => 'fa-file-pen'],
+            'APPROVED' => ['label' => 'معتمد وبانتظار التجهيز', 'tone' => 'primary', 'icon' => 'fa-thumbs-up'],
+        ],
     ];
 
     /**

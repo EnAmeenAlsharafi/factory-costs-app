@@ -47,7 +47,14 @@ class CustomerPortalAccountService
         return ['summary' => ['opening_balance' => $opening / 100, 'orders_count' => $orders->count(), 'commercial_total' => $commercial / 100, 'confirmed_paid' => $paid / 100, 'balance' => $net / 100, 'outstanding' => max(0, $net) / 100, 'credit' => max(0, -$net) / 100, 'overdue' => min(max(0, $net), $overdue) / 100], 'entries' => $entries];
     }
 
-    /** @return array<string, int|float|string> */
+    /**
+     * Customer-facing fulfilment progress of an approved order.
+     *
+     * `state` is the machine key (presented via StatusPresenter's `portal_order` domain so the
+     * label, tone and icon stay in one place); `status` keeps the plain Arabic label.
+     *
+     * @return array{state: string, status: string, ordered_quantity: float, delivered_quantity: float, returned_quantity: float, delivered_ratio: float}
+     */
     public function progress(CustomerOrder $order): array
     {
         $order->loadMissing(['lines', 'deliveryOrders.lines', 'productionOrders', 'customerReturns']);
@@ -55,20 +62,27 @@ class CustomerPortalAccountService
         $delivered = (float) $order->deliveryOrders->whereIn('status', ['DELIVERED', 'INSTALLATION_COMPLETED'])->sum(fn ($delivery) => $delivery->lines->sum('quantity'));
         $returned = (float) $order->customerReturns->whereIn('status', ['RECEIVED', 'RESOLVED'])->sum('quantity');
         $netDelivered = max(0, $delivered - $returned);
-        $status = match (true) {
-            $order->status === 'CANCELLED' => 'ملغى',
-            $quantity > 0 && $netDelivered >= $quantity => 'تم التسليم',
-            $netDelivered > 0 => 'تم التسليم جزئيًا',
-            $order->deliveryOrders->contains('status', 'OUT_FOR_DELIVERY') => 'خرج للتوصيل',
-            $order->deliveryOrders->whereIn('status', ['READY_FOR_DELIVERY', 'ASSIGNED'])->isNotEmpty() => 'جاهز للتوصيل',
-            $order->productionOrders->where('status', '!=', 'CANCELLED')->isNotEmpty() => 'قيد التصنيع والتجهيز',
-            $order->status === 'PENDING_PRODUCTION_REVIEW' => 'بانتظار اعتماد الإنتاج',
-            $order->status === 'NEEDS_CHANGES' => 'قيد مراجعة المواصفات',
-            $order->status === 'DRAFT' => 'مسودة لدى المصنع',
-            default => 'معتمد وبانتظار التجهيز',
+        $state = match (true) {
+            $order->status === 'CANCELLED' => 'CANCELLED',
+            $quantity > 0 && $netDelivered >= $quantity => 'DELIVERED',
+            $netDelivered > 0 => 'PARTIALLY_DELIVERED',
+            $order->deliveryOrders->contains('status', 'OUT_FOR_DELIVERY') => 'OUT_FOR_DELIVERY',
+            $order->deliveryOrders->whereIn('status', ['READY_FOR_DELIVERY', 'ASSIGNED'])->isNotEmpty() => 'READY_FOR_DELIVERY',
+            $order->productionOrders->where('status', '!=', 'CANCELLED')->isNotEmpty() => 'IN_PRODUCTION',
+            $order->status === 'PENDING_PRODUCTION_REVIEW' => 'PENDING_PRODUCTION_REVIEW',
+            $order->status === 'NEEDS_CHANGES' => 'NEEDS_CHANGES',
+            $order->status === 'DRAFT' => 'DRAFT',
+            default => 'APPROVED',
         };
 
-        return ['status' => $status, 'ordered_quantity' => $quantity, 'delivered_quantity' => $netDelivered, 'returned_quantity' => $returned];
+        return [
+            'state' => $state,
+            'status' => StatusPresenter::label('portal_order', $state),
+            'ordered_quantity' => $quantity,
+            'delivered_quantity' => $netDelivered,
+            'returned_quantity' => $returned,
+            'delivered_ratio' => $quantity > 0 ? min(1.0, $netDelivered / $quantity) : 0.0,
+        ];
     }
 
     protected function cents(mixed $value): int
