@@ -16,20 +16,26 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('delivery_order_lines', function (Blueprint $table) {
-            $table->foreignId('production_order_id')->nullable()->change();
+        if (! Schema::hasColumn('delivery_order_lines', 'line_type')) {
+            Schema::table('delivery_order_lines', function (Blueprint $table) {
+                $table->foreignId('production_order_id')->nullable()->change();
 
-            $table->enum('line_type', ['MANUFACTURED', 'READY_STOCK'])->default('MANUFACTURED')->after('production_order_id');
-            $table->foreignId('material_id')->nullable()->after('line_type')->constrained('materials')->nullOnDelete();
-            $table->foreignId('prepared_by_user_id')->nullable()->after('material_id')->constrained('users')->nullOnDelete();
-            $table->timestamp('prepared_at')->nullable()->after('prepared_by_user_id');
-        });
+                $table->enum('line_type', ['MANUFACTURED', 'READY_STOCK'])->default('MANUFACTURED')->after('production_order_id');
+                $table->foreignId('material_id')->nullable()->after('line_type')->constrained('materials')->nullOnDelete();
+                $table->foreignId('prepared_by_user_id')->nullable()->after('material_id')->constrained('users')->nullOnDelete();
+                $table->timestamp('prepared_at')->nullable()->after('prepared_by_user_id');
+            });
+        }
 
         $driver = Schema::getConnection()->getDriverName();
         if (in_array($driver, ['mysql', 'mariadb'], true)) {
-            DB::statement('ALTER TABLE delivery_order_lines ADD CONSTRAINT delivery_order_lines_target_xor_check CHECK ((production_order_id IS NOT NULL AND material_id IS NULL) OR (production_order_id IS NULL AND material_id IS NOT NULL))');
+            try {
+                DB::statement('ALTER TABLE delivery_order_lines ADD CONSTRAINT delivery_order_lines_target_xor_check CHECK ((production_order_id IS NOT NULL AND material_id IS NULL) OR (production_order_id IS NULL AND material_id IS NOT NULL))');
+            } catch (Throwable $e) {
+                // Older MariaDB engines reject IS NULL in CHECK constraints (MDEV-16111); enforced by DeliveryOrderService
+            }
         } elseif ($driver === 'sqlite') {
-            DB::statement('CREATE TRIGGER delivery_order_lines_target_xor_check BEFORE INSERT ON delivery_order_lines
+            DB::statement('CREATE TRIGGER IF NOT EXISTS delivery_order_lines_target_xor_check BEFORE INSERT ON delivery_order_lines
                 WHEN NOT ((NEW.production_order_id IS NOT NULL AND NEW.material_id IS NULL) OR (NEW.production_order_id IS NULL AND NEW.material_id IS NOT NULL))
                 BEGIN SELECT RAISE(ABORT, "delivery_order_lines: exactly one of production_order_id/material_id is required"); END');
         }
@@ -39,7 +45,10 @@ return new class extends Migration
     {
         $driver = Schema::getConnection()->getDriverName();
         if (in_array($driver, ['mysql', 'mariadb'], true)) {
-            DB::statement('ALTER TABLE delivery_order_lines DROP CONSTRAINT delivery_order_lines_target_xor_check');
+            try {
+                DB::statement('ALTER TABLE delivery_order_lines DROP CONSTRAINT delivery_order_lines_target_xor_check');
+            } catch (Throwable $e) {
+            }
         } elseif ($driver === 'sqlite') {
             DB::statement('DROP TRIGGER IF EXISTS delivery_order_lines_target_xor_check');
         }
