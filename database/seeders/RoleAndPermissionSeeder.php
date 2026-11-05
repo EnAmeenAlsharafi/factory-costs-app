@@ -15,6 +15,7 @@ class RoleAndPermissionSeeder extends Seeder
     {
         // 1. Core Roles Definitions
         $rolesData = [
+            ['name' => 'customer_portal', 'display_name' => 'عميل جملة / معرض', 'description' => 'إدخال ومتابعة طلبات وحساب العميل المرتبط فقط عبر بوابة العملاء.', 'is_system' => true],
             [
                 'name' => 'admin',
                 'display_name' => 'مدير النظام',

@@ -5,6 +5,7 @@ namespace Tests\Feature\Sales;
 use App\Models\Customer;
 use App\Models\CustomerOrder;
 use App\Models\CustomerOrderLine;
+use App\Models\Material;
 use App\Models\ProductConfiguration;
 use App\Models\ProductModel;
 use App\Models\Role;
@@ -52,6 +53,57 @@ class CustomerOrderTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertViewHas('orders');
+    }
+
+    public function test_ready_product_can_be_created_and_edited_without_manufacturing_specifications(): void
+    {
+        $material = Material::factory()->create([
+            'is_sellable_ready_product' => true,
+            'sales_sku' => 'READY-ORDER-1',
+            'sales_display_name' => 'مرتبة جاهزة',
+            'sales_price' => 250,
+        ]);
+        $payload = [
+            'customer_id' => $this->customer->id,
+            'sales_channel_id' => $this->salesChannel->id,
+            'order_date' => '2026-11-05',
+            'priority' => 'NORMAL',
+            'lines' => [[
+                'line_type' => 'READY_STOCK',
+                'material_id' => $material->id,
+                'quantity' => 3,
+                'unit_price' => 250,
+            ]],
+        ];
+        $this->actingAs($this->user)->get(route('sales.orders.create'))->assertSee('إضافة منتج جاهز');
+        $this->post(route('sales.orders.store'), $payload)->assertSessionHasNoErrors();
+
+        $order = CustomerOrder::latest('id')->firstOrFail();
+        $line = $order->lines()->firstOrFail();
+        $this->assertDatabaseHas('customer_order_lines', [
+            'id' => $line->id, 'line_type' => 'READY_STOCK', 'material_id' => $material->id,
+            'quantity' => 3, 'unit_price' => 250, 'line_total' => 750, 'product_model_id' => null,
+        ]);
+        $this->get(route('sales.orders.show', $order))->assertSee('مرتبة جاهزة')->assertSee('750.00');
+        $this->get(route('sales.orders.edit', $order))->assertSee('إضافة منتج جاهز')
+            ->assertViewHas('order', fn (CustomerOrder $editingOrder): bool => $editingOrder->lines->first()->material->sales_display_name === 'مرتبة جاهزة');
+        $payload['lines'][0]['id'] = $line->id;
+        $payload['lines'][0]['quantity'] = 2;
+        $payload['lines'][0]['unit_price'] = 240;
+
+        $this->put(route('sales.orders.update', $order), $payload)->assertRedirect(route('sales.orders.show', $order))->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('customer_order_lines', ['id' => $line->id, 'material_id' => $material->id, 'quantity' => 2, 'unit_price' => 240, 'line_total' => 480]);
+    }
+
+    public function test_ready_product_selection_includes_catalog_price_and_excludes_inactive_products(): void
+    {
+        $material = Material::factory()->create(['is_sellable_ready_product' => true, 'sales_sku' => 'READY-PRICE-1', 'sales_price' => 325.50]);
+        $this->actingAs($this->user)->getJson('/api/search/ready-products?q=READY-PRICE-1')
+            ->assertJsonPath('0.id', $material->id)->assertJsonPath('0.sales_price', 325.5);
+
+        $material->update(['is_active' => false]);
+        $this->getJson('/api/search/ready-products?q=READY-PRICE-1')->assertExactJson([]);
     }
 
     public function test_can_create_customer_order(): void

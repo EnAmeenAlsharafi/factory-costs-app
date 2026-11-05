@@ -49,6 +49,7 @@ class SalesImportPreviewService
                 'product_name' => $line['product_name'] ?? null,
                 'sku' => $line['sku'] ?? null,
                 'quantity' => $line['quantity'] ?? null,
+                'unit_price' => (float) ($line['unit_price'] ?? 0),
                 'target_type' => $resolution['target_type'],
                 'mapping' => $resolution['mapping'],
                 'ready_stock_availability' => null,
@@ -58,6 +59,7 @@ class SalesImportPreviewService
             if ($resolution['target_type'] === 'READY_STOCK' && $resolution['mapping']?->material_id) {
                 $material = Material::find($resolution['mapping']->material_id);
                 if ($material) {
+                    $resolvedLine['product_name'] = ($line['product_name'] ?? null) ?: ($material->sales_display_name ?: $material->name_ar);
                     $resolvedLine['ready_stock_availability'] = $this->inventory->getReadyProductAvailability($material);
                 }
             }

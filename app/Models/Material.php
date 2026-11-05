@@ -28,6 +28,12 @@ class Material extends Model
         'is_sellable_ready_product',
         'sales_sku',
         'sales_display_name',
+        'salla_product_id',
+        'salla_category',
+        'salla_status',
+        'sales_price',
+        'sales_reference_cost',
+        'salla_stock_quantity',
     ];
 
     protected $casts = [
@@ -35,6 +41,9 @@ class Material extends Model
         'reorder_point' => 'decimal:4',
         'is_active' => 'boolean',
         'is_sellable_ready_product' => 'boolean',
+        'sales_price' => 'decimal:4',
+        'sales_reference_cost' => 'decimal:4',
+        'salla_stock_quantity' => 'decimal:4',
     ];
 
     /**

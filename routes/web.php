@@ -1,11 +1,14 @@
 <?php
 
 use App\Http\Controllers\Api\SearchApiController;
+use App\Http\Controllers\Auth\CustomerPortalLoginController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerCreditProfileController;
 use App\Http\Controllers\CustomerOrderController;
 use App\Http\Controllers\CustomerPaymentController;
+use App\Http\Controllers\CustomerPortalController;
+use App\Http\Controllers\CustomerPortalReviewController;
 use App\Http\Controllers\CustomerProductAliasController;
 use App\Http\Controllers\CustomerReturnController;
 use App\Http\Controllers\CustomerTypeController;
@@ -79,6 +82,10 @@ use Illuminate\Support\Facades\Route;
 */
 
 // Guest Authentication Routes
+Route::get('/portal/login', [CustomerPortalLoginController::class, 'show'])->name('portal.login');
+Route::post('/portal/login', [CustomerPortalLoginController::class, 'store'])->name('portal.login.store');
+Route::post('/portal/logout', [CustomerPortalLoginController::class, 'destroy'])->name('portal.logout');
+
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [LoginController::class, 'login']);
@@ -89,6 +96,30 @@ Route::middleware('auth')->group(function () {
 
     // Logout
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+
+    Route::prefix('portal')->name('portal.')->group(function () {
+        Route::get('/', [CustomerPortalController::class, 'home'])->name('home');
+        Route::get('/requests', [CustomerPortalController::class, 'requests'])->name('requests.index');
+        Route::get('/requests/create', [CustomerPortalController::class, 'create'])->name('requests.create');
+        Route::post('/requests', [CustomerPortalController::class, 'store'])->name('requests.store');
+        Route::get('/requests/{submission}', [CustomerPortalController::class, 'show'])->name('requests.show');
+        Route::get('/requests/{submission}/edit', [CustomerPortalController::class, 'edit'])->name('requests.edit');
+        Route::put('/requests/{submission}', [CustomerPortalController::class, 'update'])->name('requests.update');
+        Route::post('/requests/{submission}/submit', [CustomerPortalController::class, 'submit'])->name('requests.submit');
+        Route::post('/requests/{submission}/confirm', [CustomerPortalController::class, 'confirm'])->name('requests.confirm');
+        Route::post('/requests/{submission}/changes', [CustomerPortalController::class, 'changes'])->name('requests.changes');
+        Route::get('/orders', [CustomerPortalController::class, 'orders'])->name('orders.index');
+        Route::get('/orders/{order}', [CustomerPortalController::class, 'order'])->name('orders.show');
+        Route::get('/receipts', [CustomerPortalController::class, 'receipts'])->name('receipts');
+        Route::get('/account', [CustomerPortalController::class, 'account'])->name('account');
+        Route::get('/profile', [CustomerPortalController::class, 'profile'])->name('profile');
+    });
+    Route::prefix('sales/portal-requests')->name('sales.portal-requests.')->group(function () {
+        Route::get('/', [CustomerPortalReviewController::class, 'index'])->name('index');
+        Route::get('/{submission}', [CustomerPortalReviewController::class, 'show'])->name('show');
+        Route::post('/{submission}/offer', [CustomerPortalReviewController::class, 'offer'])->name('offer');
+        Route::post('/{submission}/return', [CustomerPortalReviewController::class, 'returnForChanges'])->name('return');
+    });
 
     // Main Dashboard
     Route::get('/', [DashboardController::class, 'index'])->name('home');
@@ -136,6 +167,14 @@ Route::middleware('auth')->group(function () {
     // Stage 16.6: Salla Excel Import & Ready-Stock Products — Screens
     Route::prefix('sales')->name('sales.')->group(function () {
         Route::get('/ready-stock-products', [ReadyStockProductController::class, 'index'])->name('ready-stock-products.index');
+        Route::get('/ready-stock-products/create', [ReadyStockProductController::class, 'create'])->name('ready-stock-products.create');
+        Route::post('/ready-stock-products', [ReadyStockProductController::class, 'store'])->name('ready-stock-products.store');
+        Route::get('/ready-stock-products/import', [ReadyStockProductController::class, 'importForm'])->name('ready-stock-products.import');
+        Route::post('/ready-stock-products/import/preview', [ReadyStockProductController::class, 'previewImport'])->name('ready-stock-products.import-upload');
+        Route::get('/ready-stock-products/import/preview', [ReadyStockProductController::class, 'showImportPreview'])->name('ready-stock-products.import-preview');
+        Route::post('/ready-stock-products/import/confirm', [ReadyStockProductController::class, 'confirmImport'])->name('ready-stock-products.import-confirm');
+        Route::get('/ready-stock-products/{material}/edit', [ReadyStockProductController::class, 'edit'])->name('ready-stock-products.edit');
+        Route::put('/ready-stock-products/{material}', [ReadyStockProductController::class, 'update'])->name('ready-stock-products.update');
         Route::get('/incomplete-imports', [IncompleteImportedOrderController::class, 'index'])->name('incomplete-imports.index');
 
         Route::post('/bundles/{bundle}/toggle-status', [SalesBundleDefinitionController::class, 'toggleStatus'])->name('bundles.toggle-status');

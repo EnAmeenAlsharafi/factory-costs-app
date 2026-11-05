@@ -53,6 +53,7 @@ class ProductionOrderService
         }
 
         return DB::transaction(function () use ($line, $order, $data, $requestedQty) {
+            $order->assertCustomerConfirmation(true);
             $poNumber = DocumentNumberService::generateProductionOrderNumber();
 
             $recipeVersionId = $line->approved_recipe_version_id
@@ -126,6 +127,7 @@ class ProductionOrderService
         }
 
         return DB::transaction(function () use ($po, $routing, $routingOps, $user) {
+            $po->customerOrder->assertCustomerConfirmation(true);
             // Remove previous draft operations if any
             $po->operations()->delete();
 

@@ -11,6 +11,7 @@ use App\Models\ProductionOrder;
 use App\Models\User;
 use Exception;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class CustomerOrderService
 {
@@ -72,8 +73,11 @@ class CustomerOrderService
     /**
      * Update customer order with audit logging and post-approval reset.
      */
-    public function updateOrder(CustomerOrder $order, array $data, array $linesData, User $updater): CustomerOrder
+    public function updateOrder(CustomerOrder $order, array $data, array $linesData, User $updater, bool $customerConfirmed = false): CustomerOrder
     {
+        if (! $customerConfirmed && $order->portalRequest()->exists()) {
+            throw ValidationException::withMessages(['customer_confirmation' => 'تعديلات طلبات البوابة تتم عبر عرض جديد تؤكده الجهة العميلة.']);
+        }
         if ($order->status === 'CANCELLED') {
             throw new Exception('لا يمكن تعديل طلب عميل ملغى.');
         }
@@ -132,6 +136,9 @@ class CustomerOrderService
 
                 $linePayload = [
                     'customer_order_id' => $order->id,
+                    'line_type' => $line['line_type'] ?? $existingLine?->line_type ?? 'MANUFACTURED',
+                    'material_id' => $line['material_id'] ?? $existingLine?->material_id,
+                    'approved_recipe_version_id' => $line['approved_recipe_version_id'] ?? $existingLine?->approved_recipe_version_id,
                     'product_model_id' => ! empty($line['custom_design']) ? null : ($line['product_model_id'] ?? $existingLine?->product_model_id),
                     'product_configuration_id' => ! empty($line['custom_design']) ? null : ($line['product_configuration_id'] ?? $existingLine?->product_configuration_id),
                     'customer_product_alias_id' => $line['customer_product_alias_id'] ?? $existingLine?->customer_product_alias_id,
@@ -252,6 +259,7 @@ class CustomerOrderService
         }
 
         return DB::transaction(function () use ($order, $approver, $lineReferenceDimensions) {
+            $order->assertCustomerConfirmation(true);
             // Update line reference dimensions if provided during review
             foreach ($lineReferenceDimensions as $lineId => $dims) {
                 $line = CustomerOrderLine::where('customer_order_id', $order->id)->where('id', $lineId)->first();
@@ -391,6 +399,7 @@ class CustomerOrderService
                 'is_incomplete' => ! empty($line['is_incomplete']),
                 'product_model_id' => ! empty($line['custom_design']) ? null : ($line['product_model_id'] ?? null),
                 'product_configuration_id' => ! empty($line['custom_design']) ? null : ($line['product_configuration_id'] ?? null),
+                'approved_recipe_version_id' => $line['approved_recipe_version_id'] ?? null,
                 'customer_product_alias_id' => $line['customer_product_alias_id'] ?? null,
                 'custom_design' => ! empty($line['custom_design']),
                 'custom_design_name' => $line['custom_design_name'] ?? null,

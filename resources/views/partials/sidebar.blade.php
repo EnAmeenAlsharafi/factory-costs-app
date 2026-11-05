@@ -528,6 +528,7 @@
                         @endcan
 
                         @can('orders.update')
+                              <li class="nav-item"><a href="{{ route('sales.portal-requests.index') }}" class="sidebar-nav-link {{ request()->routeIs('sales.portal-requests.*') ? 'active' : '' }}" title="طلبات بوابة العملاء"><span class="sidebar-icon"><i class="fas fa-store"></i></span><span class="sidebar-text">طلبات بوابة العملاء</span></a></li>
                             <li class="nav-item">
                                 <a href="{{ route('sales.incomplete-imports.index') }}" class="sidebar-nav-link {{ request()->routeIs('sales.incomplete-imports.*') ? 'active' : '' }}" title="طلبات مستوردة بانتظار الاستكمال">
                                     <span class="sidebar-icon"><i class="fas fa-hourglass-half"></i></span>

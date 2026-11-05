@@ -54,6 +54,8 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    'customer_portal_domain' => env('CUSTOMER_PORTAL_DOMAIN', 'mr.sadirfactory.com'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

@@ -99,10 +99,14 @@ class ReceivablesReportingService
     public function getCustomerStatement(Customer $customer): Collection
     {
         $events = collect();
+        $opening = (float) $customer->opening_balance;
+        if ($opening !== 0.0) {
+            $events->push(['date' => 'بداية الحساب', 'raw_date' => PHP_INT_MIN, 'reference' => 'رصيد افتتاحي', 'type' => 'OPENING_BALANCE', 'type_label' => 'رصيد افتتاحي', 'description' => 'رصيد العميل الافتتاحي', 'debit' => max(0, $opening), 'credit' => max(0, -$opening)]);
+        }
 
         // 1. Orders
         $orders = CustomerOrder::where('customer_id', $customer->id)
-            ->whereNotIn('status', ['CANCELLED', 'REJECTED'])
+            ->whereNotIn('status', ['DRAFT', 'CANCELLED', 'REJECTED'])
             ->get();
 
         foreach ($orders as $order) {

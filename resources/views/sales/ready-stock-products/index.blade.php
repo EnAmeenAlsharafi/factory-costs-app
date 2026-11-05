@@ -13,16 +13,22 @@
                     <li class="breadcrumb-item active" aria-current="page">المنتجات الجاهزة للبيع</li>
                 </ol>
             </nav>
-            <h1 class="h3 fw-bold mb-0 text-dark">توفر المنتجات الجاهزة للبيع (Ready-Stock Products)</h1>
-            <p class="text-muted mb-0 fs-7">قائمة المواد المُمَيَّزة للبيع المباشر للعميل مع كمياتها المتاحة بالمستودع.</p>
+            <h1 class="h3 fw-bold mb-0 text-dark">المنتجات الجاهزة للبيع</h1>
+            <p class="text-muted mb-0 fs-7">إدارة المنتجات الجاهزة ومطابقتها مع طلبات سلة ومتابعة توفرها في المستودع.</p>
         </div>
+        @can('materials.manage')
+            <div class="d-flex flex-wrap gap-2">
+                <a class="btn btn-primary" href="{{ route('sales.ready-stock-products.create') }}"><i class="fas fa-plus me-1"></i> إضافة منتج يدويًا</a>
+                <a class="btn btn-outline-primary" href="{{ route('sales.ready-stock-products.import') }}"><i class="fas fa-file-excel me-1"></i> استيراد من سلة</a>
+            </div>
+        @endcan
     </div>
 
     <div class="card border-0 shadow-sm rounded-3 mb-4">
         <div class="card-body p-3">
             <form method="GET" action="{{ route('sales.ready-stock-products.index') }}" class="row g-3 align-items-center">
                 <div class="col-md-6">
-                    <input type="text" name="search" class="form-control" value="{{ request('search') }}" placeholder="بحث بالاسم، SKU، أو الكود...">
+                    <input type="text" name="search" class="form-control" aria-label="البحث عن منتج جاهز" value="{{ request('search') }}" placeholder="بحث بالاسم، رقم سلة، SKU، أو الكود...">
                 </div>
                 <div class="col-md-2">
                     <button type="submit" class="btn btn-primary w-100"><i class="fas fa-search me-1"></i> بحث</button>
@@ -42,9 +48,12 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead class="bg-light">
                         <tr>
+                            <th>رقم منتج سلة</th>
                             <th>SKU</th>
                             <th>الاسم المعروض</th>
                             <th>التصنيف</th>
+                            <th>سعر البيع</th>
+                            <th>كمية سلة</th>
                             <th class="text-center">بالمستودع</th>
                             <th class="text-center">محجوز</th>
                             <th class="text-center">صافي المتاح</th>
@@ -54,12 +63,19 @@
                     <tbody>
                         @forelse($materials as $material)
                             <tr>
-                                <td class="fw-mono fw-bold text-primary">{{ $material->sales_sku ?: '-' }}</td>
+                                <td><bdi>{{ $material->salla_product_id ?: '—' }}</bdi></td>
+                                <td class="fw-mono fw-bold text-primary"><bdi>{{ $material->sales_sku ?: '—' }}</bdi>
+                                    @unless($material->sales_sku)<small class="text-warning d-block">بحاجة إلى مطابقة يدوية للطلبات</small>@endunless
+                                </td>
                                 <td class="fw-bold text-dark">
                                     {{ $material->sales_display_name ?: $material->name_ar }}
                                     <div class="text-muted fs-8">{{ $material->code }}</div>
                                 </td>
-                                <td>{{ $material->category->name_ar ?? '-' }}</td>
+                                <td>{{ $material->salla_category ?: ($material->category->name_ar ?? '—') }}
+                                    @unless($material->is_active)<span class="badge bg-secondary d-block">غير نشط في النظام</span>@endunless
+                                </td>
+                                <td class="text-nowrap">{{ $material->sales_price !== null ? number_format($material->sales_price, 2).' ر.س' : '—' }}</td>
+                                <td>{{ $material->salla_stock_quantity !== null ? number_format($material->salla_stock_quantity, 2) : '—' }}</td>
                                 <td class="text-center fw-mono">{{ number_format($material->availability['on_hand'], 2) }}</td>
                                 <td class="text-center fw-mono text-muted">{{ number_format($material->availability['committed'], 2) }}</td>
                                 <td class="text-center">
@@ -71,7 +87,7 @@
                                 </td>
                                 <td class="text-center">
                                     @can('materials.manage')
-                                        <a href="{{ route('materials.edit', $material) }}" class="btn btn-sm btn-outline-primary" title="تعديل بيانات المادة">
+                                        <a href="{{ route('sales.ready-stock-products.edit', $material) }}" class="btn btn-outline-primary" title="تعديل المنتج الجاهز" aria-label="تعديل {{ $material->sales_display_name ?: $material->name_ar }}">
                                             <i class="fas fa-edit"></i>
                                         </a>
                                     @endcan
@@ -79,10 +95,10 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="text-center py-5 text-muted">
+                                <td colspan="10" class="text-center py-5 text-muted">
                                     لا توجد مواد مُمَيَّزة كمنتجات جاهزة للبيع حتى الآن.
                                     @can('materials.manage')
-                                        <br><a href="{{ route('materials.index') }}" class="text-decoration-none">افتح كتالوج المواد لتمييز مادة كمنتج جاهز</a>.
+                                        <br><a href="{{ route('sales.ready-stock-products.create') }}" class="text-decoration-none">إضافة منتج جاهز</a> أو <a href="{{ route('sales.ready-stock-products.import') }}">استيراد ملف منتجات سلة</a>.
                                     @endcan
                                 </td>
                             </tr>
@@ -97,6 +113,8 @@
             </div>
         @endif
     </div>
+
+    <p class="text-muted fs-7 mt-3">كمية سلة مرجع من ملف المنتجات؛ رصيد المستودع يتغير من خلال مستندات المخزون. المطابقة التلقائية لطلبات سلة تعتمد على SKU، ورقم منتج سلة محفوظ بشكل مستقل.</p>
 
 </div>
 @endsection

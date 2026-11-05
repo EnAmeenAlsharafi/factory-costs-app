@@ -2,6 +2,7 @@
 
 namespace App\Services\Sales;
 
+use App\Models\Material;
 use App\Models\SalesChannel;
 use App\Models\SalesItemMapping;
 
@@ -43,6 +44,26 @@ class SalesItemMatchingService
 
             if ($mapping) {
                 return ['target_type' => $mapping->target_type, 'mapping' => $mapping];
+            }
+        }
+
+        if ($normalizedSku) {
+            $materials = Material::active()->sellableReady()
+                ->whereRaw('LOWER(TRIM(sales_sku)) = ?', [$normalizedSku])
+                ->limit(2)->get();
+
+            if ($materials->count() === 1) {
+                $material = $materials->first();
+                $mapping = new SalesItemMapping([
+                    'sales_channel_id' => $salesChannel->id,
+                    'match_type' => 'SKU',
+                    'match_value' => $normalizedSku,
+                    'target_type' => 'READY_STOCK',
+                    'material_id' => $material->id,
+                ]);
+                $mapping->setRelation('material', $material);
+
+                return ['target_type' => 'READY_STOCK', 'mapping' => $mapping];
             }
         }
 

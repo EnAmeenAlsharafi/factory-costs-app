@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\UserStoreRequest;
 use App\Http\Requests\UserUpdateRequest;
+use App\Models\Customer;
 use App\Models\Department;
 use App\Models\Role;
 use App\Models\User;
@@ -42,8 +43,9 @@ class UserController extends Controller
 
         $roles = Role::orderBy('display_name')->get();
         $departments = Department::active()->orderBy('sort_order')->get();
+        $customers = Customer::active()->orderBy('name')->get();
 
-        return view('users.create', compact('roles', 'departments'));
+        return view('users.create', compact('roles', 'departments', 'customers'));
     }
 
     /**
@@ -57,6 +59,7 @@ class UserController extends Controller
             'email' => $request->validated('email'),
             'role_id' => $request->validated('role_id'),
             'department_id' => $request->validated('department_id'),
+            'customer_id' => $request->validated('customer_id'),
             'password' => Hash::make($request->validated('password')),
             'is_active' => $request->boolean('is_active', true),
         ]);
@@ -73,8 +76,9 @@ class UserController extends Controller
 
         $roles = Role::orderBy('display_name')->get();
         $departments = Department::orderBy('sort_order')->get();
+        $customers = Customer::active()->orderBy('name')->get();
 
-        return view('users.edit', compact('user', 'roles', 'departments'));
+        return view('users.edit', compact('user', 'roles', 'departments', 'customers'));
     }
 
     /**
@@ -88,6 +92,7 @@ class UserController extends Controller
             'email' => $request->validated('email'),
             'role_id' => $request->validated('role_id'),
             'department_id' => $request->validated('department_id'),
+            'customer_id' => $request->validated('customer_id'),
         ];
 
         // Guard against an administrator disabling their own account

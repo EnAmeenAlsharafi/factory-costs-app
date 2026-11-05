@@ -141,6 +141,9 @@ class SalesImportConfirmServiceTest extends TestCase
         $this->assertEquals(0.0, (float) $order->outstanding_balance);
         $this->assertEquals(1, $order->lines()->count());
         $this->assertEquals('READY_STOCK', $order->lines()->first()->line_type);
+        $this->assertSame('مرتبة طبية فاخرة اختبار', $order->lines()->first()->display_name);
+        $this->assertSame(500.0, (float) $order->lines()->first()->unit_price);
+        $this->assertSame(1.0, (float) $order->lines()->first()->quantity);
     }
 
     public function test_manufactured_order_is_created_as_incomplete_draft(): void

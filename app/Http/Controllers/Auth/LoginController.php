@@ -18,7 +18,7 @@ class LoginController extends Controller
     public function showLoginForm(): View|RedirectResponse
     {
         if (Auth::check()) {
-            return redirect()->route('dashboard');
+            return redirect()->route(Auth::user()->isCustomerAccount() ? 'portal.home' : 'dashboard');
         }
 
         return view('auth.login');
@@ -73,6 +73,10 @@ class LoginController extends Controller
             // Record audit timestamp for last login
             $user->update(['last_login_at' => now()]);
 
+            if ($user->isCustomerAccount()) {
+                return redirect()->route('portal.home');
+            }
+
             return redirect()->intended(route('dashboard'));
         }
 
@@ -88,11 +92,12 @@ class LoginController extends Controller
      */
     public function logout(Request $request): RedirectResponse
     {
+        $customerAccount = $request->user()?->isCustomerAccount() ?? false;
         Auth::logout();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('login');
+        return redirect()->route($customerAccount ? 'portal.login' : 'login');
     }
 }

@@ -93,6 +93,9 @@ class SalesImportPreviewServiceTest extends TestCase
 
         $this->assertEquals('IMPORT', $row1['decision']);
         $this->assertEquals('READY_STOCK', $row1['lines'][0]['target_type']);
+        $this->assertSame('مرتبة طبية فاخرة اختبار', $row1['lines'][0]['product_name']);
+        $this->assertSame(500.0, $row1['lines'][0]['unit_price']);
+        $this->assertEquals(1, $row1['lines'][0]['quantity']);
         $this->assertEquals($material->id, $row1['lines'][0]['mapping']->material_id);
         $this->assertNotNull($row1['lines'][0]['ready_stock_availability']);
         $this->assertTrue($row1['customer']['matched'] === false);
@@ -109,6 +112,29 @@ class SalesImportPreviewServiceTest extends TestCase
 
         $this->assertEquals('IMPORT', $row2['decision']);
         $this->assertNotEmpty($row2['warnings']);
+    }
+
+    public function test_ready_stock_preview_uses_catalog_name_when_the_imported_name_is_missing(): void
+    {
+        $this->seed();
+        $material = $this->mapReadyStockSku();
+        $material->update(['sales_display_name' => 'مرتبة جاهزة من الكتالوج', 'sales_price' => 900]);
+        $batch = $this->parseFixture();
+        $row = $batch->rows()->where('external_order_reference', 'SALLA-1001')->firstOrFail();
+        $data = $row->raw_data;
+        unset($data['lines'][0]['product_name']);
+        $data['lines'][0]['quantity'] = 3;
+        $data['lines'][0]['unit_price'] = 419.5;
+        $row->update(['raw_data' => $data]);
+
+        $preview = app(SalesImportPreviewService::class)->preview($batch->fresh());
+        $readyLine = collect($preview)->firstWhere('external_order_reference', 'SALLA-1001')['lines'][0];
+
+        $this->assertSame('مرتبة جاهزة من الكتالوج', $readyLine['product_name']);
+        $this->assertSame(3, $readyLine['quantity']);
+        $this->assertSame(419.5, $readyLine['unit_price']);
+        $this->actingAs($batch->uploadedByUser)->get(route('sales.imports.preview', $batch))
+            ->assertSee('سعر البيع للوحدة')->assertSee('مرتبة جاهزة من الكتالوج')->assertSee('419.50');
     }
 
     public function test_unmapped_sku_produces_warning_and_is_still_imported_via_internal_shipping(): void

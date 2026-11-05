@@ -231,6 +231,8 @@
                 </button>
             </form>
 
+            <a href="{{ route('portal.login') }}" class="btn btn-outline-secondary w-100 mb-3">دخول عملاء الجملة والمعارض</a>
+
             <!-- Quick Demo Accounts (Development & Testing Helper) -->
             @env(['local', 'testing'])
             <div class="bg-light p-3 rounded-3 border mb-3" aria-label="حسابات تجريبية للبيئة المحلية فقط">

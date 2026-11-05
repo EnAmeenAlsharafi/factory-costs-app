@@ -30,6 +30,7 @@
             @method('PUT')
 
             <div class="row g-3">
+                @include('users.customer-link')
                 
                 <!-- Full Name -->
                 <div class="col-md-6">

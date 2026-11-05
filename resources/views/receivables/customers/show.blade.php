@@ -33,7 +33,7 @@
             <div class="card border-0 shadow-sm rounded-3 bg-white border-start border-dark border-4">
                 <div class="card-body p-3">
                     <div class="text-muted small fw-bold mb-1">إجمالي طلبات العميل</div>
-                    <h4 class="fw-bold mb-0 text-dark">{{ number_format($customer->orders->whereNotIn('status', ['CANCELLED', 'REJECTED'])->sum('total_amount'), 2) }} <small class="fs-6 text-muted">ر.س</small></h4>
+                    <h4 class="fw-bold mb-0 text-dark">{{ number_format($accountSummary['commercial_total'], 2) }} <small class="fs-6 text-muted">ر.س</small></h4>
                 </div>
             </div>
         </div>
@@ -41,15 +41,15 @@
             <div class="card border-0 shadow-sm rounded-3 bg-white border-start border-success border-4">
                 <div class="card-body p-3">
                     <div class="text-muted small fw-bold mb-1">المسدد المؤكد</div>
-                    <h4 class="fw-bold mb-0 text-success">{{ number_format($customer->orders->whereNotIn('status', ['CANCELLED', 'REJECTED'])->sum('confirmed_paid_amount'), 2) }} <small class="fs-6 text-muted">ر.س</small></h4>
+                    <h4 class="fw-bold mb-0 text-success">{{ number_format($accountSummary['confirmed_paid'], 2) }} <small class="fs-6 text-muted">ر.س</small></h4>
                 </div>
             </div>
         </div>
         <div class="col-12 col-sm-6 col-xl-3">
             <div class="card border-0 shadow-sm rounded-3 bg-white border-start border-primary border-4">
                 <div class="card-body p-3">
-                    <div class="text-muted small fw-bold mb-1">رصيد متاح غير مخصص</div>
-                    <h4 class="fw-bold mb-0 text-primary">{{ number_format($customer->unallocated_credit, 2) }} <small class="fs-6 text-muted">ر.س</small></h4>
+                    <div class="text-muted small fw-bold mb-1">رصيد دائن لصالح العميل</div>
+                    <h4 class="fw-bold mb-0 text-primary">{{ number_format($accountSummary['credit'], 2) }} <small class="fs-6 text-muted">ر.س</small></h4>
                 </div>
             </div>
         </div>
@@ -57,7 +57,7 @@
             <div class="card border-0 shadow-sm rounded-3 bg-white border-start border-danger border-4">
                 <div class="card-body p-3">
                     <div class="text-muted small fw-bold mb-1">إجمالي المستحق القائم</div>
-                    <h4 class="fw-bold mb-0 text-danger">{{ number_format($customer->total_outstanding_balance, 2) }} <small class="fs-6 text-muted">ر.س</small></h4>
+                    <h4 class="fw-bold mb-0 text-danger">{{ number_format($accountSummary['outstanding'], 2) }} <small class="fs-6 text-muted">ر.س</small></h4>
                 </div>
             </div>
         </div>

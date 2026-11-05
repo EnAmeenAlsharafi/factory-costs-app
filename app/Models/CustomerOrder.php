@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Validation\ValidationException;
 
 class CustomerOrder extends Model
 {
@@ -81,6 +83,28 @@ class CustomerOrder extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function portalRequest(): HasOne
+    {
+        return $this->hasOne(CustomerPortalRequest::class);
+    }
+
+    public function customerReturns(): HasMany
+    {
+        return $this->hasMany(CustomerReturn::class);
+    }
+
+    public function assertCustomerConfirmation(bool $lock = false): void
+    {
+        $query = $this->portalRequest();
+        if ($lock) {
+            $query->lockForUpdate();
+        }
+        $submission = $query->first();
+        if ($submission && ($submission->status !== 'CONFIRMED' || ! $submission->confirmed_at)) {
+            throw ValidationException::withMessages(['customer_confirmation' => 'يجب تأكيد العميل لآخر عرض قبل اعتماد الطلب أو إطلاقه للإنتاج.']);
+        }
     }
 
     public function salesChannel(): BelongsTo

@@ -93,6 +93,7 @@
                                 <th>المنتج</th>
                                 <th>SKU</th>
                                 <th class="text-center">الكمية</th>
+                                <th class="text-end">سعر البيع للوحدة</th>
                                 <th>النوع المطابَق</th>
                                 <th>التوفر / المكونات</th>
                             </tr>
@@ -103,6 +104,7 @@
                                     <td>{{ $line['product_name'] }}</td>
                                     <td class="fw-mono">{{ $line['sku'] ?: '-' }}</td>
                                     <td class="text-center">{{ $line['quantity'] }}</td>
+                                    <td class="text-end">{{ number_format($line['unit_price'], 2) }} ر.س</td>
                                     <td>
                                         @if($line['target_type'] === 'READY_STOCK')
                                             <span class="badge bg-success bg-opacity-10 text-success">منتج جاهز</span>

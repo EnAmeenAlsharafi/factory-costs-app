@@ -29,6 +29,7 @@ class User extends Authenticatable
         'is_active',
         'last_login_at',
         'department_id',
+        'customer_id',
     ];
 
     /**
@@ -70,6 +71,16 @@ class User extends Authenticatable
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
+    }
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
+    }
+
+    public function isCustomerAccount(): bool
+    {
+        return $this->customer_id !== null || $this->hasRole('customer_portal');
     }
 
     /**

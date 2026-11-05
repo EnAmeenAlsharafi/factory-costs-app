@@ -84,9 +84,14 @@
         <div class="card border-0 shadow-sm mb-4 rounded-3">
             <div class="card-header bg-light py-3 d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0 fw-bold fs-6 text-dark"><i class="fas fa-list text-primary me-2"></i> بنود طلب العميل</h5>
+                <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-sm btn-outline-success" id="add-ready-line-btn">
+                    <i class="fas fa-box me-1" aria-hidden="true"></i> إضافة منتج جاهز
+                </button>
                 <button type="button" class="btn btn-sm btn-success" id="add-line-btn">
                     <i class="fas fa-plus me-1"></i> إضافة بند جديد
                 </button>
+                </div>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive" style="overflow-x: auto;">
@@ -196,7 +201,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const lineCountSpan = document.getElementById('line-count');
     const grandTotalSpan = document.getElementById('grand-total');
 
-    const oldLines = {!! json_encode($oldLinesData, JSON_UNESCAPED_UNICODE) !!};
+    const oldLines = {{ Illuminate\Support\Js::from($oldLinesData) }};
 
     let lineIndex = 0;
 
@@ -428,7 +433,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         endpoint: '/api/search/ready-products',
                         placeholder: 'ابحث عن منتج جاهز (SKU / اسم)...',
                         initialId: '${materialId}',
-                        initialLabel: '${materialLabel.replace(/'/g, "\\'")}'
+                        initialLabel: ${escapeAttribute(JSON.stringify(materialLabel))}
                     })">
                         <input type="hidden" name="lines[${lineIndex}][material_id]" :value="selectedId" class="material-id-input">
                         <input type="hidden" name="lines[${lineIndex}][material_label]" :value="selectedLabel" class="material-label-input">
@@ -635,6 +640,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (modelLabelInp) modelLabelInp.value = item.label || '';
                 setLineTitle(tr, item.label);
                 loadConfigurationsForModel(tr, item.id);
+            } else if (container.classList.contains('ready-wrapper')) {
+                tr.querySelector('.material-label-input').value = item.name_ar || item.label || '';
+                priceInput.value = Number(item.sales_price ?? 0).toFixed(2);
+                setLineTitle(tr, item.name_ar || item.label);
+                updateLineTotal();
             } else if (container.classList.contains('fabric-wrapper')) {
                 const matLabelInp = tr.querySelector('.fabric-label-input');
                 if (matLabelInp) matLabelInp.value = item.label || '';
@@ -673,6 +683,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (modelLabelInp) modelLabelInp.value = '';
                 setLineTitle(tr, '');
                 loadConfigurationsForModel(tr, null);
+            } else if (container.classList.contains('ready-wrapper')) {
+                tr.querySelector('.material-label-input').value = '';
+                priceInput.value = 0;
+                setLineTitle(tr, '');
+                updateLineTotal();
             } else if (container.classList.contains('fabric-wrapper')) {
                 const matLabelInp = tr.querySelector('.fabric-label-input');
                 if (matLabelInp) matLabelInp.value = '';
@@ -794,7 +809,7 @@ document.addEventListener('DOMContentLoaded', function () {
             newTr.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
 
-        setLineTitle(tr, modelLabel);
+        setLineTitle(tr, isReadyStock ? materialLabel : modelLabel);
         renumberLines();
         updateLineTotal();
 
@@ -827,6 +842,15 @@ document.addEventListener('DOMContentLoaded', function () {
         grandTotalSpan.textContent = total.toFixed(2);
     }
 
+    function escapeAttribute(value) {
+        return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    document.getElementById('add-ready-line-btn').addEventListener('click', () => {
+        const tr = addLine({ line_type: 'READY_STOCK' });
+        tr.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        tr.querySelector('.ready-wrapper input[role="combobox"]')?.focus();
+    });
     addLineBtn.addEventListener('click', () => addLine());
     document.getElementById('add-line-btn-mobile')?.addEventListener('click', () => {
         addLine().scrollIntoView({ behavior: 'smooth', block: 'start' });

@@ -18,11 +18,12 @@ class EnsureUserIsActive
             $user = Auth::user();
 
             if (! $user->is_active) {
+                $loginRoute = $user->isCustomerAccount() ? 'portal.login' : 'login';
                 Auth::logout();
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();
 
-                return redirect()->route('login')->withErrors([
+                return redirect()->route($loginRoute)->withErrors([
                     'username' => 'تم تعطيل هذا الحساب. يرجى مراجعة مدير النظام.',
                 ]);
             }

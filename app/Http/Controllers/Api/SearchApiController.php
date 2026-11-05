@@ -275,6 +275,7 @@ class SearchApiController extends Controller
                 'id' => $m->id,
                 'code' => $m->sales_sku ?: $m->code,
                 'sales_sku' => $m->sales_sku,
+                'sales_price' => (float) $m->sales_price,
                 'name_ar' => $displayName,
                 'available' => $availability['available'],
                 'label' => "{$displayName} — متاح: {$availability['available']}",

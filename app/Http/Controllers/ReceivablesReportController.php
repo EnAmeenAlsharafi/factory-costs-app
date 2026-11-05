@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
+use App\Services\CustomerPortalAccountService;
 use App\Services\ReceivablesReportingService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -32,14 +33,15 @@ class ReceivablesReportController extends Controller
         return view('receivables.customers.index', compact('balances', 'filters'));
     }
 
-    public function statement(Request $request, Customer $customer): View
+    public function statement(Request $request, Customer $customer, CustomerPortalAccountService $accounts): View
     {
         abort_if(! $request->user()->can('receivables.view'), 403, 'غير مصرح لك بعرض كشف الحساب التشغيلي للعميل.');
 
         $statement = $this->reportingService->getCustomerStatement($customer);
         $customer->load(['creditProfile']);
+        $accountSummary = $accounts->account($customer)['summary'];
 
-        return view('receivables.customers.show', compact('customer', 'statement'));
+        return view('receivables.customers.show', compact('customer', 'statement', 'accountSummary'));
     }
 
     public function aging(Request $request): View

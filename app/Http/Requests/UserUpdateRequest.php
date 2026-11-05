@@ -26,6 +26,7 @@ class UserUpdateRequest extends FormRequest
     public function rules(): array
     {
         $userId = $this->route('user')?->id;
+        $isPortal = Role::find($this->input('role_id'))?->name === 'customer_portal';
 
         return [
             'name' => ['required', 'string', 'max:255'],
@@ -34,7 +35,8 @@ class UserUpdateRequest extends FormRequest
             'role_id' => ['required', 'exists:roles,id'],
             'password' => ['nullable', 'string', 'min:6', 'confirmed'],
             'is_active' => ['nullable', 'boolean'],
-            'department_id' => ['nullable', 'exists:departments,id'],
+            'department_id' => [Rule::prohibitedIf($isPortal), 'nullable', 'exists:departments,id'],
+            'customer_id' => [Rule::requiredIf($isPortal), Rule::prohibitedIf(! $isPortal), 'nullable', Rule::exists('customers', 'id')->where('is_active', true), Rule::unique('users', 'customer_id')->ignore($userId)],
         ];
     }
 
@@ -47,6 +49,8 @@ class UserUpdateRequest extends FormRequest
     {
         return [
             'name.required' => 'يرجى إدخال اسم الموظف الكامل.',
+            'customer_id.required' => 'يجب ربط حساب بوابة العملاء بعميل مسجل.',
+            'customer_id.unique' => 'يوجد حساب بوابة مرتبط بهذا العميل بالفعل.',
             'username.required' => 'يرجى إدخال اسم المستخدم.',
             'username.unique' => 'اسم المستخدم هذا مستخدم مسبقاً لموظف آخر.',
             'username.regex' => 'يجب أن يتكون اسم المستخدم من حروف إنجليزية وأرقام ونقاط أو شرطات فقط.',

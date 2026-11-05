@@ -40,6 +40,7 @@ class DeliveryOrderService
     public function createDeliveryOrder(CustomerOrder $customerOrder, User $creator, array $data): DeliveryOrder
     {
         return DB::transaction(function () use ($customerOrder, $creator, $data) {
+            $customerOrder->assertCustomerConfirmation(true);
             $customerOrder = CustomerOrder::query()->whereKey($customerOrder->getKey())->lockForUpdate()->firstOrFail();
             $customer = $customerOrder->customer;
             $deliveryNumber = DocumentNumberService::generateDeliveryNumber();
