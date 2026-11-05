@@ -54,11 +54,6 @@
                     </div>
 
                     <div class="col-md-2">
-                        <label class="form-label fw-semibold">رقم أمر شراء العميل (PO)</label>
-                        <input type="text" name="external_order_reference" class="form-control @error('external_order_reference') is-invalid @enderror" value="{{ old('external_order_reference') }}" placeholder="مثال: PO-9982">
-                    </div>
-
-                    <div class="col-md-2">
                         <label class="form-label fw-semibold">تاريخ الطلب <span class="text-danger">*</span></label>
                         <input type="date" name="order_date" class="form-control @error('order_date') is-invalid @enderror" value="{{ old('order_date', date('Y-m-d')) }}" required>
                     </div>

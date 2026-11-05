@@ -105,9 +105,9 @@
         <div class="col-md-3">
             <div class="card border-0 shadow-sm rounded-3 h-100">
                 <div class="card-body">
-                    <span class="text-muted fs-7 d-block mb-1">العميل وأمر الشراء</span>
+                    <span class="text-muted fs-7 d-block mb-1">العميل</span>
                     <h6 class="fw-bold text-dark mb-0">{{ $order->customer?->name }}</h6>
-                    <small class="text-muted">PO: {{ $order->customer_po_number ?? 'غير محدد' }} | {{ $order->customer?->phone }}</small>
+                    <small class="text-muted">{{ $order->customer?->phone }}</small>
                 </div>
             </div>
         </div>

@@ -142,9 +142,6 @@
                                 </td>
                                 <td>
                                     <div class="fw-semibold text-dark">{{ $order->customer?->name }}</div>
-                                    @if($order->customer_po_number)
-                                        <small class="text-muted"><i class="fas fa-hashtag me-1"></i> PO: {{ $order->customer_po_number }}</small>
-                                    @endif
                                 </td>
                                 <td>
                                     <span class="badge bg-light text-dark border">{{ $order->salesChannel?->name_ar }}</span>

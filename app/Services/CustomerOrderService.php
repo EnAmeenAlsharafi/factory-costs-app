@@ -22,7 +22,13 @@ class CustomerOrderService
     public function createOrder(array $data, array $linesData, User $creator): CustomerOrder
     {
         return DB::transaction(function () use ($data, $linesData, $creator) {
-            $number = $this->documentNumberService->generateOrderNumber();
+            $externalReference = $data['external_order_reference'] ?? null;
+            // Honor the source channel's own order number (e.g. Salla's) as our order_number
+            // when it isn't already taken, so staff can match orders against that channel's
+            // dashboard directly instead of hunting for a separate internal ORD-xxxx number.
+            $number = ($externalReference && ! CustomerOrder::where('order_number', $externalReference)->exists())
+                ? $externalReference
+                : $this->documentNumberService->generateOrderNumber();
 
             $order = CustomerOrder::create([
                 'order_number' => $number,
