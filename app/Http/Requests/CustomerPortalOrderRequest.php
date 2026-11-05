@@ -56,7 +56,7 @@ class CustomerPortalOrderRequest extends FormRequest
             'lines.*.custom_design_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'lines.*.requested_fabric' => ['nullable', 'string', 'max:1000'],
             'lines.*.requested_color' => ['nullable', 'string', 'max:500'],
-            'lines.*.material_id' => ['required_if:lines.*.line_type,READY_STOCK', 'nullable', Rule::exists('materials', 'id')->where('is_active', true)->where('is_sellable_ready_product', true)->where('has_ready_options', false)],
+            'lines.*.material_id' => ['required_if:lines.*.line_type,READY_STOCK', 'nullable', Rule::exists('materials', 'id')->where('is_active', true)->where('is_sellable_ready_product', true)->where('has_ready_options', 0)],
             'lines.*.requested_width_cm' => ['required_if:lines.*.line_type,MANUFACTURED', 'nullable', 'numeric', 'gt:0', 'max:1000'],
             'lines.*.requested_length_cm' => ['required_if:lines.*.line_type,MANUFACTURED', 'nullable', 'numeric', 'gt:0', 'max:1000'],
             'lines.*.has_storage' => ['nullable', 'boolean'],
