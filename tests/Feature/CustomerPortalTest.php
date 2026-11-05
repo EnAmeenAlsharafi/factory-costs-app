@@ -7,6 +7,7 @@ use App\Models\CustomerOrder;
 use App\Models\CustomerPayment;
 use App\Models\CustomerPortalRequest;
 use App\Models\DeliveryOrder;
+use App\Models\FabricColor;
 use App\Models\ManufacturingRecipe;
 use App\Models\ManufacturingRecipeVersion;
 use App\Models\Material;
@@ -24,6 +25,8 @@ use App\Services\PaymentAllocationService;
 use App\Services\ProductionOrderService;
 use App\Services\ReceivablesReportingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
@@ -393,6 +396,105 @@ class CustomerPortalTest extends TestCase
         $this->assertSame('تم التسليم جزئيًا', $progress['status']);
         $this->assertSame(1, (int) $progress['delivered_quantity']);
         $this->assertSame(2, (int) $progress['ordered_quantity']);
+    }
+
+    public function test_custom_design_image_and_free_fabric_request_are_reviewed_and_transferred_to_the_confirmed_order(): void
+    {
+        Storage::fake('local');
+        $user = $this->client();
+        $line = [
+            'line_type' => 'MANUFACTURED', 'custom_design' => true, 'custom_design_name' => 'سرير بصورة العميل',
+            'requested_width_cm' => 160, 'requested_length_cm' => 200, 'quantity' => 2,
+            'requested_fabric' => 'مخمل كتالوج المعرض', 'requested_color' => 'بيج رملي',
+            'custom_design_image' => UploadedFile::fake()->image('design.png'),
+            'custom_design_image_path' => 'forged.png', 'unit_price' => 1,
+        ];
+        $this->actingAs($user)->get(route('portal.requests.create'))->assertSee('إضافة منتج جاهز')->assertSee('تصميم خاص حسب الطلب')->assertSee('وصف القماش الخاص المطلوب');
+        $this->post(route('portal.requests.store'), ['lines' => [$line]])->assertSessionHasNoErrors();
+        $submission = CustomerPortalRequest::firstOrFail();
+        $saved = $submission->lines[0];
+        $this->assertSame('سرير بصورة العميل', $saved['product_name']);
+        $this->assertArrayNotHasKey('unit_price', $saved);
+        $this->assertNotSame('forged.png', $saved['custom_design_image_path']);
+        Storage::disk('local')->assertExists($saved['custom_design_image_path']);
+        $url = route('portal.requests.design-image', [$submission, $saved['line_key']]);
+        $this->get($url)->assertOk()->assertHeader('Content-Type', 'image/png');
+        $this->get(route('portal.requests.show', $submission))->assertSee('مخمل كتالوج المعرض')->assertSee('بيج رملي')->assertSee($url);
+        $this->actingAs($this->client())->get($url)->assertNotFound();
+        $this->submit($user, $submission);
+
+        $offer = $this->offerData($submission->fresh());
+        $this->actingAs($this->admin())->post(route('sales.portal-requests.offer', $submission), $offer)->assertSessionHasErrors('lines.0.fabric_color_id');
+        $fabric = Material::factory()->create(['material_category_id' => MaterialCategory::where('code', 'FABRIC')->value('id')]);
+        $color = FabricColor::factory()->create(['material_id' => $fabric->id, 'is_available' => true]);
+        $offer['lines'][0]['fabric_material_id'] = $fabric->id;
+        $offer['lines'][0]['fabric_color_id'] = $color->id;
+        $this->post(route('sales.portal-requests.offer', $submission), $offer)->assertSessionHasNoErrors();
+        $this->get(route('sales.portal-requests.design-image', [$submission, $saved['line_key']]))->assertOk();
+        $this->actingAs($user)->post(route('portal.requests.confirm', $submission), ['revision' => $submission->fresh()->revision])->assertSessionHasNoErrors();
+
+        $confirmedLine = $submission->fresh()->order->lines->first();
+        $this->assertTrue($confirmedLine->custom_design);
+        $this->assertSame($saved['custom_design_image_path'], $confirmedLine->custom_design_image_path);
+        $this->assertSame($fabric->id, $confirmedLine->fabric_material_id);
+        $this->assertSame($color->id, $confirmedLine->fabric_color_id);
+        $this->assertStringContainsString('بيج رملي', $confirmedLine->fabric_notes);
+        $this->assertSame('بيج رملي', $submission->fresh()->lines[0]['requested_color']);
+    }
+
+    public function test_draft_images_keep_their_line_identity_after_reordering_and_ignore_foreign_paths(): void
+    {
+        Storage::fake('local');
+        $user = $this->client();
+        $base = ['line_type' => 'MANUFACTURED', 'custom_design' => true, 'requested_width_cm' => 100, 'requested_length_cm' => 200, 'quantity' => 1];
+        $lines = [
+            array_merge($base, ['custom_design_name' => 'التصميم الأول', 'custom_design_image' => UploadedFile::fake()->image('one.png')]),
+            array_merge($base, ['custom_design_name' => 'التصميم الثاني', 'custom_design_image' => UploadedFile::fake()->image('two.png')]),
+        ];
+        $this->actingAs($user)->post(route('portal.requests.store'), ['lines' => $lines])->assertSessionHasNoErrors();
+        $submission = CustomerPortalRequest::firstOrFail();
+        $original = $submission->lines;
+        $reordered = array_reverse($original);
+        $reordered[0]['custom_design_image_path'] = 'forged/another-customer.png';
+
+        $this->put(route('portal.requests.update', $submission), ['revision' => $submission->revision, 'lines' => $reordered])->assertSessionHasNoErrors();
+
+        $this->assertSame($original[1]['custom_design_image_path'], $submission->fresh()->lines[0]['custom_design_image_path']);
+        $this->assertSame($original[0]['custom_design_image_path'], $submission->fresh()->lines[1]['custom_design_image_path']);
+    }
+
+    public function test_portal_rejects_invalid_images_and_removes_uploads_when_an_offer_fails(): void
+    {
+        Storage::fake('local');
+        $user = $this->client();
+        $line = ['line_type' => 'MANUFACTURED', 'custom_design' => true, 'custom_design_name' => 'خاص', 'requested_width_cm' => 100, 'requested_length_cm' => 200, 'quantity' => 1];
+        $this->actingAs($user)->post(route('portal.requests.store'), ['lines' => [array_merge($line, ['custom_design_image' => UploadedFile::fake()->create('not-image.pdf', 1, 'application/pdf')])]])->assertSessionHasErrors('lines.0.custom_design_image');
+        $this->post(route('portal.requests.store'), ['lines' => [$line]])->assertSessionHasNoErrors();
+        $submission = CustomerPortalRequest::firstOrFail();
+        $this->submit($user, $submission);
+        $offer = $this->offerData($submission->fresh());
+        $offer['lines'][0]['custom_design_image'] = UploadedFile::fake()->image('rollback.png');
+        $offer['lines'][0]['discount_amount'] = 9999;
+
+        $this->actingAs($this->admin())->post(route('sales.portal-requests.offer', $submission), $offer)->assertSessionHasErrors('offer');
+
+        $this->assertSame([], Storage::disk('local')->allFiles());
+        $this->assertSame('SUBMITTED', $submission->fresh()->status);
+    }
+
+    public function test_customer_can_select_a_model_configuration_without_setting_the_price(): void
+    {
+        $user = $this->client();
+        $model = ProductModel::factory()->create(['requires_fabric_selection' => false]);
+        $configuration = ProductConfiguration::factory()->create(['product_model_id' => $model->id, 'has_storage' => false]);
+        $line = ['line_type' => 'MANUFACTURED', 'product_model_id' => $model->id, 'product_configuration_id' => $configuration->id,
+            'requested_width_cm' => 160, 'requested_length_cm' => 200, 'has_storage' => 0, 'quantity' => 1, 'unit_price' => 99];
+
+        $this->actingAs($user)->post(route('portal.requests.store'), ['lines' => [$line]])->assertSessionHasNoErrors();
+
+        $saved = CustomerPortalRequest::firstOrFail()->lines[0];
+        $this->assertSame($configuration->id, $saved['product_configuration_id']);
+        $this->assertArrayNotHasKey('unit_price', $saved);
     }
 
     protected function admin(): User

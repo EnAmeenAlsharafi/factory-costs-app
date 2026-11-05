@@ -42,6 +42,7 @@ class CustomerOrderService
                 'external_payment_method' => $data['external_payment_method'] ?? null,
                 'external_payment_status' => $data['external_payment_status'] ?? null,
                 'import_batch_id' => $data['import_batch_id'] ?? null,
+                'manual_import_lines' => $data['manual_import_lines'] ?? null,
                 'delivery_method' => $data['delivery_method'] ?? null,
                 'shipping_company_name' => $data['shipping_company_name'] ?? null,
                 'shipping_tracking_number' => $data['shipping_tracking_number'] ?? null,
@@ -144,6 +145,7 @@ class CustomerOrderService
                     'customer_product_alias_id' => $line['customer_product_alias_id'] ?? $existingLine?->customer_product_alias_id,
                     'custom_design' => ! empty($line['custom_design'] ?? $existingLine?->custom_design),
                     'custom_design_name' => $line['custom_design_name'] ?? $existingLine?->custom_design_name,
+                    'custom_design_image_path' => $line['custom_design_image_path'] ?? $existingLine?->custom_design_image_path,
                     'requested_width_cm' => $line['requested_width_cm'] ?? $existingLine?->requested_width_cm,
                     'requested_length_cm' => $line['requested_length_cm'] ?? $existingLine?->requested_length_cm,
                     'reference_width_cm' => $line['reference_width_cm'] ?? $existingLine?->reference_width_cm ?? ($line['requested_width_cm'] ?? $existingLine?->requested_width_cm),
@@ -206,6 +208,9 @@ class CustomerOrderService
 
             $order->recalculateTotals();
             app(PaymentAllocationService::class)->handleOrderPriceReduction($order);
+            if (! empty($data['import_completion_confirmed']) && $order->manual_import_lines) {
+                $order->update(['manual_import_lines' => null]);
+            }
 
             // If changes occurred after production approval, reset status for re-review
             if ($wasApproved) {
@@ -224,6 +229,7 @@ class CustomerOrderService
      */
     public function submitForProductionReview(CustomerOrder $order): CustomerOrder
     {
+        $order->assertCustomerConfirmation();
         if ($order->status === 'CANCELLED') {
             throw new Exception('لا يمكن إرسال طلب ملغى للمراجعة.');
         }
@@ -403,6 +409,7 @@ class CustomerOrderService
                 'customer_product_alias_id' => $line['customer_product_alias_id'] ?? null,
                 'custom_design' => ! empty($line['custom_design']),
                 'custom_design_name' => $line['custom_design_name'] ?? null,
+                'custom_design_image_path' => $line['custom_design_image_path'] ?? null,
                 'requested_width_cm' => $line['requested_width_cm'] ?? null,
                 'requested_length_cm' => $line['requested_length_cm'] ?? null,
                 'reference_width_cm' => $line['reference_width_cm'] ?? ($line['requested_width_cm'] ?? null),

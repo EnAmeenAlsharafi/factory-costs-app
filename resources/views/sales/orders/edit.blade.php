@@ -35,9 +35,13 @@
 
     {{-- Validation errors are shown once by the layout flash partial. --}}
 
-    <form action="{{ route('sales.orders.update', $order) }}" method="POST" id="orderForm" data-unsaved-warning>
+    <form action="{{ route('sales.orders.update', $order) }}" method="POST" enctype="multipart/form-data" id="orderForm" data-unsaved-warning>
         @csrf
         @method('PUT')
+        @include('sales.orders.manual-import-lines')
+        @if($order->manual_import_lines)
+            <div class="form-check mb-3"><input type="checkbox" class="form-check-input" id="import_completion_confirmed" name="import_completion_confirmed" value="1"><label class="form-check-label" for="import_completion_confirmed">أؤكد إضافة جميع بنود سلة المطلوبة ومراجعة إجمالي الطلب والدفعات.</label></div>
+        @endif
 
         {{-- Header Information Card --}}
         <div class="card border-0 shadow-sm mb-4 rounded-3">
@@ -160,7 +164,7 @@
 </div>
 
 @php
-$dbLinesData = $order->lines->map(function($l) {
+$dbLinesData = $order->lines->map(function($l) use ($order) {
     $cfg = $l->productConfiguration;
     $cfgStorage = ($cfg && $cfg->has_storage) ? 'بتخزين' : 'بدون تخزين';
     $cfgLabel = $cfg ? "{$cfg->width_cm}×{$cfg->length_cm} — {$cfgStorage}" : '';
@@ -173,6 +177,7 @@ $dbLinesData = $order->lines->map(function($l) {
         'product_model_id' => $l->product_model_id,
         'product_model_label' => $l->productModel ? $l->productModel->name_ar : '',
         'product_model_code' => $l->productModel ? $l->productModel->model_code : '',
+        'custom_design_image_url' => $l->custom_design_image_path ? route('sales.orders.design-image', [$order, $l]) : null,
         'custom_design' => $l->custom_design,
         'custom_design_name' => $l->custom_design_name,
         'product_configuration_id' => $l->product_configuration_id,
@@ -217,6 +222,8 @@ if (!empty($rawOldLines)) {
     $readyMaterials = !empty($readyMaterialIds) ? \App\Models\Material::whereIn('id', $readyMaterialIds)->get()->keyBy('id') : collect();
 
     foreach ($rawOldLines as $line) {
+        $existingLine = $order->lines->firstWhere('id', $line['id'] ?? null);
+        $line['custom_design_image_url'] = $existingLine?->custom_design_image_path ? route('sales.orders.design-image', [$order, $existingLine]) : null;
         $mid = $line['product_model_id'] ?? null;
         $cid = $line['product_configuration_id'] ?? null;
         $sid = $line['fabric_supplier_id'] ?? null;
@@ -405,6 +412,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const supplierColorCode = data.fabric_supplier_color_code || '';
         const isCustom = data.custom_design ? 'checked' : '';
         const customName = data.custom_design_name || '';
+        const customImageUrl = data.custom_design_image_url || '';
         const customNameDisplay = data.custom_design ? '' : 'd-none';
         const lineType = data.line_type || 'MANUFACTURED';
         const materialId = data.material_id || '';
@@ -486,6 +494,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     <label class="form-check-label fs-8 text-secondary" for="custom_${lineIndex}">تصميم خاص حسب الطلب</label>
                 </div>
                 <input type="text" name="lines[${lineIndex}][custom_design_name]" class="form-control form-control-sm custom-name-input ${customNameDisplay} mt-1" value="${customName.replace(/"/g, '&quot;')}" placeholder="اسم التصميم الخاص...">
+                <div class="custom-image-fields ${customNameDisplay} mt-2">
+                    <label for="custom_image_${lineIndex}" class="form-label fs-8">صورة المنتج / التصميم الخاص</label>
+                    <input type="file" name="lines[${lineIndex}][custom_design_image]" id="custom_image_${lineIndex}" class="form-control form-control-sm custom-image-input" accept="image/jpeg,image/png,image/webp" ${data.custom_design ? '' : 'disabled'}>
+                    <small class="text-muted d-block">JPG، PNG، WebP — حتى 5 ميجابايت. عند التعديل اترك الحقل فارغًا للاحتفاظ بالصورة الحالية.</small>
+                    <img ${customImageUrl ? 'src="' + escapeAttribute(customImageUrl) + '"' : ''} alt="معاينة صورة التصميم الخاص" class="custom-image-preview img-thumbnail mt-2 ${customImageUrl ? '' : 'd-none'}" style="max-width: 180px; max-height: 140px; object-fit: contain;">
+                </div>
                 </div>
                 <div class="ready-stock-fields ${isReadyStock ? '' : 'd-none'}">
                     <div class="typeahead-container ready-wrapper mb-1" @click.outside="closeDropdown" x-data="typeaheadSelect({
@@ -800,12 +814,26 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         customCheck.addEventListener('change', function () {
+            tr.querySelector('.custom-image-fields').classList.toggle('d-none', !this.checked);
+            tr.querySelector('.custom-image-input').disabled = !this.checked;
             if (this.checked) {
                 customNameInput.classList.remove('d-none');
             } else {
                 customNameInput.classList.add('d-none');
                 customNameInput.value = '';
             }
+        });
+
+        let imagePreviewUrl = null;
+        tr.querySelector('.custom-image-input').addEventListener('change', function () {
+            const preview = tr.querySelector('.custom-image-preview');
+            if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+            const file = this.files[0];
+            imagePreviewUrl = file ? URL.createObjectURL(file) : null;
+            const source = imagePreviewUrl || customImageUrl;
+            if (source) preview.src = source;
+            else preview.removeAttribute('src');
+            preview.classList.toggle('d-none', !source);
         });
 
         function updateLineTotal() {

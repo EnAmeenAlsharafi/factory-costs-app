@@ -9,6 +9,24 @@
     @endif
     <form method="POST" action="{{ $material->exists ? route('sales.ready-stock-products.update', $material) : route('sales.ready-stock-products.store') }}" class="card border-0 shadow-sm">
         @csrf
+        <input type="hidden" name="ready_parent_id" value="{{ $material->ready_parent_id }}">
+        @if($material->ready_parent_id)
+            <div class="alert alert-info m-3">إضافة / تعديل خيار للمنتج: {{ $material->readyParent?->name_ar }}. سمِّ الصنف باسم المنتج والمقاس لتمييزه عند إدخاله يدويًا في الطلب.</div>
+            <input type="hidden" name="has_ready_options" value="0">
+            <div class="px-4 mb-3"><label for="ready_option_label" class="form-label">الخيار / المقاس</label><input name="ready_option_label" id="ready_option_label" class="form-control" maxlength="255" placeholder="مثل 160×200 سم" value="{{ old('ready_option_label', $material->ready_option_label) }}" required></div>
+        @else
+            <div class="form-check m-4">
+                <input type="hidden" name="has_ready_options" value="0">
+                <input type="checkbox" name="has_ready_options" id="has_ready_options" class="form-check-input" value="1" @checked(old('has_ready_options', $material->has_ready_options))>
+                <label for="has_ready_options" class="form-check-label">منتج رئيسي يحتوي خيارات / مقاسات تُضاف من النظام</label>
+            </div>
+        @endif
+        @if($material->exists && $material->has_ready_options)
+            <div class="px-4 mb-3">
+                <a href="{{ route('sales.ready-stock-products.options.create', $material) }}" class="btn btn-outline-success mb-2">إضافة خيار / مقاس</a>
+                @foreach($material->readyOptions as $option)<a class="d-block" href="{{ route('sales.ready-stock-products.edit', $option) }}">{{ $option->ready_option_label }} — {{ $option->sales_display_name ?: $option->name_ar }}</a>@endforeach
+            </div>
+        @endif
         @if($material->exists) @method('PUT') @endif
         <div class="card-body p-4">
             <div class="row g-3">
@@ -67,6 +85,12 @@
                 <div class="col-md-6">
                     <label for="is_active" class="form-label">حالة المنتج في النظام</label>
                     <select id="is_active" name="is_active" class="form-select"><option value="1" @selected(old('is_active', $material->is_active) == 1)>نشط</option><option value="0" @selected(old('is_active', $material->is_active) == 0)>غير نشط</option></select>
+                </div>
+                <div class="col-12">
+                    <label for="sales_image_url" class="form-label">رابط الصورة الرئيسية للمنتج</label>
+                    <input id="sales_image_url" name="sales_image_url" type="url" class="form-control" dir="ltr" maxlength="2048" placeholder="https://..." value="{{ old('sales_image_url', $material->sales_image_url) }}">
+                    @if($material->sales_image_url)<img src="{{ $material->sales_image_url }}" alt="الصورة الرئيسية للمنتج" class="img-thumbnail mt-2" style="max-width:180px;max-height:140px;object-fit:contain;" referrerpolicy="no-referrer">@endif
+                    <small class="text-muted d-block">يُحفظ رابط الصورة الأولى من ملف سلة، وتُعرض الصورة من مصدرها الأصلي.</small>
                 </div>
                 <div class="col-12">
                     <label for="notes" class="form-label">ملاحظات</label>

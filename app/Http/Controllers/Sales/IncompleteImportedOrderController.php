@@ -15,7 +15,7 @@ class IncompleteImportedOrderController extends Controller
 
         $orders = CustomerOrder::whereNotNull('import_batch_id')
             ->where('status', 'DRAFT')
-            ->whereHas('lines', fn ($q) => $q->where('is_incomplete', true))
+            ->where(fn ($query) => $query->whereNotNull('manual_import_lines')->orWhereHas('lines', fn ($q) => $q->where('is_incomplete', true)))
             ->with(['customer', 'salesChannel', 'importBatch'])
             ->withCount(['lines as incomplete_lines_count' => fn ($q) => $q->where('is_incomplete', true)])
             ->latest('id')

@@ -30,6 +30,7 @@ class CustomerOrderLine extends Model
         'customer_product_alias_id',
         'custom_design',
         'custom_design_name',
+        'custom_design_image_path',
         'requested_width_cm',
         'requested_length_cm',
         'reference_width_cm',

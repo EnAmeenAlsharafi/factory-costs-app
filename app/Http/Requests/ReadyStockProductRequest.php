@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class ReadyStockProductRequest extends FormRequest
 {
@@ -27,7 +28,11 @@ class ReadyStockProductRequest extends FormRequest
 
         return [
             'name_ar' => ['required', 'string', 'max:255'],
+            'has_ready_options' => ['nullable', 'boolean'],
+            'ready_parent_id' => ['nullable', Rule::exists('materials', 'id')->where('has_ready_options', true)->whereNull('ready_parent_id')->where('is_sellable_ready_product', true)],
+            'ready_option_label' => ['required_with:ready_parent_id', 'nullable', 'string', 'max:255'],
             'sales_display_name' => ['nullable', 'string', 'max:255'],
+            'sales_image_url' => ['nullable', 'url:https', 'max:2048'],
             'sales_sku' => ['nullable', 'string', 'max:100', Rule::unique('materials', 'sales_sku')->ignore($material)],
             'salla_product_id' => ['nullable', 'string', 'regex:/^[0-9]+$/', 'max:100', Rule::unique('materials', 'salla_product_id')->ignore($material)],
             'base_unit_id' => ['required', Rule::exists('units_of_measure', 'id')->where('is_active', true)],
@@ -39,6 +44,22 @@ class ReadyStockProductRequest extends FormRequest
             'is_active' => ['required', 'boolean'],
             'notes' => ['nullable', 'string', 'max:10000'],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function ($validator) {
+            $material = $this->route('material');
+            if ($this->filled('ready_parent_id') && $this->boolean('has_ready_options')) {
+                $validator->errors()->add('has_ready_options', 'الخيار يتبع منتجًا رئيسيًا ولا يمكن أن يحتوي خيارات أخرى.');
+            }
+            if ($material && (string) $material->ready_parent_id !== (string) $this->input('ready_parent_id')) {
+                $validator->errors()->add('ready_parent_id', 'لا يمكن تغيير ارتباط الصنف بالمنتج الرئيسي بعد إنشائه.');
+            }
+            if ($material && ! $this->boolean('has_ready_options') && $material->readyOptions()->exists()) {
+                $validator->errors()->add('has_ready_options', 'هذا المنتج يحتوي خيارات مسجلة بالفعل.');
+            }
+        });
     }
 
     public function messages(): array

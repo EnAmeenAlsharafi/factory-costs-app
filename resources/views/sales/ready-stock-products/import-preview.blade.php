@@ -5,7 +5,8 @@
     <a href="{{ route('sales.ready-stock-products.import') }}" class="text-decoration-none d-inline-block mb-3">رفع ملف آخر</a>
     <h1 class="h3 fw-bold">معاينة المنتجات: {{ $fileName }}</h1>
     @if($errors->any())<div class="alert alert-danger" role="alert">@foreach($errors->all() as $error)<div>{{ $error }}</div>@endforeach</div>@endif
-    <p>عدد المنتجات: {{ count($preview['rows']) }}. الصفوف المستبعدة (خيارات أو أنواع أخرى): {{ $preview['skipped'] }}. لم يتم حفظ أي منتج بعد.</p>
+    <p>عدد المنتجات: {{ count($preview['rows']) }}. الصفوف المستبعدة (خيارات، أنواع أخرى، منتجات مخفية أو كمية صفر): {{ $preview['skipped'] }}. لم يتم حفظ أي منتج بعد.</p>
+    <p class="text-muted">سعر البيع مأخوذ من «السعر المخفض» فقط. المنتجات دون سعر مخفض صالح لا يمكن استيرادها.</p>
     <div class="alert alert-warning">اختر المنتجات التي تُباع من المخزون دون تصنيع. يُحدّث المنتج الموجود برقم سلة أو SKU، مع رفض أي تعارض بينهما. المنتجات دون SKU تحتاج إلى مطابقة يدوية للطلبات.</div>
     <form method="POST" action="{{ route('sales.ready-stock-products.import-confirm') }}">
         @csrf
@@ -28,7 +29,11 @@
                         <td><input type="checkbox" class="form-check-input" value="{{ $row['row_number'] }}" x-model.number="selected" @disabled($row['error']) aria-label="اختيار {{ $row['name_ar'] }}"></td>
                         <td><bdi>{{ $row['salla_product_id'] }}</bdi></td>
                         <td><bdi>{{ $row['sales_sku'] ?: '—' }}</bdi>@unless($row['sales_sku'])<small class="text-warning d-block">يلزم مطابقة يدوية</small>@endunless</td>
-                        <td>{{ $row['name_ar'] }}<small class="text-muted d-block">{{ $row['salla_category'] }}</small></td>
+                        <td>
+                            @if($row['sales_image_url'])<img src="{{ $row['sales_image_url'] }}" alt="الصورة الأولى للمنتج" width="64" height="64" class="img-thumbnail mb-1" style="object-fit:contain;" loading="lazy" referrerpolicy="no-referrer">@endif
+                            {{ $row['name_ar'] }}<small class="text-muted d-block">{{ $row['salla_category'] }}</small>
+                            @if($row['has_ready_options'])<small class="d-block text-info">منتج رئيسي: أضف الخيارات من النظام. بنوده في الطلبات تُستكمل يدويًا.</small>@endif
+                        </td>
                         <td>{{ $row['sales_price'] ?? '—' }}</td>
                         @can('costing.view')<td>{{ $row['sales_reference_cost'] ?? '—' }}</td>@endcan
                         <td>{{ $row['salla_stock_quantity'] ?? '—' }}</td>

@@ -49,15 +49,21 @@ class CustomerPortalOrderRequest extends FormRequest
             'customer_notes' => ['nullable', 'string', 'max:5000'],
             'lines' => ['required', 'array', 'min:1', 'max:100'],
             'lines.*.line_type' => ['required', 'in:MANUFACTURED,READY_STOCK'],
-            'lines.*.product_model_id' => ['required_if:lines.*.line_type,MANUFACTURED', 'nullable', Rule::exists('product_models', 'id')->where('is_active', true)],
-            'lines.*.material_id' => ['required_if:lines.*.line_type,READY_STOCK', 'nullable', Rule::exists('materials', 'id')->where('is_active', true)->where('is_sellable_ready_product', true)],
+            'lines.*.product_model_id' => ['nullable', Rule::exists('product_models', 'id')->where('is_active', true)],
+            'lines.*.line_key' => ['nullable', 'uuid', 'distinct'],
+            'lines.*.custom_design' => ['nullable', 'boolean'],
+            'lines.*.custom_design_name' => ['required_if:lines.*.custom_design,1,true', 'nullable', 'string', 'max:255'],
+            'lines.*.custom_design_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'lines.*.requested_fabric' => ['nullable', 'string', 'max:1000'],
+            'lines.*.requested_color' => ['nullable', 'string', 'max:500'],
+            'lines.*.material_id' => ['required_if:lines.*.line_type,READY_STOCK', 'nullable', Rule::exists('materials', 'id')->where('is_active', true)->where('is_sellable_ready_product', true)->where('has_ready_options', false)],
             'lines.*.requested_width_cm' => ['required_if:lines.*.line_type,MANUFACTURED', 'nullable', 'numeric', 'gt:0', 'max:1000'],
             'lines.*.requested_length_cm' => ['required_if:lines.*.line_type,MANUFACTURED', 'nullable', 'numeric', 'gt:0', 'max:1000'],
             'lines.*.has_storage' => ['nullable', 'boolean'],
             'lines.*.fabric_material_id' => ['nullable', Rule::exists('materials', 'id')->where('is_active', true)],
             'lines.*.fabric_color_id' => ['nullable', 'exists:fabric_colors,id'],
             'lines.*.quantity' => ['required', 'integer', 'min:1', 'max:10000'],
-            'lines.*.product_configuration_id' => [$offer ? 'nullable' : 'exclude', Rule::exists('product_configurations', 'id')->where('is_active', true)],
+            'lines.*.product_configuration_id' => ['nullable', Rule::exists('product_configurations', 'id')->where('is_active', true)],
             'lines.*.notes' => ['nullable', 'string', 'max:2000'],
             'lines.*.unit_price' => [$offer ? 'required' : 'exclude', 'numeric', 'min:0', 'max:9999999', 'decimal:0,2'],
             'lines.*.discount_amount' => [$offer ? 'nullable' : 'exclude', 'numeric', 'min:0', 'max:9999999', 'decimal:0,2'],
@@ -76,8 +82,15 @@ class CustomerPortalOrderRequest extends FormRequest
                 return;
             }
             foreach ($this->input('lines', []) as $index => $line) {
+                $custom = ! empty($line['custom_design']);
+                if ($this->hasFile("lines.{$index}.custom_design_image") && (! $custom || ($line['line_type'] ?? '') !== 'MANUFACTURED')) {
+                    $validator->errors()->add("lines.{$index}.custom_design_image", 'الصورة مخصصة لبنود التصميم الخاص فقط.');
+                }
                 if (($line['line_type'] ?? '') !== 'MANUFACTURED') {
                     continue;
+                }
+                if (! $custom && empty($line['product_model_id'])) {
+                    $validator->errors()->add("lines.{$index}.product_model_id", 'اختر الموديل أو فعّل تصميم خاص حسب الطلب.');
                 }
                 $fabric = ! empty($line['fabric_material_id']) ? Material::with('category')->find($line['fabric_material_id']) : null;
                 if ($fabric && $fabric->category?->code !== 'FABRIC') {
@@ -86,10 +99,11 @@ class CustomerPortalOrderRequest extends FormRequest
                 if (! empty($line['fabric_color_id']) && ! FabricColor::where('material_id', $line['fabric_material_id'] ?? null)->active()->available()->whereKey($line['fabric_color_id'])->exists()) {
                     $validator->errors()->add("lines.{$index}.fabric_color_id", 'اللون المختار لا يتبع القماش المحدد أو غير متاح.');
                 }
-                $requiresFabric = ProductModel::find($line['product_model_id'])?->requires_fabric_selection;
-                if (! empty($line['product_configuration_id']) && $this->routeIs('sales.portal-requests.offer')) {
+                $requiresFabric = (! $custom && ProductModel::find($line['product_model_id'] ?? null)?->requires_fabric_selection)
+                    || ! empty($line['requested_fabric']) || ! empty($line['requested_color']);
+                if (! empty($line['product_configuration_id'])) {
                     $configuration = ProductConfiguration::find($line['product_configuration_id']);
-                    if ($configuration->product_model_id !== (int) $line['product_model_id'] || $configuration->has_storage !== (bool) ($line['has_storage'] ?? false)) {
+                    if ($custom || $configuration->product_model_id !== (int) ($line['product_model_id'] ?? null) || $configuration->has_storage !== (bool) ($line['has_storage'] ?? false)) {
                         $validator->errors()->add("lines.{$index}.product_configuration_id", 'التهيئة المرجعية يجب أن تتبع الموديل وخيار التخزين المحددين.');
                     }
                 }

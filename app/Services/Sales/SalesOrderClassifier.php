@@ -48,13 +48,16 @@ class SalesOrderClassifier
         }
 
         $isInternalShipping = in_array($shippingMethod, self::INTERNAL_SHIPPING_METHODS, true);
-        $hasManufacturedOrBundle = ! empty(array_intersect($lineTargetTypes, ['MANUFACTURED', 'BUNDLE']));
+        $hasManufacturedOrBundle = ! empty(array_intersect($lineTargetTypes, ['MANUFACTURED', 'BUNDLE', 'MANUAL']));
 
         if (! $isInternalShipping && ! $hasManufacturedOrBundle) {
             return ['decision' => 'SKIP', 'skip_reason' => 'شحن خارجي ولا يحتوي على منتج مصنّع أو بكج — يُدار بالكامل داخل سلة.', 'warnings' => []];
         }
 
         $warnings = [];
+        if (in_array('MANUAL', $lineTargetTypes, true)) {
+            $warnings[] = 'ستُحفظ بيانات العميل والمنتجات البسيطة فقط؛ أضف المنتجات ذات الخيارات والأسرّة يدويًا قبل اعتماد الطلب. تُراجع الدفعات بعد استكمال جميع البنود.';
+        }
 
         if (in_array($orderStatus, self::ALREADY_FULFILLED_STATUSES, true)) {
             $warnings[] = "الطلب مُسجَّل في سلة بالفعل كـ \"{$orderStatus}\".";

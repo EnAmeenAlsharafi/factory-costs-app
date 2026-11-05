@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Sales;
 
+use App\Models\Customer;
 use App\Models\Material;
 use App\Models\MaterialCategory;
 use App\Models\Role;
@@ -125,7 +126,7 @@ class ReadyStockProductImportTest extends TestCase
     public function test_duplicate_file_identifiers_and_invalid_values_are_not_importable(): void
     {
         $this->signIn();
-        $this->upload([$this->row(), $this->row(), $this->row(['No.' => '99', 'سعر المنتج' => '-10'])])->assertSee('رقم المنتج أو SKU مكرر داخل الملف.');
+        $this->upload([$this->row(), $this->row(), $this->row(['No.' => '99', 'السعر المخفض' => '-10'])])->assertSee('رقم المنتج أو SKU مكرر داخل الملف.');
 
         $this->confirm([2])->assertSessionHasErrors('selected_rows');
         $this->confirm([4])->assertSessionHasErrors('selected_rows');
@@ -190,10 +191,118 @@ class ReadyStockProductImportTest extends TestCase
         $this->assertNull($matcher->resolve($channel, 'INACTIVE', null)['target_type']);
     }
 
+    public function test_import_saves_and_displays_only_the_first_product_image(): void
+    {
+        $this->signIn();
+        $first = 'https://cdn.salla.sa/store/first.webp';
+        $second = 'https://cdn.salla.sa/store/second.jpg';
+        $response = $this->upload([$this->row(['صورة المنتج' => '  '.$first.', '.$second.'  '])]);
+        $response->assertSee($first)->assertDontSee($second);
+        $this->assertDatabaseCount('materials', 0);
+
+        $this->confirm([2])->assertRedirect(route('sales.ready-stock-products.index'));
+
+        $this->assertDatabaseHas('materials', ['salla_product_id' => '1932559050', 'sales_image_url' => $first]);
+        $this->get(route('sales.ready-stock-products.index'))->assertSee($first)->assertDontSee($second);
+        $this->assertDatabaseCount('inventory_movements', 0);
+    }
+
+    public function test_reimport_without_an_image_keeps_the_existing_main_image(): void
+    {
+        $this->signIn();
+        $material = $this->readyProduct(['salla_product_id' => '1932559050', 'sales_sku' => 'NP-210-2302-07', 'sales_image_url' => 'https://cdn.salla.sa/store/original.png']);
+        $this->upload([$this->row()]);
+
+        $this->confirm([2])->assertRedirect(route('sales.ready-stock-products.index'));
+
+        $this->assertSame('https://cdn.salla.sa/store/original.png', $material->fresh()->sales_image_url);
+    }
+
+    public function test_an_invalid_first_image_is_rejected_instead_of_importing_a_later_image(): void
+    {
+        $this->signIn();
+        $this->upload([$this->row(['صورة المنتج' => 'javascript:alert(1),https://cdn.salla.sa/store/second.jpg'])])
+            ->assertViewHas('preview', fn (array $preview): bool => $preview['rows'][2]['error'] !== null);
+
+        $this->confirm([2])->assertSessionHasErrors();
+
+        $this->assertDatabaseCount('materials', 0);
+    }
+
+    public function test_discounted_price_is_used_and_hidden_or_zero_quantity_products_are_excluded(): void
+    {
+        $this->signIn();
+        $this->upload([
+            $this->row(['سعر المنتج' => '900', 'السعر المخفض' => '525']),
+            $this->row(['No.' => '22', 'حالة المنتج' => 'مخفي']),
+            $this->row(['No.' => '33', 'الكمية المتوفرة' => '0']),
+        ])->assertViewHas('preview', fn (array $preview): bool => count($preview['rows']) === 1 && $preview['skipped'] === 2 && $preview['rows'][2]['sales_price'] === '525');
+
+        $this->confirm([2])->assertRedirect(route('sales.ready-stock-products.index'));
+
+        $this->assertDatabaseHas('materials', ['salla_product_id' => '1932559050', 'sales_price' => 525]);
+        $this->assertDatabaseCount('materials', 1);
+    }
+
+    public function test_excluded_existing_products_are_not_updated_even_when_their_row_is_submitted(): void
+    {
+        $this->signIn();
+        $material = $this->readyProduct(['salla_product_id' => '1932559050', 'sales_sku' => 'NP-210-2302-07', 'sales_price' => 600, 'salla_stock_quantity' => 8]);
+        $this->upload([$this->row(['حالة المنتج' => 'مخفية'])])
+            ->assertViewHas('preview', fn (array $preview): bool => $preview['rows'] === [] && $preview['skipped'] === 1);
+
+        $this->confirm([2])->assertSessionHasErrors('selected_rows');
+
+        $this->assertSame('600.0000', $material->fresh()->sales_price);
+        $this->assertSame('8.0000', $material->fresh()->salla_stock_quantity);
+    }
+
+    public function test_missing_discounted_price_does_not_fall_back_to_original_price(): void
+    {
+        $this->signIn();
+        $this->upload([$this->row(['السعر المخفض' => '', 'سعر المنتج' => '900'])])->assertSee('السعر المخفض مفقود');
+
+        $this->confirm([2])->assertSessionHasErrors('selected_rows');
+
+        $this->assertDatabaseCount('materials', 0);
+    }
+
     protected function signIn(): void
     {
         Storage::fake('local');
         $this->actingAs(User::factory()->create(['role_id' => Role::where('name', 'admin')->firstOrFail()->id, 'is_active' => true]));
+    }
+
+    public function test_option_products_import_as_parents_and_local_options_can_be_added_for_manual_orders(): void
+    {
+        $this->signIn();
+        $this->upload([$this->row(), $this->row(['No.' => '3322', 'النوع' => 'خيار', 'رمز المنتج sku' => 'EXTERNAL-OPTION'])]);
+        $this->confirm([2])->assertRedirect(route('sales.ready-stock-products.index'));
+        $parent = Material::where('salla_product_id', '1932559050')->firstOrFail();
+
+        $this->assertTrue($parent->has_ready_options);
+        $this->assertSame(0, $parent->readyOptions()->count());
+        $this->assertDatabaseMissing('materials', ['sales_sku' => 'EXTERNAL-OPTION']);
+        $this->get(route('sales.ready-stock-products.edit', $parent))->assertSee('إضافة خيار / مقاس');
+        $this->get(route('sales.ready-stock-products.options.create', $parent))->assertOk();
+        $this->post(route('sales.ready-stock-products.store'), [
+            'name_ar' => 'مقاس محلي', 'ready_parent_id' => $parent->id, 'ready_option_label' => '160×200',
+            'sales_sku' => 'LOCAL-160', 'base_unit_id' => $parent->base_unit_id, 'sales_price' => 300, 'is_active' => 1,
+        ])->assertSessionHasNoErrors();
+
+        $option = $parent->readyOptions()->firstOrFail();
+        $this->assertSame('مفرش جاهز — 160×200', $option->sales_display_name);
+        $this->assertFalse($option->has_ready_options);
+        $this->getJson('/api/search/ready-products?q=NP-210-2302-07')->assertExactJson([]);
+        $this->getJson('/api/search/ready-products?q=LOCAL-160')->assertJsonPath('0.id', $option->id);
+        $this->put(route('sales.ready-stock-products.update', $parent), [
+            'name_ar' => $parent->name_ar, 'base_unit_id' => $parent->base_unit_id, 'is_active' => 1, 'has_ready_options' => 0,
+        ])->assertSessionHasErrors('has_ready_options');
+        $this->post(route('sales.orders.store'), [
+            'customer_id' => Customer::firstOrFail()->id, 'sales_channel_id' => SalesChannel::firstOrFail()->id,
+            'order_date' => '2026-11-05', 'priority' => 'NORMAL',
+            'lines' => [['line_type' => 'READY_STOCK', 'material_id' => $parent->id, 'quantity' => 1, 'unit_price' => 250]],
+        ])->assertSessionHasErrors('lines.0.material_id');
     }
 
     /** @param array<string, mixed> $overrides */
@@ -207,7 +316,7 @@ class ReadyStockProductImportTest extends TestCase
      */
     protected function row(array $overrides = []): array
     {
-        return array_merge(['No.' => '1932559050', 'النوع' => 'منتج', 'أسم المنتج' => 'مفرش جاهز', 'نوع المنتج' => 'منتج جاهز', 'رمز المنتج sku' => 'NP-210-2302-07', 'تصنيف المنتج' => 'مفارش', 'سعر المنتج' => '250', 'سعر التكلفة' => '130', 'الكمية المتوفرة' => '12', 'حالة المنتج' => 'غير متاح'], $overrides);
+        return array_merge(['No.' => '1932559050', 'النوع' => 'منتج', 'أسم المنتج' => 'مفرش جاهز', 'نوع المنتج' => 'منتج جاهز', 'رمز المنتج sku' => 'NP-210-2302-07', 'تصنيف المنتج' => 'مفارش', 'سعر المنتج' => '400', 'السعر المخفض' => '250', 'سعر التكلفة' => '130', 'الكمية المتوفرة' => '12', 'حالة المنتج' => 'غير متاح'], $overrides);
     }
 
     /** @param array<int, array<string, mixed>> $rows */

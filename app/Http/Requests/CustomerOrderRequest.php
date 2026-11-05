@@ -82,6 +82,7 @@ class CustomerOrderRequest extends FormRequest
     {
         return [
             'quotation_id' => 'nullable|exists:quotations,id',
+            'import_completion_confirmed' => 'nullable|boolean',
             'customer_id' => 'required|exists:customers,id',
             'sales_channel_id' => 'required|exists:sales_channels,id',
             'customer_reference' => 'nullable|string|max:255',
@@ -102,6 +103,7 @@ class CustomerOrderRequest extends FormRequest
             'lines.*.material_id' => 'required_if:lines.*.line_type,READY_STOCK|nullable|exists:materials,id',
             'lines.*.custom_design' => 'nullable|boolean',
             'lines.*.custom_design_name' => 'required_if:lines.*.custom_design,1,true|nullable|string|max:255',
+            'lines.*.custom_design_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
             'lines.*.product_model_id' => 'nullable|exists:product_models,id',
             'lines.*.product_configuration_id' => 'nullable|exists:product_configurations,id',
             'lines.*.customer_product_alias_id' => 'nullable|exists:customer_product_aliases,id',
@@ -123,11 +125,26 @@ class CustomerOrderRequest extends FormRequest
         ];
     }
 
+    public function messages(): array
+    {
+        return [
+            'lines.*.custom_design_image.image' => 'يجب أن يكون مرفق التصميم صورة صالحة.',
+            'lines.*.custom_design_image.mimes' => 'صورة التصميم يجب أن تكون بصيغة JPG أو PNG أو WebP.',
+            'lines.*.custom_design_image.max' => 'حجم صورة التصميم يجب ألا يتجاوز 5 ميجابايت.',
+        ];
+    }
+
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
             $lines = $this->input('lines', []);
             foreach ($lines as $index => $line) {
+                if (($line['line_type'] ?? '') === 'READY_STOCK' && ! empty($line['material_id']) && Material::find($line['material_id'])?->has_ready_options) {
+                    $validator->errors()->add("lines.{$index}.material_id", 'اختر المقاس / الخيار بدل المنتج الرئيسي.');
+                }
+                if ($this->hasFile("lines.{$index}.custom_design_image") && (empty($line['custom_design']) || ($line['line_type'] ?? 'MANUFACTURED') !== 'MANUFACTURED')) {
+                    $validator->errors()->add("lines.{$index}.custom_design_image", 'يمكن إرفاق صورة فقط لبند تصميم خاص حسب الطلب.');
+                }
                 $requiresFabric = false;
                 if (! empty($line['product_model_id'])) {
                     $model = ProductModel::find($line['product_model_id']);

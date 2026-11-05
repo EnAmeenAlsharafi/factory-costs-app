@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\CustomerOrderRequest;
 use App\Models\Customer;
 use App\Models\CustomerOrder;
+use App\Models\CustomerOrderLine;
 use App\Models\CustomerProductAlias;
 use App\Models\FabricColor;
 use App\Models\Material;
@@ -17,7 +18,10 @@ use App\Services\OrderTrackingService;
 use Exception;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class CustomerOrderController extends Controller
 {
@@ -60,16 +64,20 @@ class CustomerOrderController extends Controller
 
     public function store(CustomerOrderRequest $request): RedirectResponse
     {
+        $storedImages = [];
         try {
+            $lines = $this->storeDesignImages($request->validated('lines'), $storedImages);
             $order = $this->customerOrderService->createOrder(
                 $request->validated(),
-                $request->validated('lines'),
+                $lines,
                 $request->user()
             );
 
             return redirect()->route('sales.orders.show', $order)
                 ->with('success', 'تم إنشاء طلب العميل بنجاح.');
         } catch (Exception $e) {
+            Storage::disk('local')->delete($storedImages);
+
             return back()->withInput()->with('error', $e->getMessage());
         }
     }
@@ -126,19 +134,59 @@ class CustomerOrderController extends Controller
 
     public function update(CustomerOrderRequest $request, CustomerOrder $order): RedirectResponse
     {
+        $storedImages = [];
         try {
+            $lines = $this->storeDesignImages($request->validated('lines'), $storedImages);
             $this->customerOrderService->updateOrder(
                 $order,
                 $request->validated(),
-                $request->validated('lines'),
+                $lines,
                 $request->user()
             );
 
             return redirect()->route('sales.orders.show', $order)
                 ->with('success', 'تم تحديث طلب العميل وسجل التغييرات بنجاح.');
         } catch (Exception $e) {
+            Storage::disk('local')->delete($storedImages);
+
             return back()->withInput()->with('error', $e->getMessage());
         }
+    }
+
+    public function designImage(Request $request, CustomerOrder $order, CustomerOrderLine $line): BinaryFileResponse
+    {
+        abort_unless($request->user()->can('orders.view'), 403);
+        abort_unless($line->customer_order_id === $order->id && $line->custom_design && $line->custom_design_image_path, 404);
+        $disk = Storage::disk('local');
+        abort_unless($disk->exists($line->custom_design_image_path), 404);
+
+        return response()->file($disk->path($line->custom_design_image_path), [
+            'Cache-Control' => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
+        ])->setPrivate();
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $lines
+     * @param  array<int, string>  $storedImages
+     * @return array<int, array<string, mixed>>
+     */
+    protected function storeDesignImages(array $lines, array &$storedImages): array
+    {
+        foreach ($lines as &$line) {
+            $image = $line['custom_design_image'] ?? null;
+            if ($image instanceof UploadedFile) {
+                $path = $image->store('customer-order-designs', 'local');
+                if ($path === false) {
+                    throw new Exception('تعذر حفظ صورة التصميم. يرجى إعادة المحاولة.');
+                }
+                $storedImages[] = $path;
+                $line['custom_design_image_path'] = $path;
+            }
+            unset($line['custom_design_image']);
+        }
+
+        return $lines;
     }
 
     public function submitReview(Request $request, CustomerOrder $order): RedirectResponse

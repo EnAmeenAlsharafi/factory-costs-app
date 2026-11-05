@@ -34,7 +34,7 @@ class SalesImportConfirmServiceTest extends TestCase
         $this->seed();
 
         $this->channel = SalesChannel::where('code', 'SADIR_STORE')->first();
-        $this->confirmer = User::factory()->create(['role_id' => Role::where('name', 'customer_service')->first()->id]);
+        $this->confirmer = User::factory()->create(['role_id' => Role::where('name', 'customer_service')->first()->id, 'is_active' => true]);
     }
 
     protected function setUpMappings(): void
@@ -116,6 +116,52 @@ class SalesImportConfirmServiceTest extends TestCase
         ]);
     }
 
+    public function test_mixed_order_imports_only_simple_products_and_requires_explicit_manual_completion(): void
+    {
+        $this->setUpMappings();
+        $parent = Material::factory()->create(['is_active' => true, 'is_sellable_ready_product' => true, 'has_ready_options' => true, 'sales_sku' => 'PARENT-MATTRESS']);
+        $option = Material::factory()->create(['is_active' => true, 'is_sellable_ready_product' => true, 'ready_parent_id' => $parent->id, 'ready_option_label' => '160×200', 'sales_sku' => 'LOCAL-MATTRESS-160']);
+        $batch = app(SalesImportParserService::class)->parse(
+            base_path('tests/Fixtures/salla_sample_orders.csv'), 'salla_sample_orders.csv', $this->channel, $this->confirmer
+        );
+        $row = $batch->rows()->where('external_order_reference', 'SALLA-1001')->firstOrFail();
+        $data = $row->raw_data;
+        $data['lines'][] = ['product_name' => 'مرتبة بمقاسات', 'sku' => 'PARENT-MATTRESS', 'quantity' => 1, 'unit_price' => 700];
+        $data['lines'][] = ['product_name' => 'سرير يحتاج مواصفات', 'sku' => 'UNKNOWN-BED', 'quantity' => 1, 'unit_price' => 1200];
+        $data['lines'][] = ['product_name' => 'مقاس محلي', 'sku' => 'LOCAL-MATTRESS-160', 'quantity' => 1, 'unit_price' => 700];
+        $row->update(['raw_data' => $data]);
+
+        app(SalesImportConfirmService::class)->confirm($batch->fresh(), $this->confirmer);
+
+        $order = CustomerOrder::findOrFail($row->fresh()->created_customer_order_id);
+        $this->assertSame('DRAFT', $order->status);
+        $this->assertSame(1, $order->lines()->count());
+        $this->assertCount(3, $order->manual_import_lines);
+        $this->assertSame(0.0, (float) $order->confirmed_paid_amount);
+        $this->actingAs($this->confirmer)->get(route('sales.incomplete-imports.index'))->assertSee($order->order_number);
+        $this->get(route('sales.orders.edit', $order))->assertSee('سرير يحتاج مواصفات');
+        $this->post(route('sales.orders.submit-review', $order))->assertSessionHas('error');
+        $existing = $order->lines()->firstOrFail();
+        $payload = [
+            'customer_id' => $order->customer_id, 'sales_channel_id' => $order->sales_channel_id,
+            'order_date' => $order->order_date->toDateString(), 'priority' => 'NORMAL',
+            'lines' => [
+                ['id' => $existing->id, 'line_type' => 'READY_STOCK', 'material_id' => $existing->material_id, 'quantity' => 1, 'unit_price' => 500],
+                ['line_type' => 'READY_STOCK', 'material_id' => $option->id, 'quantity' => 2, 'unit_price' => 700],
+                ['line_type' => 'MANUFACTURED', 'custom_design' => 1, 'custom_design_name' => 'سرير مخصص', 'requested_width_cm' => 160, 'requested_length_cm' => 200, 'quantity' => 1, 'unit_price' => 1200],
+            ],
+        ];
+        $this->put(route('sales.orders.update', $order), $payload)->assertSessionHasNoErrors();
+        $this->assertCount(3, $order->fresh()->manual_import_lines);
+        $payload['import_completion_confirmed'] = 1;
+
+        $this->put(route('sales.orders.update', $order), $payload)->assertSessionHasNoErrors();
+
+        $this->assertNull($order->fresh()->manual_import_lines);
+        $this->post(route('sales.orders.submit-review', $order))->assertRedirect(route('sales.orders.show', $order));
+        $this->assertSame('PENDING_PRODUCTION_REVIEW', $order->fresh()->status);
+    }
+
     protected function parseAndConfirm(): SalesImportBatch
     {
         $batch = app(SalesImportParserService::class)->parse(
@@ -156,13 +202,36 @@ class SalesImportConfirmServiceTest extends TestCase
 
         $order = CustomerOrder::find($row->created_customer_order_id);
         $this->assertEquals('DRAFT', $order->status);
-        $line = $order->lines()->first();
-        $this->assertEquals('MANUFACTURED', $line->line_type);
-        $this->assertTrue((bool) $line->is_incomplete);
-        $this->assertNull($line->requested_width_cm);
+        $this->assertSame(0, $order->lines()->count());
+        $this->assertCount(1, $order->manual_import_lines);
+        $this->assertSame($row->raw_data['lines'][0]['product_name'], $order->manual_import_lines[0]['product_name']);
     }
 
-    public function test_bundle_order_creates_parent_and_component_lines(): void
+    public function test_ready_stock_import_preserves_order_price_and_quantity_instead_of_catalog_values(): void
+    {
+        $this->setUpMappings();
+        Material::where('code', 'MAT-CONFIRM-READY-0001')->update(['sales_price' => 900]);
+        $batch = app(SalesImportParserService::class)->parse(
+            base_path('tests/Fixtures/salla_sample_orders.csv'), 'salla_sample_orders.csv', $this->channel, $this->confirmer
+        );
+        $row = $batch->rows()->where('external_order_reference', 'SALLA-1001')->firstOrFail();
+        $data = $row->raw_data;
+        $data['lines'][0]['quantity'] = 3;
+        $data['lines'][0]['unit_price'] = 419.5;
+        $row->update(['raw_data' => $data]);
+
+        app(SalesImportConfirmService::class)->confirm($batch->fresh(), $this->confirmer);
+
+        $order = CustomerOrder::findOrFail($row->fresh()->created_customer_order_id);
+        $this->assertDatabaseHas('customer_order_lines', [
+            'customer_order_id' => $order->id, 'line_type' => 'READY_STOCK',
+            'external_product_name' => 'مرتبة طبية فاخرة اختبار', 'quantity' => 3,
+            'unit_price' => 419.5, 'line_total' => 1258.5,
+        ]);
+        $this->assertSame(1258.5, (float) $order->total_amount);
+    }
+
+    public function test_bundle_order_waits_for_manual_entry_without_creating_component_lines(): void
     {
         $this->setUpMappings();
         $batch = $this->parseAndConfirm();
@@ -173,19 +242,10 @@ class SalesImportConfirmServiceTest extends TestCase
         $order = CustomerOrder::find($row->created_customer_order_id);
         $lines = $order->lines;
 
-        $this->assertCount(3, $lines); // bundle parent + 2 components
-        $parent = $lines->firstWhere('line_type', 'BUNDLE');
-        $this->assertNotNull($parent);
-        $this->assertEquals(4000, (float) $parent->line_total);
-
-        $manufacturedChild = $lines->firstWhere('line_type', 'MANUFACTURED');
-        $this->assertNotNull($manufacturedChild);
-        $this->assertEquals(0, (float) $manufacturedChild->unit_price);
-        $this->assertEquals(160, (float) $manufacturedChild->requested_width_cm);
-
-        $readyChild = $lines->firstWhere('line_type', 'READY_STOCK');
-        $this->assertNotNull($readyChild);
-        $this->assertEquals(2, (float) $readyChild->quantity); // component qty 2 * ordered qty 1
+        $this->assertCount(0, $lines);
+        $this->assertCount(1, $order->manual_import_lines);
+        $this->assertSame('DRAFT', $order->status);
+        $this->assertSame(0.0, (float) $order->confirmed_paid_amount);
     }
 
     public function test_cancelled_and_courier_only_orders_are_skipped_not_created(): void
@@ -215,7 +275,7 @@ class SalesImportConfirmServiceTest extends TestCase
         $this->assertEquals($createdCount, $duplicates);
     }
 
-    public function test_unmapped_item_order_is_still_created_as_incomplete_manufactured_placeholder(): void
+    public function test_unmapped_item_is_kept_for_manual_entry_without_assuming_it_is_manufactured(): void
     {
         $this->setUpMappings();
         $batch = $this->parseAndConfirm();
@@ -224,9 +284,7 @@ class SalesImportConfirmServiceTest extends TestCase
         $this->assertEquals('CREATED', $row->outcome);
 
         $order = CustomerOrder::find($row->created_customer_order_id);
-        $line = $order->lines()->first();
-        $this->assertEquals('MANUFACTURED', $line->line_type);
-        $this->assertTrue((bool) $line->is_incomplete);
-        $this->assertEquals('منتج غير معروف اختبار', $line->external_product_name);
+        $this->assertSame(0, $order->lines()->count());
+        $this->assertSame('منتج غير معروف اختبار', $order->manual_import_lines[0]['product_name']);
     }
 }

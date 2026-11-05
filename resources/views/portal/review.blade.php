@@ -5,7 +5,7 @@
 <h1 class="h3 mt-3">مراجعة <bdi>PR-{{ $submission->id }}</bdi> — {{ $submission->customer->name }}</h1><p>{{ $submission->status_label }} — النسخة {{ $submission->revision }}</p>
 @if($submission->change_note)<div class="alert alert-warning">طلب تعديل من العميل: {{ $submission->change_note }}</div>@endif
 @if($submission->customer_order_id)<a class="btn btn-outline-primary mb-3" href="{{ route('sales.orders.show', $submission->customer_order_id) }}">فتح طلب البيع المعتمد</a>@endif
-<form method="POST" action="{{ route('sales.portal-requests.offer', $submission) }}">
+<form method="POST" enctype="multipart/form-data" action="{{ route('sales.portal-requests.offer', $submission) }}">
     @csrf @include('portal.request-fields', ['isReview' => true])
     <div class="card border-0 shadow-sm mt-3"><div class="card-body"><h2 class="h5">شروط العرض المرسل للعميل</h2><div class="row g-3">
         <div class="col-md-6"><label class="form-label" for="promised_delivery_date">موعد التسليم المقترح</label><input class="form-control" type="date" id="promised_delivery_date" name="promised_delivery_date" value="{{ old('promised_delivery_date', $submission->promised_delivery_date?->toDateString()) }}" required></div>

@@ -1,6 +1,15 @@
 @php
     $defaultLine = ['line_type' => 'MANUFACTURED', 'product_model_id' => '', 'product_configuration_id' => '', 'material_id' => '', 'requested_width_cm' => '', 'requested_length_cm' => '', 'has_storage' => 0, 'fabric_material_id' => '', 'fabric_color_id' => '', 'quantity' => 1, 'notes' => '', 'unit_price' => '', 'discount_amount' => 0];
     $initialLines = old('lines', $submission->lines ?: [$defaultLine]);
+    $defaultLine = array_merge($defaultLine, ['line_key' => '', 'custom_design' => false, 'custom_design_name' => '', 'requested_fabric' => '', 'requested_color' => '', 'custom_design_image_url' => null]);
+    $initialLines = collect($initialLines)->map(function ($line) use ($defaultLine, $submission, $isReview) {
+        $existing = collect($submission->lines ?? [])->firstWhere('line_key', $line['line_key'] ?? '') ?? [];
+        $line = array_merge($defaultLine, $line);
+        $line['custom_design'] = !empty($line['custom_design']);
+        $line['custom_design_image_url'] = !empty($existing['custom_design_image_path'])
+            ? route($isReview ? 'sales.portal-requests.design-image' : 'portal.requests.design-image', [$submission, $existing['line_key']]) : null;
+        return $line;
+    })->all();
 @endphp
 @if($submission->exists)<input type="hidden" name="revision" value="{{ $submission->revision }}">@endif
 <div class="card border-0 shadow-sm mb-3"><div class="card-body"><div class="row g-3">
@@ -10,13 +19,23 @@
     <div class="col-md-8"><label for="delivery_address" class="form-label">عنوان التسليم</label><input class="form-control" id="delivery_address" name="delivery_address" maxlength="3000" value="{{ old('delivery_address', $submission->delivery_address) }}"></div>
     <div class="col-12"><label for="customer_notes" class="form-label">ملاحظات الطلب</label><textarea class="form-control" id="customer_notes" name="customer_notes" rows="2" maxlength="5000">{{ old('customer_notes', $submission->customer_notes) }}</textarea></div>
 </div></div></div>
-<div x-data="{ lines: @js($initialLines), blank: @js($defaultLine), models: @js($models), ready: @js($readyProducts), fabrics: @js($fabrics), colors: @js($colors), configurations: @js($isReview ? $configurations : []) }">
-    <template x-for="(line, index) in lines" :key="index">
-        <section class="card border-0 shadow-sm mb-3"><div class="card-body">
+<div x-data="{ lines: (@js($initialLines)).map(line => ({...line, _key: crypto.randomUUID()})), blank: @js($defaultLine), models: @js($models), ready: @js($readyProducts), fabrics: @js($fabrics), colors: @js($colors), configurations: @js($configurations) }">
+    <template x-for="(line, index) in lines" :key="line._key">
+        <section class="card border-0 shadow-sm mb-3" x-data="{ previewUrl: null }"><div class="card-body">
+            <input type="hidden" :name="'lines['+index+'][line_key]'" x-model="line.line_key">
+            <input type="hidden" :name="'lines['+index+'][custom_design]'" :value="line.line_type === 'MANUFACTURED' && line.custom_design ? 1 : 0">
             <div class="d-flex justify-content-between align-items-center mb-3"><h2 class="h6 mb-0">المنتج <span x-text="index + 1"></span></h2><button class="btn btn-outline-danger" type="button" @click="lines.splice(index, 1)" :disabled="lines.length === 1">حذف المنتج</button></div>
             <div class="row g-3">
                 <div class="col-md-4"><label class="form-label" :for="'type-'+index">نوع المنتج</label><select class="form-select" :id="'type-'+index" :name="'lines['+index+'][line_type]'" x-model="line.line_type"><option value="MANUFACTURED">منتج يُصنّع حسب الطلب</option><option value="READY_STOCK">منتج جاهز</option></select></div>
-                <div class="col-md-8" x-show="line.line_type === 'MANUFACTURED'"><label class="form-label" :for="'model-'+index">الموديل</label><select class="form-select" :id="'model-'+index" :name="'lines['+index+'][product_model_id]'" x-model="line.product_model_id" :required="line.line_type === 'MANUFACTURED'"><option value="">اختر الموديل</option><template x-for="model in models" :key="model.id"><option :value="model.id" x-text="model.name"></option></template></select></div>
+                <div class="col-md-8" x-show="line.line_type === 'MANUFACTURED' && !line.custom_design"><label class="form-label" :for="'model-'+index">الموديل</label><select class="form-select" :id="'model-'+index" :name="'lines['+index+'][product_model_id]'" x-model="line.product_model_id" @change="line.product_configuration_id = ''" :disabled="line.line_type !== 'MANUFACTURED' || line.custom_design" :required="line.line_type === 'MANUFACTURED' && !line.custom_design"><option value="">اختر الموديل</option><template x-for="model in models" :key="model.id"><option :value="model.id" x-text="model.name"></option></template></select></div>
+                <div class="col-12" x-show="line.line_type === 'MANUFACTURED'">
+                    <div class="form-check"><input type="checkbox" class="form-check-input" :id="'custom-'+index" x-model="line.custom_design" @change="line.product_configuration_id = ''"><label class="form-check-label" :for="'custom-'+index">تصميم خاص حسب الطلب</label></div>
+                    <div class="row g-3 mt-1" x-show="line.custom_design">
+                        <div class="col-md-6"><label class="form-label" :for="'custom-name-'+index">اسم التصميم الخاص</label><input class="form-control" :id="'custom-name-'+index" :name="'lines['+index+'][custom_design_name]'" x-model="line.custom_design_name" maxlength="255" :disabled="!line.custom_design || line.line_type !== 'MANUFACTURED'" :required="line.custom_design && line.line_type === 'MANUFACTURED'"></div>
+                        <div class="col-md-6"><label class="form-label" :for="'custom-image-'+index">صورة المنتج / التصميم الخاص</label><input type="file" class="form-control" :id="'custom-image-'+index" :name="'lines['+index+'][custom_design_image]'" accept="image/jpeg,image/png,image/webp" :disabled="!line.custom_design || line.line_type !== 'MANUFACTURED'" @change="if(previewUrl) URL.revokeObjectURL(previewUrl); previewUrl = $event.target.files[0] ? URL.createObjectURL($event.target.files[0]) : null"><small class="text-muted">JPG، PNG، WebP — حتى 5 ميجابايت. اتركه فارغًا للاحتفاظ بالصورة الحالية.</small><img x-show="previewUrl || line.custom_design_image_url" :src="previewUrl || line.custom_design_image_url || null" alt="صورة التصميم الخاص" class="img-thumbnail mt-2" style="max-width:180px;max-height:140px;object-fit:contain;"></div>
+                    </div>
+                </div>
+                <div class="col-12" x-show="line.line_type === 'MANUFACTURED' && !line.custom_design"><label class="form-label" :for="'size-'+index">التكوين / المقاس</label><select class="form-select" :id="'size-'+index" :name="'lines['+index+'][product_configuration_id]'" x-model="line.product_configuration_id" :disabled="line.line_type !== 'MANUFACTURED' || line.custom_design" @change="const selected = configurations.find(c => c.id == line.product_configuration_id); if(selected) { line.requested_width_cm = selected.width_cm; line.requested_length_cm = selected.length_cm; line.has_storage = selected.has_storage ? 1 : 0; }"><option value="">مقاس خاص / أدخل العرض والطول</option><template x-for="configuration in configurations.filter(c => c.product_model_id == line.product_model_id)" :key="configuration.id"><option :value="configuration.id" x-text="configuration.name"></option></template></select></div>
                 <div class="col-md-8" x-show="line.line_type === 'READY_STOCK'"><label class="form-label" :for="'material-'+index">المنتج الجاهز</label><select class="form-select" :id="'material-'+index" :name="'lines['+index+'][material_id]'" x-model="line.material_id" :required="line.line_type === 'READY_STOCK'"><option value="">اختر المنتج</option><template x-for="product in ready" :key="product.id"><option :value="product.id" x-text="product.name"></option></template></select></div>
                 <div class="col-md-4" x-show="line.line_type === 'MANUFACTURED'"><label class="form-label" :for="'width-'+index">العرض المطلوب (سم)</label><input type="number" min="1" max="1000" step="0.01" class="form-control" :id="'width-'+index" :name="'lines['+index+'][requested_width_cm]'" x-model="line.requested_width_cm" :required="line.line_type === 'MANUFACTURED'"></div>
                 <div class="col-md-4" x-show="line.line_type === 'MANUFACTURED'"><label class="form-label" :for="'length-'+index">الطول المطلوب (سم)</label><input type="number" min="1" max="1000" step="0.01" class="form-control" :id="'length-'+index" :name="'lines['+index+'][requested_length_cm]'" x-model="line.requested_length_cm" :required="line.line_type === 'MANUFACTURED'"></div>
@@ -24,8 +43,10 @@
                 <div class="col-md-6" x-show="line.line_type === 'MANUFACTURED'"><label class="form-label" :for="'fabric-'+index">القماش</label><select class="form-select" :id="'fabric-'+index" :name="'lines['+index+'][fabric_material_id]'" x-model="line.fabric_material_id" @change="line.fabric_color_id = ''"><option value="">يُستكمل مع خدمة العملاء</option><template x-for="fabric in fabrics" :key="fabric.id"><option :value="fabric.id" x-text="fabric.name_ar"></option></template></select></div>
                 <div class="col-md-6" x-show="line.line_type === 'MANUFACTURED'"><label class="form-label" :for="'color-'+index">اللون</label><select class="form-select" :id="'color-'+index" :name="'lines['+index+'][fabric_color_id]'" x-model="line.fabric_color_id"><option value="">اختر اللون</option><template x-for="color in colors.filter(c => c.material_id == line.fabric_material_id)" :key="color.id"><option :value="color.id" x-text="(color.color_name_ar || color.color_code) + ' — ' + color.color_code"></option></template></select></div>
                 <div class="col-md-4"><label class="form-label" :for="'qty-'+index">الكمية</label><input type="number" min="1" max="10000" step="1" class="form-control" :id="'qty-'+index" :name="'lines['+index+'][quantity]'" x-model="line.quantity" required></div>
+                <div class="col-md-6" x-show="line.line_type === 'MANUFACTURED'"><label class="form-label" :for="'requested-fabric-'+index">وصف القماش الخاص المطلوب</label><input class="form-control" :id="'requested-fabric-'+index" :name="'lines['+index+'][requested_fabric]'" x-model="line.requested_fabric" maxlength="1000" @readonly($isReview) placeholder="اسم القماش أو خامته أو رقم كتالوجك"></div>
+                <div class="col-md-6" x-show="line.line_type === 'MANUFACTURED'"><label class="form-label" :for="'requested-color-'+index">اللون الخاص المطلوب</label><input class="form-control" :id="'requested-color-'+index" :name="'lines['+index+'][requested_color]'" x-model="line.requested_color" maxlength="500" @readonly($isReview) placeholder="اسم اللون أو رمزه أو وصفه"></div>
+                <p class="text-muted mb-0" x-show="line.line_type === 'MANUFACTURED'">{{ $isReview ? 'طلب العميل الأصلي محفوظ أعلاه. حدّد القماش واللون المعتمدين من المخزون قبل إرسال العرض.' : 'يمكنك وصف قماش ولون خارج الكتالوج؛ ستراجع خدمة العملاء طلبك وتحدد القماش واللون المتاحين لتأكيدهما معك.' }}</p>
                 @if($isReview)
-                    <div class="col-md-8" x-show="line.line_type === 'MANUFACTURED'"><label class="form-label" :for="'config-'+index">التهيئة المرجعية للمصنع (لا تغيّر المقاس المطلوب)</label><select class="form-select" :id="'config-'+index" :name="'lines['+index+'][product_configuration_id]'" x-model="line.product_configuration_id"><option value="">مطابقة المقاس تلقائيًا / يُستكمل عند اعتماد الإنتاج</option><template x-for="configuration in configurations.filter(c => c.product_model_id == line.product_model_id && c.has_storage == Boolean(Number(line.has_storage)))" :key="configuration.id"><option :value="configuration.id" x-text="configuration.name"></option></template></select></div>
                     <div class="col-md-4"><label class="form-label" :for="'price-'+index">سعر الوحدة (ر.س)</label><input type="number" min="0" max="9999999" step="0.01" class="form-control" :id="'price-'+index" :name="'lines['+index+'][unit_price]'" x-model="line.unit_price" required></div>
                     <div class="col-md-4"><label class="form-label" :for="'discount-'+index">خصم البند (ر.س)</label><input type="number" min="0" step="0.01" class="form-control" :id="'discount-'+index" :name="'lines['+index+'][discount_amount]'" x-model="line.discount_amount"></div>
                 @endif
@@ -33,6 +54,9 @@
             </div>
         </div></section>
     </template>
-    <button class="btn btn-outline-primary" type="button" @click="lines.push({...blank})" :disabled="lines.length >= 100">إضافة منتج آخر</button>
+    <div class="d-flex flex-wrap gap-2">
+        <button class="btn btn-outline-primary" type="button" @click="lines.push({...blank, _key: crypto.randomUUID()})" :disabled="lines.length >= 100">إضافة منتج يُصنّع حسب الطلب</button>
+        <button class="btn btn-outline-success" type="button" @click="lines.push({...blank, line_type: 'READY_STOCK', _key: crypto.randomUUID()})" :disabled="lines.length >= 100">إضافة منتج جاهز</button>
+    </div>
     <noscript><div class="alert alert-warning">يلزم تفعيل JavaScript لإدخال المنتجات.</div></noscript>
 </div>

@@ -253,6 +253,7 @@ class SearchApiController extends Controller
 
         $materials = Material::query()
             ->sellableReady()
+            ->where('has_ready_options', false)
             ->where('is_active', true)
             ->when($query !== '', function ($q) use ($query) {
                 $q->where(function ($sub) use ($query) {

@@ -60,6 +60,17 @@ class ReadyStockProductController extends Controller
         return redirect()->route('sales.ready-stock-products.index')->with('success', 'تمت إضافة المنتج الجاهز بنجاح.');
     }
 
+    public function createOption(Request $request, Material $material): View
+    {
+        abort_unless($request->user()->can('materials.manage'), 403);
+        abort_unless($material->is_sellable_ready_product && $material->has_ready_options && ! $material->ready_parent_id, 404);
+
+        return $this->form(new Material([
+            'ready_parent_id' => $material->id, 'name_ar' => $material->name_ar.' — ',
+            'base_unit_id' => $material->base_unit_id, 'is_active' => true, 'sales_image_url' => $material->sales_image_url,
+        ]));
+    }
+
     public function edit(Request $request, Material $material): View
     {
         abort_unless($request->user()->can('materials.manage'), 403);
@@ -150,6 +161,7 @@ class ReadyStockProductController extends Controller
     protected function form(Material $material): View
     {
         $units = UnitOfMeasure::active()->orderBy('name_ar')->get();
+        $material->load('readyParent', 'readyOptions');
 
         return view('sales.ready-stock-products.form', compact('material', 'units'));
     }

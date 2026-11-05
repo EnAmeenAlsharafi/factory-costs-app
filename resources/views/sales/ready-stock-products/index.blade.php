@@ -68,7 +68,11 @@
                                     @unless($material->sales_sku)<small class="text-warning d-block">بحاجة إلى مطابقة يدوية للطلبات</small>@endunless
                                 </td>
                                 <td class="fw-bold text-dark">
+                                    @if($material->sales_image_url)
+                                        <img src="{{ $material->sales_image_url }}" alt="{{ $material->sales_display_name ?: $material->name_ar }}" width="64" height="64" class="img-thumbnail mb-1" style="object-fit:contain;" loading="lazy" referrerpolicy="no-referrer">
+                                    @endif
                                     {{ $material->sales_display_name ?: $material->name_ar }}
+                                    @if($material->has_ready_options)<span class="badge bg-info text-dark">منتج رئيسي — خيارات يدوية</span>@elseif($material->ready_parent_id)<span class="badge bg-light text-dark">{{ $material->ready_option_label }}</span>@endif
                                     <div class="text-muted fs-8">{{ $material->code }}</div>
                                 </td>
                                 <td>{{ $material->salla_category ?: ($material->category->name_ar ?? '—') }}
@@ -87,6 +91,7 @@
                                 </td>
                                 <td class="text-center">
                                     @can('materials.manage')
+                                        @if($material->has_ready_options)<a href="{{ route('sales.ready-stock-products.options.create', $material) }}" class="btn btn-sm btn-outline-success">إضافة خيار</a>@endif
                                         <a href="{{ route('sales.ready-stock-products.edit', $material) }}" class="btn btn-outline-primary" title="تعديل المنتج الجاهز" aria-label="تعديل {{ $material->sales_display_name ?: $material->name_ar }}">
                                             <i class="fas fa-edit"></i>
                                         </a>

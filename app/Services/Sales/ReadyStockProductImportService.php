@@ -28,7 +28,7 @@ class ReadyStockProductImportService
         }
 
         $headers = array_map(fn (mixed $value): string => trim((string) $value), array_shift($data) ?? []);
-        foreach (['No.', 'النوع', 'أسم المنتج', 'نوع المنتج', 'رمز المنتج sku'] as $required) {
+        foreach (['No.', 'النوع', 'أسم المنتج', 'نوع المنتج', 'رمز المنتج sku', 'السعر المخفض', 'الكمية المتوفرة', 'حالة المنتج'] as $required) {
             if (! in_array($required, $headers, true)) {
                 throw ValidationException::withMessages(['import_file' => "عمود إلزامي مفقود في ملف المنتجات: {$required}"]);
             }
@@ -36,9 +36,25 @@ class ReadyStockProductImportService
 
         $rows = [];
         $skipped = 0;
+        $parentRowNumber = null;
         foreach ($data as $index => $values) {
             $source = array_combine($headers, $values);
+            $rowType = trim((string) ($source['النوع'] ?? ''));
+            if ($rowType === 'منتج') {
+                $parentRowNumber = $index + 2;
+            } elseif ($rowType === 'خيار' && isset($rows[$parentRowNumber])) {
+                $rows[$parentRowNumber]['has_ready_options'] = true;
+            }
             if (trim((string) ($source['النوع'] ?? '')) !== 'منتج' || trim((string) ($source['نوع المنتج'] ?? '')) !== 'منتج جاهز') {
+                $skipped++;
+
+                continue;
+            }
+
+            $status = $this->text($source['حالة المنتج'] ?? null);
+            $quantity = $this->text($source['الكمية المتوفرة'] ?? null);
+            if (in_array(mb_strtolower((string) $status), ['مخفي', 'مخفية', 'مخفيه', 'hidden'], true)
+                || (is_numeric($quantity) && (float) $quantity === 0.0)) {
                 $skipped++;
 
                 continue;
@@ -46,25 +62,32 @@ class ReadyStockProductImportService
 
             $row = [
                 'row_number' => $index + 2,
+                'has_ready_options' => false,
                 'salla_product_id' => $this->text($source['No.'] ?? null),
                 'name_ar' => $this->text($source['أسم المنتج'] ?? null),
                 'sales_sku' => $this->text($source['رمز المنتج sku'] ?? null),
+                'sales_image_url' => $this->firstImage($source['صورة المنتج'] ?? null),
                 'salla_category' => $this->text($source['تصنيف المنتج'] ?? null),
-                'salla_status' => $this->text($source['حالة المنتج'] ?? null),
-                'sales_price' => $this->text($source['سعر المنتج'] ?? null),
+                'salla_status' => $status,
+                'sales_price' => $this->text($source['السعر المخفض'] ?? null),
                 'sales_reference_cost' => $this->text($source['سعر التكلفة'] ?? null),
-                'salla_stock_quantity' => $this->text($source['الكمية المتوفرة'] ?? null),
+                'salla_stock_quantity' => $quantity,
             ];
 
             $validator = Validator::make($row, [
                 'salla_product_id' => ['required', 'regex:/^[0-9]+$/', 'max:100'],
                 'name_ar' => ['required', 'string', 'max:255'],
                 'sales_sku' => ['nullable', 'string', 'max:100'],
+                'sales_image_url' => ['nullable', 'url:https', 'max:2048'],
                 'salla_category' => ['nullable', 'string', 'max:255'],
                 'salla_status' => ['nullable', 'string', 'max:100'],
-                'sales_price' => ['nullable', 'numeric', 'min:0', 'max:99999999999'],
+                'sales_price' => ['required', 'numeric', 'min:0', 'max:99999999999'],
                 'sales_reference_cost' => ['nullable', 'numeric', 'min:0', 'max:99999999999'],
-                'salla_stock_quantity' => ['nullable', 'numeric', 'min:0', 'max:99999999999'],
+                'salla_stock_quantity' => ['required', 'numeric', 'gt:0', 'max:99999999999'],
+            ], [
+                'sales_price.required' => 'السعر المخفض مفقود؛ أكمله قبل الاستيراد.',
+                'sales_price.numeric' => 'السعر المخفض يجب أن يكون رقمًا.',
+                'sales_price.min' => 'السعر المخفض يجب ألا يكون سالبًا.',
             ]);
             $row['error'] = $validator->fails() ? 'بيانات غير صالحة: '.$validator->errors()->first() : null;
             $rows[$index + 2] = $row;
@@ -120,6 +143,8 @@ class ReadyStockProductImportService
                 $existing = $this->resolveExisting($row, true);
                 unset($row['row_number'], $row['error'], $row['action']);
                 $row['sales_sku'] = $row['sales_sku'] ?? $existing?->sales_sku;
+                $row['sales_image_url'] = $row['sales_image_url'] ?? $existing?->sales_image_url;
+                $row['has_ready_options'] = $row['has_ready_options'] || ($existing?->has_ready_options ?? false);
                 $row['sales_display_name'] = $row['name_ar'];
                 $row['base_unit_id'] = $unit->id;
                 if (! $existing) {
@@ -160,6 +185,17 @@ class ReadyStockProductImportService
         }
 
         return $material;
+    }
+
+    protected function firstImage(mixed $value): ?string
+    {
+        $value = $this->text($value);
+        if ($value === null) {
+            return null;
+        }
+        $images = preg_split('/\s*[,،\r\n]+\s*/u', $value, -1, PREG_SPLIT_NO_EMPTY);
+
+        return $this->text($images[0] ?? null);
     }
 
     protected function text(mixed $value): ?string

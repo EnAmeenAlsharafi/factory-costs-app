@@ -108,6 +108,8 @@
                                     <td>
                                         @if($line['target_type'] === 'READY_STOCK')
                                             <span class="badge bg-success bg-opacity-10 text-success">منتج جاهز</span>
+                                        @elseif($line['target_type'] === 'MANUAL')
+                                            <span class="badge bg-warning text-dark">يُضاف يدويًا بعد الاستيراد</span>
                                         @elseif($line['target_type'] === 'BUNDLE')
                                             <span class="badge bg-info bg-opacity-10 text-info">بكج</span>
                                         @elseif($line['target_type'] === 'MANUFACTURED')

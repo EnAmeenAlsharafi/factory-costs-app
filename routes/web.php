@@ -104,6 +104,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/requests', [CustomerPortalController::class, 'store'])->name('requests.store');
         Route::get('/requests/{submission}', [CustomerPortalController::class, 'show'])->name('requests.show');
         Route::get('/requests/{submission}/edit', [CustomerPortalController::class, 'edit'])->name('requests.edit');
+        Route::get('/requests/{submission}/images/{lineKey}', [CustomerPortalController::class, 'designImage'])->name('requests.design-image');
         Route::put('/requests/{submission}', [CustomerPortalController::class, 'update'])->name('requests.update');
         Route::post('/requests/{submission}/submit', [CustomerPortalController::class, 'submit'])->name('requests.submit');
         Route::post('/requests/{submission}/confirm', [CustomerPortalController::class, 'confirm'])->name('requests.confirm');
@@ -117,6 +118,7 @@ Route::middleware('auth')->group(function () {
     Route::prefix('sales/portal-requests')->name('sales.portal-requests.')->group(function () {
         Route::get('/', [CustomerPortalReviewController::class, 'index'])->name('index');
         Route::get('/{submission}', [CustomerPortalReviewController::class, 'show'])->name('show');
+        Route::get('/{submission}/images/{lineKey}', [CustomerPortalController::class, 'designImage'])->name('design-image');
         Route::post('/{submission}/offer', [CustomerPortalReviewController::class, 'offer'])->name('offer');
         Route::post('/{submission}/return', [CustomerPortalReviewController::class, 'returnForChanges'])->name('return');
     });
@@ -174,6 +176,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/ready-stock-products/import/preview', [ReadyStockProductController::class, 'showImportPreview'])->name('ready-stock-products.import-preview');
         Route::post('/ready-stock-products/import/confirm', [ReadyStockProductController::class, 'confirmImport'])->name('ready-stock-products.import-confirm');
         Route::get('/ready-stock-products/{material}/edit', [ReadyStockProductController::class, 'edit'])->name('ready-stock-products.edit');
+        Route::get('/ready-stock-products/{material}/options/create', [ReadyStockProductController::class, 'createOption'])->name('ready-stock-products.options.create');
         Route::put('/ready-stock-products/{material}', [ReadyStockProductController::class, 'update'])->name('ready-stock-products.update');
         Route::get('/incomplete-imports', [IncompleteImportedOrderController::class, 'index'])->name('incomplete-imports.index');
 
@@ -330,6 +333,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/orders', [CustomerOrderController::class, 'store'])->name('orders.store');
         Route::get('/orders/{order}', [CustomerOrderController::class, 'show'])->name('orders.show');
         Route::get('/orders/{order}/edit', [CustomerOrderController::class, 'edit'])->name('orders.edit');
+        Route::get('/orders/{order}/lines/{line}/design-image', [CustomerOrderController::class, 'designImage'])->name('orders.design-image');
         Route::put('/orders/{order}', [CustomerOrderController::class, 'update'])->name('orders.update');
         Route::post('/orders/{order}/submit-review', [CustomerOrderController::class, 'submitReview'])->name('orders.submit-review');
         Route::post('/orders/{order}/cancel', [CustomerOrderController::class, 'cancel'])->name('orders.cancel');

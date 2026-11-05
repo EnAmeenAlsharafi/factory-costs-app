@@ -28,7 +28,6 @@ class SalesImportConfirmService
     public function __construct(
         protected SalesItemMatchingService $matcher,
         protected SalesOrderClassifier $classifier,
-        protected SalesBundleExpansionService $bundleExpansion,
         protected CustomerOrderService $orderService,
         protected CustomerPaymentService $paymentService,
         protected PaymentAllocationService $allocationService,
@@ -60,7 +59,7 @@ class SalesImportConfirmService
         $targetTypes = [];
         $resolutions = [];
         foreach ($lines as $line) {
-            $resolution = $this->matcher->resolve($batch->salesChannel, $line['sku'] ?? null, $line['product_name'] ?? null);
+            $resolution = $this->matcher->resolveForImport($batch->salesChannel, $line['sku'] ?? null, $line['product_name'] ?? null);
             $resolutions[] = $resolution;
             $targetTypes[] = $resolution['target_type'];
         }
@@ -87,7 +86,8 @@ class SalesImportConfirmService
             DB::transaction(function () use ($batch, $row, $data, $lines, $resolutions, $confirmer) {
                 $customer = $this->resolveOrCreateCustomer($batch, $data);
                 $linesData = $this->buildLinesData($lines, $resolutions);
-                $hasIncompleteManufactured = ! empty(array_filter($linesData, fn ($l) => ! empty($l['is_incomplete'])));
+                $manualLines = array_values(array_filter($lines, fn ($line, $index) => $resolutions[$index]['target_type'] !== 'READY_STOCK', ARRAY_FILTER_USE_BOTH));
+                $hasIncompleteManufactured = $manualLines !== [];
 
                 $order = $this->orderService->createOrder([
                     'customer_id' => $customer->id,
@@ -97,6 +97,7 @@ class SalesImportConfirmService
                     'external_payment_method' => $data['payment_method'] ?? null,
                     'external_payment_status' => $data['payment_status'] ?? null,
                     'import_batch_id' => $batch->id,
+                    'manual_import_lines' => $manualLines ?: null,
                     'delivery_method' => in_array($data['shipping_method'] ?? null, SalesOrderClassifier::INTERNAL_SHIPPING_METHODS, true) ? 'INTERNAL_TEAM' : 'COURIER',
                     'shipping_company_name' => $data['shipping_method'] ?? null,
                     'shipping_tracking_number' => $data['tracking_number'] ?? null,
@@ -106,14 +107,16 @@ class SalesImportConfirmService
                     'delivery_map_url' => $data['map_url'] ?? null,
                     'order_date' => $data['order_date'] ?? now()->toDateString(),
                     'commercial_notes' => $data['customer_notes'] ?? null,
-                    'production_notes' => $hasIncompleteManufactured ? 'بانتظار استكمال بيانات الأسرّة (مستورَد من سلة).' : null,
+                    'production_notes' => $hasIncompleteManufactured ? 'بانتظار إضافة المنتجات ذات الخيارات والأسرّة يدويًا من خدمة العملاء.' : null,
                 ], $linesData, $confirmer);
 
                 if (! $hasIncompleteManufactured) {
                     $order->update(['status' => 'APPROVED_FOR_FULFILLMENT']);
                 }
 
-                $this->maybeRecordPayment($order, $customer, $data, $confirmer);
+                if (! $hasIncompleteManufactured) {
+                    $this->maybeRecordPayment($order, $customer, $data, $confirmer);
+                }
 
                 $row->update(['outcome' => 'CREATED', 'created_customer_order_id' => $order->id]);
             });
@@ -160,6 +163,9 @@ class SalesImportConfirmService
             $resolution = $resolutions[$i];
             $targetType = $resolution['target_type'];
             $mapping = $resolution['mapping'];
+            if ($targetType !== 'READY_STOCK' || ! $mapping?->material_id) {
+                continue;
+            }
             $qty = (float) ($line['quantity'] ?? 1);
             $unitPrice = (float) ($line['unit_price'] ?? 0);
             $discount = (float) ($line['line_discount'] ?? 0);
@@ -173,35 +179,9 @@ class SalesImportConfirmService
                 'discount_amount' => $discount,
             ];
 
-            if ($targetType === 'BUNDLE' && $mapping?->bundleDefinition) {
-                $linesData[] = array_merge($common, [
-                    'line_type' => 'BUNDLE',
-                ]);
-
-                foreach ($this->bundleExpansion->expand($mapping->bundleDefinition, $qty) as $child) {
-                    $linesData[] = array_merge($child, [
-                        'external_product_name' => $line['product_name'] ?? null,
-                    ]);
-                }
-
-                continue;
-            }
-
-            if ($targetType === 'READY_STOCK' && $mapping?->material_id) {
-                $linesData[] = array_merge($common, [
-                    'line_type' => 'READY_STOCK',
-                    'material_id' => $mapping->material_id,
-                ]);
-
-                continue;
-            }
-
-            // MANUFACTURED (mapped or unmapped) — always staged as an incomplete draft line.
             $linesData[] = array_merge($common, [
-                'line_type' => 'MANUFACTURED',
-                'is_incomplete' => true,
-                'product_model_id' => $mapping?->product_model_id,
-                'product_configuration_id' => $mapping?->product_configuration_id,
+                'line_type' => 'READY_STOCK',
+                'material_id' => $mapping->material_id,
             ]);
         }
 
