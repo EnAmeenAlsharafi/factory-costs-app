@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerCreditProfileController;
 use App\Http\Controllers\CustomerOrderController;
+use App\Http\Controllers\CustomerOrderFabricController;
 use App\Http\Controllers\CustomerPaymentController;
 use App\Http\Controllers\CustomerPortalController;
 use App\Http\Controllers\CustomerPortalReviewController;
@@ -337,6 +338,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/orders/{order}/edit', [CustomerOrderController::class, 'edit'])->name('orders.edit');
         Route::get('/orders/{order}/lines/{line}/design-image', [CustomerOrderController::class, 'designImage'])->name('orders.design-image');
         Route::put('/orders/{order}', [CustomerOrderController::class, 'update'])->name('orders.update');
+        Route::put('/orders/{order}/lines/{line}/fabric', [CustomerOrderFabricController::class, 'update'])->name('orders.fabric.update');
         Route::post('/orders/{order}/submit-review', [CustomerOrderController::class, 'submitReview'])->name('orders.submit-review');
         Route::post('/orders/{order}/cancel', [CustomerOrderController::class, 'cancel'])->name('orders.cancel');
 

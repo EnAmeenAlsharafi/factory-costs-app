@@ -106,8 +106,13 @@ class CustomerOrderController extends Controller
 
         $trackingSummary = $this->trackingService->summary($order);
         $timeline = $this->timelineService->forCustomerOrder($order, 50, $request->user()->role?->name);
+        $specialFabricColors = $order->lines->contains('special_fabric', true)
+            && ($request->user()->can('orders.update') || $request->user()->can('orders.review_production'))
+            ? FabricColor::active()->available()->whereHas('material', fn ($query) => $query->active()->whereHas('category', fn ($category) => $category->where('code', 'FABRIC')))
+                ->with('material.fabricSpec.supplier')->orderBy('material_id')->orderBy('color_code')->get()
+            : collect();
 
-        return view('sales.orders.show', compact('order', 'trackingSummary', 'timeline'));
+        return view('sales.orders.show', compact('order', 'trackingSummary', 'timeline', 'specialFabricColors'));
     }
 
     public function edit(Request $request, CustomerOrder $order): View

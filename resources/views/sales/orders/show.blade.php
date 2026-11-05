@@ -5,6 +5,7 @@
 @section('content')
 <div class="container-fluid px-4 py-4">
     @include('sales.orders.manual-import-lines')
+    @include('sales.orders.special-fabric')
 
     @php
         // Commercial values (prices, payments, balances) are for sales, production review and receivables staff only;

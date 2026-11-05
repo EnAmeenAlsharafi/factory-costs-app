@@ -42,6 +42,7 @@ class CustomerOrderLine extends Model
         'fabric_color_code',
         'fabric_supplier_color_code',
         'fabric_notes',
+        'special_fabric',
         'quantity',
         'unit_price',
         'discount_amount',
@@ -54,6 +55,7 @@ class CustomerOrderLine extends Model
     {
         return [
             'custom_design' => 'boolean',
+            'special_fabric' => 'boolean',
             'is_incomplete' => 'boolean',
             'has_storage' => 'boolean',
             'requested_width_cm' => 'decimal:2',

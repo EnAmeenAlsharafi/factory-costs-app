@@ -62,6 +62,7 @@ class ProductionExecutionService
             }
 
             $fromStatus = $locked->status;
+            app(SpecialFabricService::class)->assertOperationReady($locked);
 
             if ($locked->assigned_user_id === null) {
                 $locked->assigned_user_id = $employee->id;

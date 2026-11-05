@@ -229,6 +229,19 @@ class CustomerPortalService
                 $data['product_name'] = $material->sales_display_name ?: $material->name_ar;
             } else {
                 $data['material_id'] = null;
+                $data['fabric_source'] = $line['fabric_source'] ?? (! empty($line['fabric_material_id']) ? 'CATALOG' : ((! empty($line['requested_fabric']) || ! empty($line['requested_color'])) ? 'CUSTOM' : 'CATALOG'));
+                if ($priced) {
+                    $data['fabric_source'] = $previous['fabric_source'] ?? $data['fabric_source'];
+                }
+                if (! $priced) {
+                    if ($data['fabric_source'] === 'CUSTOM') {
+                        $data['fabric_material_id'] = null;
+                        $data['fabric_color_id'] = null;
+                    } else {
+                        $data['requested_fabric'] = null;
+                        $data['requested_color'] = null;
+                    }
+                }
                 $custom = ! empty($data['custom_design']);
                 if ($custom) {
                     $data['product_model_id'] = null;
@@ -258,9 +271,7 @@ class CustomerPortalService
                 $color = FabricColor::find($data['fabric_color_id'] ?? null);
                 $data['fabric_name'] = $fabric?->name_ar;
                 $data['color_name'] = $color?->color_name_ar ?: $color?->color_code;
-                if ($priced && (! empty($data['requested_fabric']) || ! empty($data['requested_color'])) && (! $fabric || ! $color)) {
-                    throw ValidationException::withMessages(['fabric' => 'يجب ربط القماش واللون المطلوبين بمواد المخزون قبل إرسال العرض.']);
-                }
+                $data['special_fabric'] = $data['fabric_source'] === 'CUSTOM' || ! empty($data['fabric_notes']);
                 if ($priced && ! $custom) {
                     $configuration = ! empty($line['product_configuration_id'])
                         ? ProductConfiguration::find($line['product_configuration_id'])

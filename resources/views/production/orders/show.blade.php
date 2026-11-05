@@ -4,6 +4,14 @@
 
 @section('content')
 <div class="container-fluid px-4 py-3">
+    @if($order->customerOrderLine?->special_fabric)
+        <div class="alert alert-warning">
+            <strong>طلب بقماش خاص:</strong> {{ $order->customerOrderLine->fabric_notes }}
+            <p class="mb-0">يلزم ربط القماش واللون والمورد بالمخزون، ثم استلام القماش وصرفه على هذا الأمر قبل التنجيد.
+                <a href="{{ route('sales.orders.show', $order->customerOrder) }}">مراجعة الربط في طلب العميل</a>
+            </p>
+        </div>
+    @endif
     <!-- Header -->
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <div>

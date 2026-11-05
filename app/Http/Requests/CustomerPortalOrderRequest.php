@@ -13,6 +13,31 @@ use Illuminate\Validation\Validator;
 
 class CustomerPortalOrderRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        if ($this->routeIs('sales.portal-requests.offer')) {
+            return;
+        }
+        $lines = $this->input('lines', []);
+        if (! is_array($lines)) {
+            return;
+        }
+        foreach ($lines as &$line) {
+            if (! is_array($line)) {
+                continue;
+            }
+            if (($line['fabric_source'] ?? null) === 'CUSTOM') {
+                $line['fabric_material_id'] = null;
+                $line['fabric_color_id'] = null;
+            } elseif (($line['fabric_source'] ?? null) === 'CATALOG' || ! empty($line['fabric_material_id'])) {
+                $line['requested_fabric'] = null;
+                $line['requested_color'] = null;
+            }
+        }
+        unset($line);
+        $this->merge(['lines' => $lines]);
+    }
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -55,6 +80,7 @@ class CustomerPortalOrderRequest extends FormRequest
             'lines.*.custom_design_name' => ['required_if:lines.*.custom_design,1,true', 'nullable', 'string', 'max:255'],
             'lines.*.custom_design_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'lines.*.requested_fabric' => ['nullable', 'string', 'max:1000'],
+            'lines.*.fabric_source' => ['nullable', 'in:CATALOG,CUSTOM'],
             'lines.*.requested_color' => ['nullable', 'string', 'max:500'],
             'lines.*.material_id' => ['required_if:lines.*.line_type,READY_STOCK', 'nullable', Rule::exists('materials', 'id')->where('is_active', true)->where('is_sellable_ready_product', true)->where('has_ready_options', 0)],
             'lines.*.requested_width_cm' => ['required_if:lines.*.line_type,MANUFACTURED', 'nullable', 'numeric', 'gt:0', 'max:1000'],
@@ -107,7 +133,11 @@ class CustomerPortalOrderRequest extends FormRequest
                         $validator->errors()->add("lines.{$index}.product_configuration_id", 'التهيئة المرجعية يجب أن تتبع الموديل وخيار التخزين المحددين.');
                     }
                 }
-                if ($this->routeIs('sales.portal-requests.offer') && $requiresFabric && (! $fabric || empty($line['fabric_color_id']))) {
+                $original = collect($this->route('submission')?->lines ?? [])->firstWhere('line_key', $line['line_key'] ?? '') ?? [];
+                $specialFabric = ($original['fabric_source'] ?? $line['fabric_source'] ?? null) === 'CUSTOM'
+                    || ! empty($original['requested_fabric']) || ! empty($original['requested_color'])
+                    || ! empty($line['requested_fabric']) || ! empty($line['requested_color']);
+                if ($this->routeIs('sales.portal-requests.offer') && $requiresFabric && ! $specialFabric && (! $fabric || empty($line['fabric_color_id']))) {
                     $validator->errors()->add("lines.{$index}.fabric_color_id", 'يجب استكمال القماش واللون قبل إرسال العرض للعميل.');
                 }
             }

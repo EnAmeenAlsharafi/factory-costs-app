@@ -424,20 +424,16 @@ class CustomerPortalTest extends TestCase
         $this->submit($user, $submission);
 
         $offer = $this->offerData($submission->fresh());
-        $this->actingAs($this->admin())->post(route('sales.portal-requests.offer', $submission), $offer)->assertSessionHasErrors('lines.0.fabric_color_id');
-        $fabric = Material::factory()->create(['material_category_id' => MaterialCategory::where('code', 'FABRIC')->value('id')]);
-        $color = FabricColor::factory()->create(['material_id' => $fabric->id, 'is_available' => true]);
-        $offer['lines'][0]['fabric_material_id'] = $fabric->id;
-        $offer['lines'][0]['fabric_color_id'] = $color->id;
-        $this->post(route('sales.portal-requests.offer', $submission), $offer)->assertSessionHasNoErrors();
+        $this->actingAs($this->admin())->post(route('sales.portal-requests.offer', $submission), $offer)->assertSessionHasNoErrors();
         $this->get(route('sales.portal-requests.design-image', [$submission, $saved['line_key']]))->assertOk();
         $this->actingAs($user)->post(route('portal.requests.confirm', $submission), ['revision' => $submission->fresh()->revision])->assertSessionHasNoErrors();
 
         $confirmedLine = $submission->fresh()->order->lines->first();
         $this->assertTrue($confirmedLine->custom_design);
         $this->assertSame($saved['custom_design_image_path'], $confirmedLine->custom_design_image_path);
-        $this->assertSame($fabric->id, $confirmedLine->fabric_material_id);
-        $this->assertSame($color->id, $confirmedLine->fabric_color_id);
+        $this->assertNull($confirmedLine->fabric_material_id);
+        $this->assertNull($confirmedLine->fabric_color_id);
+        $this->assertTrue($confirmedLine->special_fabric);
         $this->assertStringContainsString('بيج رملي', $confirmedLine->fabric_notes);
         $this->assertSame('بيج رملي', $submission->fresh()->lines[0]['requested_color']);
     }
@@ -495,6 +491,66 @@ class CustomerPortalTest extends TestCase
         $saved = CustomerPortalRequest::firstOrFail()->lines[0];
         $this->assertSame($configuration->id, $saved['product_configuration_id']);
         $this->assertArrayNotHasKey('unit_price', $saved);
+    }
+
+    public function test_customer_can_switch_between_custom_and_catalog_fabric_without_stale_values(): void
+    {
+        $user = $this->client();
+        $fabric = Material::factory()->create(['material_category_id' => MaterialCategory::where('code', 'FABRIC')->value('id')]);
+        $color = FabricColor::factory()->create(['material_id' => $fabric->id, 'is_available' => true]);
+        $line = ['line_type' => 'MANUFACTURED', 'custom_design' => true, 'custom_design_name' => 'سرير خاص',
+            'requested_width_cm' => 160, 'requested_length_cm' => 200, 'quantity' => 1,
+            'fabric_source' => 'CUSTOM', 'fabric_material_id' => $fabric->id, 'fabric_color_id' => $color->id,
+            'requested_fabric' => 'كتالوج العميل', 'requested_color' => 'بيج خاص'];
+
+        $this->actingAs($user)->post(route('portal.requests.store'), ['lines' => [$line]])->assertSessionHasNoErrors();
+
+        $submission = CustomerPortalRequest::firstOrFail();
+        $saved = $submission->lines[0];
+        $this->assertSame('CUSTOM', $saved['fabric_source']);
+        $this->assertNull($saved['fabric_material_id']);
+        $this->assertNull($saved['fabric_color_id']);
+        $this->assertSame('كتالوج العميل', $saved['requested_fabric']);
+        $saved['fabric_source'] = 'CATALOG';
+        $saved['fabric_material_id'] = $fabric->id;
+        $saved['fabric_color_id'] = $color->id;
+
+        $this->put(route('portal.requests.update', $submission), ['revision' => $submission->revision, 'lines' => [$saved]])->assertSessionHasNoErrors();
+
+        $catalog = $submission->fresh()->lines[0];
+        $this->assertSame($fabric->id, $catalog['fabric_material_id']);
+        $this->assertSame($color->id, $catalog['fabric_color_id']);
+        $this->assertNull($catalog['requested_fabric']);
+        $this->assertNull($catalog['requested_color']);
+        $this->assertNull($catalog['fabric_notes']);
+        $this->get(route('portal.requests.edit', $submission))->assertSee('كتالوج خاص / قماش خاص')->assertDontSee('يُستكمل مع خدمة العملاء');
+    }
+
+    public function test_staff_keeps_original_custom_fabric_request_when_mapping_it_to_inventory(): void
+    {
+        $user = $this->client();
+        $line = ['line_type' => 'MANUFACTURED', 'custom_design' => true, 'custom_design_name' => 'سرير خاص',
+            'requested_width_cm' => 160, 'requested_length_cm' => 200, 'quantity' => 1,
+            'fabric_source' => 'CUSTOM', 'requested_fabric' => 'كتالوج العميل', 'requested_color' => 'بيج خاص'];
+        $this->actingAs($user)->post(route('portal.requests.store'), ['lines' => [$line]])->assertSessionHasNoErrors();
+        $submission = CustomerPortalRequest::firstOrFail();
+        $this->submit($user, $submission);
+        $fabric = Material::factory()->create(['material_category_id' => MaterialCategory::where('code', 'FABRIC')->value('id')]);
+        $color = FabricColor::factory()->create(['material_id' => $fabric->id, 'is_available' => true]);
+        $offer = $this->offerData($submission->fresh());
+        unset($offer['lines'][0]['fabric_source']);
+        $offer['lines'][0]['fabric_material_id'] = $fabric->id;
+        $offer['lines'][0]['fabric_color_id'] = $color->id;
+        $offer['lines'][0]['requested_fabric'] = 'تغيير غير مطلوب للوصف الأصلي';
+
+        $this->actingAs($this->admin())->post(route('sales.portal-requests.offer', $submission), $offer)->assertSessionHasNoErrors();
+
+        $saved = $submission->fresh()->lines[0];
+        $this->assertSame('CUSTOM', $saved['fabric_source']);
+        $this->assertSame('كتالوج العميل', $saved['requested_fabric']);
+        $this->assertSame('بيج خاص', $saved['requested_color']);
+        $this->assertSame($fabric->id, $saved['fabric_material_id']);
+        $this->get(route('sales.portal-requests.show', $submission))->assertSee('طلب العميل الأصلي محفوظ');
     }
 
     protected function admin(): User

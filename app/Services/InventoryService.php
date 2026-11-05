@@ -151,6 +151,8 @@ class InventoryService
                     ->lockForUpdate()
                     ->firstOrFail();
 
+                app(SpecialFabricService::class)->assertIssue($issue, $line, $lot);
+
                 if ($line->issued_quantity > $lot->remaining_quantity) {
                     throw new Exception("الكمية المطلوبة للصرف ({$line->issued_quantity}) تتجاوز الكمية المتاحة في اللوت {$lot->lot_code} ({$lot->remaining_quantity}).");
                 }
