@@ -93,7 +93,7 @@ class CustomerOrderController extends Controller
             'productionReviewedBy',
             'productionApprovedBy',
             'lines.productModel',
-            'lines.material',
+            'lines.material.readyParent',
             'lines.productConfiguration',
             'lines.customerProductAlias',
             'lines.fabricSupplier',
@@ -116,7 +116,7 @@ class CustomerOrderController extends Controller
 
         $order->load([
             'lines.productModel',
-            'lines.material',
+            'lines.material.readyParent',
             'lines.productConfiguration',
             'lines.fabricSupplier',
             'lines.fabricMaterial',

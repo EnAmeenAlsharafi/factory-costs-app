@@ -97,11 +97,16 @@ class CustomerOrder extends Model
         return $this->hasMany(CustomerReturn::class);
     }
 
-    public function assertCustomerConfirmation(bool $lock = false): void
+    public function assertImportCompletion(): void
     {
         if ($this->manual_import_lines) {
             throw ValidationException::withMessages(['import_completion' => 'أكمل إضافة بنود سلة اليدوية وأكد اكتمال الطلب أولًا.']);
         }
+    }
+
+    public function assertCustomerConfirmation(bool $lock = false): void
+    {
+        $this->assertImportCompletion();
         $query = $this->portalRequest();
         if ($lock) {
             $query->lockForUpdate();

@@ -91,7 +91,7 @@
                                 </td>
                                 <td class="text-center">
                                     @can('materials.manage')
-                                        @if($material->has_ready_options)<a href="{{ route('sales.ready-stock-products.options.create', $material) }}" class="btn btn-sm btn-outline-success">إضافة خيار</a>@endif
+                                        @if(!$material->ready_parent_id)<a href="{{ route('sales.ready-stock-products.options', $material) }}" class="btn btn-sm btn-outline-success">إدارة الخيارات</a>@endif
                                         <a href="{{ route('sales.ready-stock-products.edit', $material) }}" class="btn btn-outline-primary" title="تعديل المنتج الجاهز" aria-label="تعديل {{ $material->sales_display_name ?: $material->name_ar }}">
                                             <i class="fas fa-edit"></i>
                                         </a>

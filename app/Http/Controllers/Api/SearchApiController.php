@@ -248,12 +248,18 @@ class SearchApiController extends Controller
      */
     public function readyProducts(Request $request, InventoryService $inventoryService): JsonResponse
     {
+        $request->validate(['parent_id' => ['nullable', 'integer', 'min:1']]);
+        $parentId = $request->integer('parent_id');
+        if ($parentId) {
+            abort_unless(Material::active()->sellableReady()->whereNull('ready_parent_id')->whereKey($parentId)->exists(), 404);
+        }
         $query = trim($request->input('q', ''));
         $perPage = min(30, max(1, (int) $request->input('per_page', 20)));
 
         $materials = Material::query()
+            ->with('readyParent')
             ->sellableReady()
-            ->where('has_ready_options', false)
+            ->when($parentId, fn ($query) => $query->where('ready_parent_id', $parentId))
             ->where('is_active', true)
             ->when($query !== '', function ($q) use ($query) {
                 $q->where(function ($sub) use ($query) {
@@ -265,7 +271,7 @@ class SearchApiController extends Controller
             })
             ->orderBy('sales_display_name')
             ->orderBy('name_ar')
-            ->limit($perPage)
+            ->limit($parentId ? 1000 : $perPage)
             ->get();
 
         $results = $materials->map(function ($m) use ($inventoryService) {
@@ -277,9 +283,13 @@ class SearchApiController extends Controller
                 'code' => $m->sales_sku ?: $m->code,
                 'sales_sku' => $m->sales_sku,
                 'sales_price' => (float) $m->sales_price,
+                'has_ready_options' => $m->has_ready_options,
+                'ready_parent_id' => $m->ready_parent_id,
+                'ready_parent_label' => $m->readyParent?->sales_display_name ?: $m->readyParent?->name_ar,
+                'option_label' => $m->ready_option_label,
                 'name_ar' => $displayName,
                 'available' => $availability['available'],
-                'label' => "{$displayName} — متاح: {$availability['available']}",
+                'label' => $m->has_ready_options ? "{$displayName} — اختر المقاس" : "{$displayName} — متاح: {$availability['available']}",
             ];
         });
 

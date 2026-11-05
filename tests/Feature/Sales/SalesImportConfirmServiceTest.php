@@ -127,6 +127,7 @@ class SalesImportConfirmServiceTest extends TestCase
         $row = $batch->rows()->where('external_order_reference', 'SALLA-1001')->firstOrFail();
         $data = $row->raw_data;
         $data['lines'][] = ['product_name' => 'مرتبة بمقاسات', 'sku' => 'PARENT-MATTRESS', 'quantity' => 1, 'unit_price' => 700];
+        $data['lines'][0]['line_discount'] = 50;
         $data['lines'][] = ['product_name' => 'سرير يحتاج مواصفات', 'sku' => 'UNKNOWN-BED', 'quantity' => 1, 'unit_price' => 1200];
         $data['lines'][] = ['product_name' => 'مقاس محلي', 'sku' => 'LOCAL-MATTRESS-160', 'quantity' => 1, 'unit_price' => 700];
         $row->update(['raw_data' => $data]);
@@ -153,6 +154,7 @@ class SalesImportConfirmServiceTest extends TestCase
         ];
         $this->put(route('sales.orders.update', $order), $payload)->assertSessionHasNoErrors();
         $this->assertCount(3, $order->fresh()->manual_import_lines);
+        $this->assertSame('3050.00', $order->fresh()->total_amount);
         $payload['import_completion_confirmed'] = 1;
 
         $this->put(route('sales.orders.update', $order), $payload)->assertSessionHasNoErrors();

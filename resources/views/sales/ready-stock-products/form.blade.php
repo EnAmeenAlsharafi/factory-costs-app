@@ -21,10 +21,18 @@
                 <label for="has_ready_options" class="form-check-label">منتج رئيسي يحتوي خيارات / مقاسات تُضاف من النظام</label>
             </div>
         @endif
-        @if($material->exists && $material->has_ready_options)
+        @if($material->exists && !$material->ready_parent_id)
             <div class="px-4 mb-3">
-                <a href="{{ route('sales.ready-stock-products.options.create', $material) }}" class="btn btn-outline-success mb-2">إضافة خيار / مقاس</a>
-                @foreach($material->readyOptions as $option)<a class="d-block" href="{{ route('sales.ready-stock-products.edit', $option) }}">{{ $option->ready_option_label }} — {{ $option->sales_display_name ?: $option->name_ar }}</a>@endforeach
+                <div class="border rounded p-3 bg-light d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div>
+                        <h2 class="h6 mb-1">خيارات ومقاسات المنتج</h2>
+                        <p class="text-muted mb-0 fs-7">سجّل المقاسات وأسعارها في جدول واحد، أو أضف خيارًا مفردًا ليظهر في قائمة الطلب.</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a href="{{ route('sales.ready-stock-products.options.create', $material) }}" class="btn btn-sm btn-outline-success">إضافة خيار / مقاس</a>
+                        <a href="{{ route('sales.ready-stock-products.options', $material) }}" class="btn btn-sm btn-primary">إدارة الخيارات / المقاسات ({{ $material->readyOptions->count() }})</a>
+                    </div>
+                </div>
             </div>
         @endif
         @if($material->exists) @method('PUT') @endif

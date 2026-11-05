@@ -127,12 +127,12 @@ class CustomerOrderService
             }
 
             foreach ($linesData as $line) {
+                $existingLine = (! empty($line['id']) && $oldLines->has($line['id'])) ? $oldLines->get($line['id']) : null;
                 $qty = (float) ($line['quantity'] ?? 1);
                 $unitPrice = (float) ($line['unit_price'] ?? 0);
-                $discount = (float) ($line['discount_amount'] ?? 0);
+                $discount = (float) ($line['discount_amount'] ?? $existingLine?->discount_amount ?? 0);
                 $lineTotal = max(0, ($qty * $unitPrice) - $discount);
 
-                $existingLine = (! empty($line['id']) && $oldLines->has($line['id'])) ? $oldLines->get($line['id']) : null;
                 $fabricAttrs = $this->resolveFabricLineAttributes($line, $existingLine);
 
                 $linePayload = [
@@ -229,7 +229,7 @@ class CustomerOrderService
      */
     public function submitForProductionReview(CustomerOrder $order): CustomerOrder
     {
-        $order->assertCustomerConfirmation();
+        $order->assertImportCompletion();
         if ($order->status === 'CANCELLED') {
             throw new Exception('لا يمكن إرسال طلب ملغى للمراجعة.');
         }

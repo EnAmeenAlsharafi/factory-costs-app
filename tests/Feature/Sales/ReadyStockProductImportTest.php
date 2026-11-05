@@ -283,7 +283,7 @@ class ReadyStockProductImportTest extends TestCase
         $this->assertTrue($parent->has_ready_options);
         $this->assertSame(0, $parent->readyOptions()->count());
         $this->assertDatabaseMissing('materials', ['sales_sku' => 'EXTERNAL-OPTION']);
-        $this->get(route('sales.ready-stock-products.edit', $parent))->assertSee('إضافة خيار / مقاس');
+        $this->get(route('sales.ready-stock-products.edit', $parent))->assertSee('إدارة الخيارات / المقاسات');
         $this->get(route('sales.ready-stock-products.options.create', $parent))->assertOk();
         $this->post(route('sales.ready-stock-products.store'), [
             'name_ar' => 'مقاس محلي', 'ready_parent_id' => $parent->id, 'ready_option_label' => '160×200',
@@ -293,7 +293,7 @@ class ReadyStockProductImportTest extends TestCase
         $option = $parent->readyOptions()->firstOrFail();
         $this->assertSame('مفرش جاهز — 160×200', $option->sales_display_name);
         $this->assertFalse($option->has_ready_options);
-        $this->getJson('/api/search/ready-products?q=NP-210-2302-07')->assertExactJson([]);
+        $this->getJson('/api/search/ready-products?q=NP-210-2302-07')->assertJsonPath('0.id', $parent->id)->assertJsonPath('0.has_ready_options', true);
         $this->getJson('/api/search/ready-products?q=LOCAL-160')->assertJsonPath('0.id', $option->id);
         $this->put(route('sales.ready-stock-products.update', $parent), [
             'name_ar' => $parent->name_ar, 'base_unit_id' => $parent->base_unit_id, 'is_active' => 1, 'has_ready_options' => 0,

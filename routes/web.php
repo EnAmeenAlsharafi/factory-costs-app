@@ -177,6 +177,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/ready-stock-products/import/confirm', [ReadyStockProductController::class, 'confirmImport'])->name('ready-stock-products.import-confirm');
         Route::get('/ready-stock-products/{material}/edit', [ReadyStockProductController::class, 'edit'])->name('ready-stock-products.edit');
         Route::get('/ready-stock-products/{material}/options/create', [ReadyStockProductController::class, 'createOption'])->name('ready-stock-products.options.create');
+        Route::get('/ready-stock-products/{material}/options', [ReadyStockProductController::class, 'options'])->name('ready-stock-products.options');
+        Route::post('/ready-stock-products/{material}/options', [ReadyStockProductController::class, 'storeOptions'])->name('ready-stock-products.options.store');
         Route::put('/ready-stock-products/{material}', [ReadyStockProductController::class, 'update'])->name('ready-stock-products.update');
         Route::get('/incomplete-imports', [IncompleteImportedOrderController::class, 'index'])->name('incomplete-imports.index');
 
