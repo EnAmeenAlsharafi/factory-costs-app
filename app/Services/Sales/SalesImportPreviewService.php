@@ -42,7 +42,7 @@ class SalesImportPreviewService
         $targetTypes = [];
 
         foreach ($lines as $line) {
-            $resolution = $this->matcher->resolve($batch->salesChannel, $line['sku'] ?? null, $line['product_name'] ?? null);
+            $resolution = $this->matcher->resolveForImport($batch->salesChannel, $line['sku'] ?? null, $line['product_name'] ?? null);
             $targetTypes[] = $resolution['target_type'];
 
             $resolvedLine = [

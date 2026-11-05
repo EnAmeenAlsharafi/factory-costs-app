@@ -147,7 +147,7 @@ class SalesImportPreviewServiceTest extends TestCase
         $row6 = collect($preview)->firstWhere('external_order_reference', 'SALLA-1006');
 
         $this->assertEquals('IMPORT', $row6['decision']);
-        $this->assertNull($row6['lines'][0]['target_type']);
-        $this->assertTrue(collect($row6['warnings'])->contains(fn ($w) => str_contains($w, 'غير مطابَقة')));
+        $this->assertSame('MANUAL', $row6['lines'][0]['target_type']);
+        $this->assertTrue(collect($row6['warnings'])->contains(fn ($w) => str_contains($w, 'يدويًا')));
     }
 }

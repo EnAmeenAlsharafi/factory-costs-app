@@ -25,6 +25,7 @@ class CustomerOrder extends Model
         'external_payment_method',
         'external_payment_status',
         'import_batch_id',
+        'manual_import_lines',
         'delivery_method',
         'shipping_company_name',
         'shipping_tracking_number',
@@ -57,6 +58,7 @@ class CustomerOrder extends Model
     {
         return [
             'order_date' => 'date',
+            'manual_import_lines' => 'array',
             'requested_delivery_date' => 'date',
             'payment_due_date' => 'date',
             'credit_days' => 'integer',
@@ -95,8 +97,16 @@ class CustomerOrder extends Model
         return $this->hasMany(CustomerReturn::class);
     }
 
+    public function assertImportCompletion(): void
+    {
+        if ($this->manual_import_lines) {
+            throw ValidationException::withMessages(['import_completion' => 'أكمل إضافة بنود سلة اليدوية وأكد اكتمال الطلب أولًا.']);
+        }
+    }
+
     public function assertCustomerConfirmation(bool $lock = false): void
     {
+        $this->assertImportCompletion();
         $query = $this->portalRequest();
         if ($lock) {
             $query->lockForUpdate();

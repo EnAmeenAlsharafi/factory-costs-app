@@ -19,7 +19,7 @@
 
     {{-- Validation errors are shown once by the layout flash partial. --}}
 
-    <form action="{{ route('sales.orders.store') }}" method="POST" id="orderForm" data-unsaved-warning>
+    <form action="{{ route('sales.orders.store') }}" method="POST" enctype="multipart/form-data" id="orderForm" data-unsaved-warning>
         @csrf
 
         {{-- Header Information Card --}}
@@ -157,7 +157,7 @@ if (!empty($rawOldLines)) {
     $colors = !empty($colorIds) ? \App\Models\FabricColor::whereIn('id', $colorIds)->get()->keyBy('id') : collect();
 
     $readyMaterialIds = collect($rawOldLines)->pluck('material_id')->filter()->unique()->all();
-    $readyMaterials = !empty($readyMaterialIds) ? \App\Models\Material::whereIn('id', $readyMaterialIds)->get()->keyBy('id') : collect();
+    $readyMaterials = !empty($readyMaterialIds) ? \App\Models\Material::with('readyParent')->whereIn('id', $readyMaterialIds)->get()->keyBy('id') : collect();
 
     foreach ($rawOldLines as $line) {
         $mid = $line['product_model_id'] ?? null;
@@ -189,11 +189,15 @@ if (!empty($rawOldLines)) {
             'fabric_supplier_color_code' => $line['fabric_supplier_color_code'] ?? ($col ? $col->supplier_color_code : ''),
             'line_type' => $line['line_type'] ?? 'MANUFACTURED',
             'material_label' => $line['material_label'] ?? ($rm ? ($rm->sales_display_name ?: $rm->name_ar) : ''),
+            'ready_parent_id' => $rm?->ready_parent_id,
+            'ready_parent_label' => $rm?->readyParent?->sales_display_name ?: $rm?->readyParent?->name_ar,
+            'ready_has_options' => $rm?->has_ready_options ?? false,
         ]);
     }
 }
 @endphp
 
+@include('sales.orders.ready-product-options-script')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const linesContainer = document.getElementById('lines-container');
@@ -345,10 +349,13 @@ document.addEventListener('DOMContentLoaded', function () {
         const supplierColorCode = data.fabric_supplier_color_code || '';
         const isCustom = data.custom_design ? 'checked' : '';
         const customName = data.custom_design_name || '';
+        const customImageUrl = data.custom_design_image_url || '';
         const customNameDisplay = data.custom_design ? '' : 'd-none';
         const lineType = data.line_type || 'MANUFACTURED';
         const materialId = data.material_id || '';
         const materialLabel = data.material_label || '';
+        const readySelectionId = data.ready_parent_id || materialId;
+        const readySelectionLabel = data.ready_parent_label || materialLabel;
         const isReadyStock = lineType === 'READY_STOCK';
 
         tr.innerHTML = `
@@ -426,16 +433,23 @@ document.addEventListener('DOMContentLoaded', function () {
                     <label class="form-check-label fs-8 text-secondary" for="custom_${lineIndex}">تصميم خاص حسب الطلب</label>
                 </div>
                 <input type="text" name="lines[${lineIndex}][custom_design_name]" class="form-control form-control-sm custom-name-input ${customNameDisplay} mt-1" value="${customName.replace(/"/g, '&quot;')}" placeholder="اسم التصميم الخاص...">
+                <div class="custom-image-fields ${customNameDisplay} mt-2">
+                    <label for="custom_image_${lineIndex}" class="form-label fs-8">صورة المنتج / التصميم الخاص</label>
+                    <input type="file" name="lines[${lineIndex}][custom_design_image]" id="custom_image_${lineIndex}" class="form-control form-control-sm custom-image-input" accept="image/jpeg,image/png,image/webp" ${data.custom_design ? '' : 'disabled'}>
+                    <small class="text-muted d-block">JPG، PNG، WebP — حتى 5 ميجابايت. عند التعديل اترك الحقل فارغًا للاحتفاظ بالصورة الحالية.</small>
+                    <img ${customImageUrl ? 'src="' + escapeAttribute(customImageUrl) + '"' : ''} alt="معاينة صورة التصميم الخاص" class="custom-image-preview img-thumbnail mt-2 ${customImageUrl ? '' : 'd-none'}" style="max-width: 180px; max-height: 140px; object-fit: contain;">
+                </div>
                 </div>
                 <div class="ready-stock-fields ${isReadyStock ? '' : 'd-none'}">
                     <div class="typeahead-container ready-wrapper mb-1" @click.outside="closeDropdown" x-data="typeaheadSelect({
                         name: 'lines[${lineIndex}][material_id]',
                         endpoint: '/api/search/ready-products',
                         placeholder: 'ابحث عن منتج جاهز (SKU / اسم)...',
-                        initialId: '${materialId}',
-                        initialLabel: ${escapeAttribute(JSON.stringify(materialLabel))}
+                        initialId: '${readySelectionId}',
+                        initialLabel: ${escapeAttribute(JSON.stringify(readySelectionLabel))}
                     })">
-                        <input type="hidden" name="lines[${lineIndex}][material_id]" :value="selectedId" class="material-id-input">
+                        <input type="hidden" :value="selectedId" class="ready-search-id-input">
+                        <input type="hidden" name="lines[${lineIndex}][material_id]" value="${Number(materialId) || ''}" class="material-id-input">
                         <input type="hidden" name="lines[${lineIndex}][material_label]" :value="selectedLabel" class="material-label-input">
                         <div class="input-group input-group-sm">
                             <input type="text" inputmode="search" class="form-control form-control-sm"
@@ -498,6 +512,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     <div class="col-6">
                         <input type="number" step="0.1" inputmode="decimal" name="lines[${lineIndex}][requested_length_cm]" class="form-control form-control-sm length-input" value="${data.requested_length_cm || ''}" placeholder="طول سم" aria-label="الطول بالسنتيمتر">
                     </div>
+                </div>
+                </div>
+                <div class="ready-stock-fields ${isReadyStock ? '' : 'd-none'}"><div class="ready-option-box d-none">
+                    <label class="form-label fs-8">المقاس / الخيار</label>
+                    <select class="form-select form-select-sm ready-option-select" aria-label="المقاس / الخيار"><option value="">اختر المقاس / الخيار...</option></select>
+                    <small class="text-muted ready-option-status d-block mt-1"></small>
                 </div>
                 </div>
             </td>
@@ -640,11 +660,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (modelLabelInp) modelLabelInp.value = item.label || '';
                 setLineTitle(tr, item.label);
                 loadConfigurationsForModel(tr, item.id);
-            } else if (container.classList.contains('ready-wrapper')) {
-                tr.querySelector('.material-label-input').value = item.name_ar || item.label || '';
-                priceInput.value = Number(item.sales_price ?? 0).toFixed(2);
-                setLineTitle(tr, item.name_ar || item.label);
-                updateLineTotal();
             } else if (container.classList.contains('fabric-wrapper')) {
                 const matLabelInp = tr.querySelector('.fabric-label-input');
                 if (matLabelInp) matLabelInp.value = item.label || '';
@@ -683,11 +698,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (modelLabelInp) modelLabelInp.value = '';
                 setLineTitle(tr, '');
                 loadConfigurationsForModel(tr, null);
-            } else if (container.classList.contains('ready-wrapper')) {
-                tr.querySelector('.material-label-input').value = '';
-                priceInput.value = 0;
-                setLineTitle(tr, '');
-                updateLineTotal();
             } else if (container.classList.contains('fabric-wrapper')) {
                 const matLabelInp = tr.querySelector('.fabric-label-input');
                 if (matLabelInp) matLabelInp.value = '';
@@ -740,12 +750,26 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         customCheck.addEventListener('change', function () {
+            tr.querySelector('.custom-image-fields').classList.toggle('d-none', !this.checked);
+            tr.querySelector('.custom-image-input').disabled = !this.checked;
             if (this.checked) {
                 customNameInput.classList.remove('d-none');
             } else {
                 customNameInput.classList.add('d-none');
                 customNameInput.value = '';
             }
+        });
+
+        let imagePreviewUrl = null;
+        tr.querySelector('.custom-image-input').addEventListener('change', function () {
+            const preview = tr.querySelector('.custom-image-preview');
+            if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+            const file = this.files[0];
+            imagePreviewUrl = file ? URL.createObjectURL(file) : null;
+            const source = imagePreviewUrl || customImageUrl;
+            if (source) preview.src = source;
+            else preview.removeAttribute('src');
+            preview.classList.toggle('d-none', !source);
         });
 
         function updateLineTotal() {
@@ -786,6 +810,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 line_type: lineTypeSelect.value,
                 material_id: tr.querySelector('.material-id-input')?.value || '',
                 material_label: tr.querySelector('.material-label-input')?.value || '',
+                ready_parent_id: tr.dataset.readyParentId || '',
+                ready_parent_label: tr.dataset.readyParentLabel || '',
                 product_model_id: tr.querySelector('.model-id-input')?.value || '',
                 product_model_label: tr.querySelector('.model-label-input')?.value || '',
                 product_configuration_id: configSelect.value || '',
@@ -810,6 +836,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         setLineTitle(tr, isReadyStock ? materialLabel : modelLabel);
+        window.attachReadyProductOptions(tr, data, updateLineTotal, setLineTitle);
         renumberLines();
         updateLineTotal();
 

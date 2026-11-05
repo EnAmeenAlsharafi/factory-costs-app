@@ -4,6 +4,8 @@
 
 @section('content')
 <div class="container-fluid px-4 py-4">
+    @include('sales.orders.manual-import-lines')
+    @include('sales.orders.special-fabric')
 
     @php
         // Commercial values (prices, payments, balances) are for sales, production review and receivables staff only;
@@ -359,6 +361,11 @@
                                     @elseif($line->custom_design)
                                         <span class="badge bg-purple text-white mb-1" style="background-color: #6f42c1;">تصميم خاص</span>
                                         <div class="fw-bold text-dark">{{ $line->custom_design_name ?? 'تصميم خاص بدون اسم' }}</div>
+                                        @if($line->custom_design_image_path)
+                                            <a href="{{ route('sales.orders.design-image', [$order, $line]) }}" target="_blank" rel="noopener" class="d-block mt-2" aria-label="عرض صورة التصميم الخاص">
+                                                <img src="{{ route('sales.orders.design-image', [$order, $line]) }}" alt="صورة {{ $line->custom_design_name }}" class="img-thumbnail" style="max-width: 180px; max-height: 140px; object-fit: contain;" loading="lazy">
+                                            </a>
+                                        @endif
                                     @else
                                         <div class="fw-bold text-dark">{{ $line->productModel?->name_ar ?? 'موديل غير محدد' }}</div>
                                         <small class="text-muted">كود: {{ $line->productModel?->model_code }}</small>

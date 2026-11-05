@@ -14,6 +14,19 @@ use App\Models\SalesItemMapping;
  */
 class SalesItemMatchingService
 {
+    /** @return array{target_type: string|null, mapping: SalesItemMapping|null} */
+    public function resolveForImport(SalesChannel $salesChannel, ?string $sku, ?string $name): array
+    {
+        $resolution = $this->resolve($salesChannel, $sku, $name);
+        $material = $resolution['mapping']?->material;
+        if ($resolution['target_type'] !== 'READY_STOCK' || ! $material?->is_active
+            || ! $material->is_sellable_ready_product || $material->has_ready_options || $material->ready_parent_id) {
+            $resolution['target_type'] = 'MANUAL';
+        }
+
+        return $resolution;
+    }
+
     /**
      * @return array{target_type: string|null, mapping: SalesItemMapping|null}
      */

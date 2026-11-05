@@ -7,7 +7,8 @@
     <p class="text-muted fs-7 mb-0">اختر المنتجات والمواصفات. ستراجع خدمة العملاء الطلب وتحدد السعر قبل عرضه عليك للتأكيد.</p>
 </div>
 
-<form method="POST" action="{{ $submission->exists ? route('portal.requests.update', $submission) : route('portal.requests.store') }}">
+{{-- enctype is required: a line may carry a custom-design image upload. --}}
+<form method="POST" enctype="multipart/form-data" action="{{ $submission->exists ? route('portal.requests.update', $submission) : route('portal.requests.store') }}">
     @csrf @if($submission->exists) @method('PUT') @endif
     @include('portal.request-fields', ['isReview' => false])
 

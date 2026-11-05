@@ -12,9 +12,13 @@ use App\Models\Material;
 use App\Models\ProductConfiguration;
 use App\Models\ProductModel;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class CustomerPortalService
 {
@@ -25,10 +29,10 @@ class CustomerPortalService
     {
         $aliases = CustomerProductAlias::where('customer_id', $customer->id)->where('is_active', true)->orderByDesc('is_default')->get()->unique('product_model_id')->keyBy('product_model_id');
         $models = ProductModel::where('is_active', true)->orderBy('name_ar')->get(['id', 'name_ar'])->map(fn ($model): array => ['id' => $model->id, 'name' => $aliases->get($model->id)?->customer_product_name ?: $model->name_ar]);
-        $readyProducts = Material::active()->sellableReady()->orderBy('name_ar')->get(['id', 'name_ar', 'sales_display_name'])->map(fn ($material): array => ['id' => $material->id, 'name' => $material->sales_display_name ?: $material->name_ar]);
+        $readyProducts = Material::active()->sellableReady()->where('has_ready_options', false)->orderBy('name_ar')->get(['id', 'name_ar', 'sales_display_name'])->map(fn ($material): array => ['id' => $material->id, 'name' => $material->sales_display_name ?: $material->name_ar]);
         $fabrics = Material::active()->whereHas('category', fn ($query) => $query->where('code', 'FABRIC'))->orderBy('name_ar')->get(['id', 'name_ar']);
         $colors = FabricColor::active()->available()->whereIn('material_id', $fabrics->pluck('id'))->get(['id', 'material_id', 'color_name_ar', 'color_code']);
-        $configurations = ProductConfiguration::where('is_active', true)->get()->map(fn ($configuration): array => ['id' => $configuration->id, 'product_model_id' => $configuration->product_model_id, 'has_storage' => $configuration->has_storage, 'name' => $configuration->display_name]);
+        $configurations = ProductConfiguration::where('is_active', true)->get()->map(fn ($configuration): array => ['id' => $configuration->id, 'product_model_id' => $configuration->product_model_id, 'has_storage' => $configuration->has_storage, 'width_cm' => $configuration->width_cm, 'length_cm' => $configuration->length_cm, 'name' => $configuration->display_name]);
 
         return compact('models', 'readyProducts', 'fabrics', 'colors', 'configurations');
     }
@@ -36,7 +40,7 @@ class CustomerPortalService
     /** @param array<string, mixed> $data */
     public function saveDraft(User $user, array $data, ?CustomerPortalRequest $submission = null): CustomerPortalRequest
     {
-        return DB::transaction(function () use ($user, $data, $submission) {
+        return $this->saveWithImages(function (array &$storedImages) use ($user, $data, $submission) {
             if ($submission) {
                 $submission = $this->locked($submission);
                 $this->assertOwner($submission, $user);
@@ -49,7 +53,7 @@ class CustomerPortalService
             }
 
             $submission->fill(Arr::only($data, ['customer_reference', 'requested_delivery_date', 'delivery_city', 'delivery_address', 'customer_notes']));
-            $submission->fill(['lines' => $this->prepareLines($data['lines'], false), 'status' => 'DRAFT', 'revision' => $submission->revision + 1, 'offer_total' => null, 'offered_at' => null]);
+            $submission->fill(['lines' => $this->prepareLines($data['lines'], false, $submission->lines ?? [], $storedImages), 'status' => 'DRAFT', 'revision' => $submission->revision + 1, 'offer_total' => null, 'offered_at' => null]);
             $submission->save();
             $this->record($submission, $user, 'SAVED');
 
@@ -76,7 +80,7 @@ class CustomerPortalService
     {
         abort_unless(! $user->isCustomerAccount() && $user->can('orders.update'), 403);
 
-        return DB::transaction(function () use ($submission, $user, $data) {
+        return $this->saveWithImages(function (array &$storedImages) use ($submission, $user, $data) {
             $submission = $this->locked($submission);
             $this->assertRevision($submission, (int) $data['revision']);
             $this->assertStatus($submission, ['SUBMITTED', 'CHANGES_REQUESTED', 'OFFERED', 'CONFIRMED']);
@@ -84,7 +88,7 @@ class CustomerPortalService
             if (! $submission->customer->defaultSalesChannel?->is_active) {
                 throw ValidationException::withMessages(['offer' => 'حدد قناة بيع افتراضية نشطة في بيانات العميل قبل إرسال العرض.']);
             }
-            $lines = $this->prepareLines($data['lines'], true);
+            $lines = $this->prepareLines($data['lines'], true, $submission->lines, $storedImages);
             $cents = 0;
             foreach ($lines as $line) {
                 $gross = (int) round((float) $line['unit_price'] * 100) * (int) $line['quantity'];
@@ -208,27 +212,67 @@ class CustomerPortalService
     /** @param array<int, array<string, mixed>> $lines
      * @return list<array<string, mixed>>
      */
-    protected function prepareLines(array $lines, bool $priced): array
+    protected function prepareLines(array $lines, bool $priced, array $previousLines, array &$storedImages): array
     {
         $result = [];
         foreach ($lines as $line) {
-            $data = Arr::only($line, ['line_type', 'product_model_id', 'material_id', 'requested_width_cm', 'requested_length_cm', 'has_storage', 'fabric_material_id', 'fabric_color_id', 'quantity', 'notes']);
+            $data = Arr::only($line, ['line_type', 'product_model_id', 'product_configuration_id', 'custom_design', 'custom_design_name', 'requested_fabric', 'requested_color', 'material_id', 'requested_width_cm', 'requested_length_cm', 'has_storage', 'fabric_material_id', 'fabric_color_id', 'quantity', 'notes']);
+            $previous = collect($previousLines)->firstWhere('line_key', $line['line_key'] ?? '') ?? [];
+            $data['line_key'] = $previous['line_key'] ?? (string) Str::uuid();
             if ($priced) {
                 $data['unit_price'] = $line['unit_price'];
                 $data['discount_amount'] = $line['discount_amount'] ?? 0;
             }
             if ($data['line_type'] === 'READY_STOCK') {
                 $material = Material::active()->sellableReady()->findOrFail($data['material_id']);
-                $data = Arr::only($data, ['line_type', 'material_id', 'quantity', 'notes', 'unit_price', 'discount_amount']);
+                $data = Arr::only($data, ['line_key', 'line_type', 'material_id', 'quantity', 'notes', 'unit_price', 'discount_amount']);
                 $data['product_name'] = $material->sales_display_name ?: $material->name_ar;
             } else {
                 $data['material_id'] = null;
-                $data['product_name'] = ProductModel::whereKey($data['product_model_id'])->firstOrFail()->name_ar;
+                $data['fabric_source'] = $line['fabric_source'] ?? (! empty($line['fabric_material_id']) ? 'CATALOG' : ((! empty($line['requested_fabric']) || ! empty($line['requested_color'])) ? 'CUSTOM' : 'CATALOG'));
+                if ($priced) {
+                    $data['fabric_source'] = $previous['fabric_source'] ?? $data['fabric_source'];
+                }
+                if (! $priced) {
+                    if ($data['fabric_source'] === 'CUSTOM') {
+                        $data['fabric_material_id'] = null;
+                        $data['fabric_color_id'] = null;
+                    } else {
+                        $data['requested_fabric'] = null;
+                        $data['requested_color'] = null;
+                    }
+                }
+                $custom = ! empty($data['custom_design']);
+                if ($custom) {
+                    $data['product_model_id'] = null;
+                    $data['product_configuration_id'] = null;
+                    $data['product_name'] = $data['custom_design_name'];
+                    $data['custom_design_image_path'] = $previous['custom_design_image_path'] ?? null;
+                    if (($line['custom_design_image'] ?? null) instanceof UploadedFile) {
+                        $path = $line['custom_design_image']->store('customer-order-designs', 'local');
+                        if ($path === false) {
+                            throw ValidationException::withMessages(['image' => 'تعذر حفظ صورة التصميم.']);
+                        }
+                        $storedImages[] = $path;
+                        $data['custom_design_image_path'] = $path;
+                    }
+                } else {
+                    $data['product_name'] = ProductModel::whereKey($data['product_model_id'])->firstOrFail()->name_ar;
+                }
+                if ($priced) {
+                    foreach (['requested_fabric', 'requested_color'] as $field) {
+                        $data[$field] = $previous[$field] ?? $data[$field] ?? null;
+                    }
+                }
+                $data['fabric_notes'] = ! empty($data['requested_fabric']) || ! empty($data['requested_color'])
+                    ? 'قماش العميل: '.($data['requested_fabric'] ?? '').' — لون العميل: '.($data['requested_color'] ?? '')
+                    : null;
                 $fabric = Material::with('fabricSpec')->find($data['fabric_material_id'] ?? null);
                 $color = FabricColor::find($data['fabric_color_id'] ?? null);
                 $data['fabric_name'] = $fabric?->name_ar;
                 $data['color_name'] = $color?->color_name_ar ?: $color?->color_code;
-                if ($priced) {
+                $data['special_fabric'] = $data['fabric_source'] === 'CUSTOM' || ! empty($data['fabric_notes']);
+                if ($priced && ! $custom) {
                     $configuration = ! empty($line['product_configuration_id'])
                         ? ProductConfiguration::find($line['product_configuration_id'])
                         : ProductConfiguration::where('product_model_id', $data['product_model_id'])->where('width_cm', $data['requested_width_cm'])->where('length_cm', $data['requested_length_cm'])->where('has_storage', ! empty($data['has_storage']))->where('is_active', true)->first();
@@ -244,6 +288,19 @@ class CustomerPortalService
         }
 
         return $result;
+    }
+
+    protected function saveWithImages(callable $operation): CustomerPortalRequest
+    {
+        $storedImages = [];
+        try {
+            return DB::transaction(function () use ($operation, &$storedImages) {
+                return $operation($storedImages);
+            });
+        } catch (Throwable $exception) {
+            Storage::disk('local')->delete($storedImages);
+            throw $exception;
+        }
     }
 
     protected function record(CustomerPortalRequest $submission, User $user, string $type, ?string $message = null, bool $snapshot = false): void

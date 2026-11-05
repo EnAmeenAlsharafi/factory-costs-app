@@ -12,6 +12,7 @@ use App\Models\ProductionOrder;
 use App\Models\User;
 use Exception;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class ProductionMaterialRequestService
 {
@@ -25,6 +26,7 @@ class ProductionMaterialRequestService
     public function createMaterialRequirementsFromRecipe(ProductionOrder $productionOrder): int
     {
         return DB::transaction(function () use ($productionOrder) {
+            $productionOrder = ProductionOrder::whereKey($productionOrder->id)->lockForUpdate()->firstOrFail();
             $recipeVersion = $productionOrder->recipeVersion;
             if (! $recipeVersion) {
                 return 0;
@@ -32,17 +34,22 @@ class ProductionMaterialRequestService
 
             // Remove existing requirements for clean sync if not yet requested
             $hasRequests = $productionOrder->materialRequests()->exists();
-            if ($hasRequests) {
+            if ($hasRequests && ! app(SpecialFabricService::class)->isSpecial($productionOrder)) {
                 // If requests exist, retain existing requirements to avoid dangling FKs
                 return $productionOrder->materialRequirements()->count();
             }
 
-            $productionOrder->materialRequirements()->delete();
+            if (! $hasRequests) {
+                $productionOrder->materialRequirements()->delete();
+            }
 
             $recipeVersion->load('items.material.category', 'items.semiFinishedComponent', 'items.unit');
 
             $count = 0;
             foreach ($recipeVersion->items as $item) {
+                if ($hasRequests && $productionOrder->materialRequirements()->where('manufacturing_recipe_item_id', $item->id)->exists()) {
+                    continue;
+                }
                 $reqQtyPerUnit = (float) ($item->quantity_per_unit ?? $item->quantity);
                 $wastePct = (float) $item->waste_percentage;
                 $plannedQtyPerUnit = $reqQtyPerUnit * (1 + ($wastePct / 100));
@@ -58,6 +65,9 @@ class ProductionMaterialRequestService
 
                 // Resolve fabric requirement to customer's order-specified fabric if item is fabric category or fabric material
                 if ($item->material && (strtoupper($item->material->category?->code ?? '') === 'FABRIC' || str_contains($item->material->name_ar, 'قماش'))) {
+                    if (app(SpecialFabricService::class)->isSpecial($productionOrder) && (! $productionOrder->fabric_material_id || ! $productionOrder->fabric_color_id)) {
+                        continue;
+                    }
                     if ($productionOrder->fabric_material_id) {
                         $materialId = $productionOrder->fabric_material_id;
                         $resolvedFabric = Material::find($productionOrder->fabric_material_id);
@@ -102,6 +112,7 @@ class ProductionMaterialRequestService
     public function createRequest(ProductionOrder $productionOrder, User $user, array $data): ProductionMaterialRequest
     {
         return DB::transaction(function () use ($productionOrder, $user, $data) {
+            $productionOrder = ProductionOrder::whereKey($productionOrder->id)->lockForUpdate()->firstOrFail();
             $requestNumber = DocumentNumberService::generateRequestNumber();
 
             $request = ProductionMaterialRequest::create([
@@ -123,6 +134,15 @@ class ProductionMaterialRequestService
 
                     if (! $materialId) {
                         throw new Exception('يلزم تحديد الخامة المطلوبة في السطر.');
+                    }
+
+                    if (app(SpecialFabricService::class)->isSpecial($productionOrder)
+                        && Material::find($materialId)?->category?->code === 'FABRIC') {
+                        app(SpecialFabricService::class)->assertRegistered($productionOrder);
+                        if ((int) $materialId !== $productionOrder->fabric_material_id
+                            || (isset($lineData['fabric_color_id']) && (int) $lineData['fabric_color_id'] !== $productionOrder->fabric_color_id)) {
+                            throw ValidationException::withMessages(['fabric' => 'طلب القماش يجب أن يطابق القماش واللون المعتمدين لأمر الإنتاج.']);
+                        }
                     }
 
                     $requestedQty = (float) $lineData['requested_quantity'];

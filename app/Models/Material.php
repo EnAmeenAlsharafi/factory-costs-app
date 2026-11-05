@@ -28,6 +28,10 @@ class Material extends Model
         'is_sellable_ready_product',
         'sales_sku',
         'sales_display_name',
+        'sales_image_url',
+        'has_ready_options',
+        'ready_parent_id',
+        'ready_option_label',
         'salla_product_id',
         'salla_category',
         'salla_status',
@@ -40,6 +44,7 @@ class Material extends Model
         'min_stock_level' => 'decimal:4',
         'reorder_point' => 'decimal:4',
         'is_active' => 'boolean',
+        'has_ready_options' => 'boolean',
         'is_sellable_ready_product' => 'boolean',
         'sales_price' => 'decimal:4',
         'sales_reference_cost' => 'decimal:4',
@@ -57,6 +62,16 @@ class Material extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(MaterialCategory::class, 'material_category_id');
+    }
+
+    public function readyParent(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'ready_parent_id');
+    }
+
+    public function readyOptions(): HasMany
+    {
+        return $this->hasMany(self::class, 'ready_parent_id');
     }
 
     public function baseUnit(): BelongsTo

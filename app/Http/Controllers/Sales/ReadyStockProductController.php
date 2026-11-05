@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Sales;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ReadyStockOptionsRequest;
 use App\Http\Requests\ReadyStockProductRequest;
 use App\Models\Material;
 use App\Models\UnitOfMeasure;
@@ -11,6 +12,7 @@ use App\Services\Sales\ReadyStockProductImportService;
 use App\Services\Sales\ReadyStockProductService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -58,6 +60,45 @@ class ReadyStockProductController extends Controller
         $products->save($request->validated());
 
         return redirect()->route('sales.ready-stock-products.index')->with('success', 'تمت إضافة المنتج الجاهز بنجاح.');
+    }
+
+    public function createOption(Request $request, Material $material): View
+    {
+        abort_unless($request->user()->can('materials.manage'), 403);
+        abort_unless($material->is_sellable_ready_product && $material->has_ready_options && ! $material->ready_parent_id, 404);
+
+        return $this->form(new Material([
+            'ready_parent_id' => $material->id, 'name_ar' => $material->name_ar.' — ',
+            'base_unit_id' => $material->base_unit_id, 'is_active' => true, 'sales_image_url' => $material->sales_image_url,
+        ]));
+    }
+
+    public function options(Request $request, Material $material): View
+    {
+        abort_unless($request->user()->can('materials.manage'), 403);
+        abort_unless($material->is_sellable_ready_product && ! $material->ready_parent_id, 404);
+        $material->load('readyOptions');
+
+        return view('sales.ready-stock-products.options', compact('material'));
+    }
+
+    public function storeOptions(ReadyStockOptionsRequest $request, Material $material, ReadyStockProductService $products): RedirectResponse
+    {
+        abort_unless($material->is_sellable_ready_product && ! $material->ready_parent_id, 404);
+        DB::transaction(function () use ($request, $material, $products) {
+            $material->update(['has_ready_options' => true]);
+            foreach ($request->validated('options') as $option) {
+                $existing = ! empty($option['id']) ? $material->readyOptions()->findOrFail($option['id']) : null;
+                $products->save([
+                    'ready_parent_id' => $material->id, 'ready_option_label' => $option['label'],
+                    'has_ready_options' => false, 'sales_sku' => $option['sales_sku'] ?? null,
+                    'sales_price' => $option['sales_price'], 'is_active' => $option['is_active'],
+                    'base_unit_id' => $material->base_unit_id, 'sales_image_url' => $existing?->sales_image_url ?: $material->sales_image_url,
+                ], $existing);
+            }
+        });
+
+        return redirect()->route('sales.ready-stock-products.options', $material)->with('success', 'تم حفظ خيارات المنتج وأسعارها.');
     }
 
     public function edit(Request $request, Material $material): View
@@ -150,6 +191,7 @@ class ReadyStockProductController extends Controller
     protected function form(Material $material): View
     {
         $units = UnitOfMeasure::active()->orderBy('name_ar')->get();
+        $material->load('readyParent', 'readyOptions');
 
         return view('sales.ready-stock-products.form', compact('material', 'units'));
     }

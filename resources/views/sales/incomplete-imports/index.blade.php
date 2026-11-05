@@ -13,8 +13,8 @@
                     <li class="breadcrumb-item active" aria-current="page">طلبات بانتظار الاستكمال</li>
                 </ol>
             </nav>
-            <h1 class="h3 fw-bold mb-0 text-dark">طلبات مستوردة بانتظار استكمال بيانات الأسرّة</h1>
-            <p class="text-muted mb-0 fs-7">طلبات وُرِدت من سلة وتحتوي بنود أسرّة مصنّعة بلا مقاس أو مواصفات قماش — أكمل بياناتها ثم أرسلها للمراجعة.</p>
+            <h1 class="h3 fw-bold mb-0 text-dark">طلبات مستوردة بانتظار الاستكمال اليدوي</h1>
+            <p class="text-muted mb-0 fs-7">أضف المنتجات ذات الخيارات والأسرّة يدويًا، وراجع الأسعار والدفعات ثم أكد اكتمال الطلب وأرسله للمراجعة.</p>
         </div>
     </div>
 
@@ -40,7 +40,7 @@
                                 <td>{{ $order->salesChannel->name_ar ?? '-' }}</td>
                                 <td>{{ optional($order->order_date)->format('Y-m-d') }}</td>
                                 <td class="text-center">
-                                    <span class="badge bg-warning bg-opacity-25 text-warning-emphasis fw-bold px-3 py-1">{{ $order->incomplete_lines_count }}</span>
+                                    <span class="badge bg-warning bg-opacity-25 text-warning-emphasis fw-bold px-3 py-1">{{ $order->incomplete_lines_count + count($order->manual_import_lines ?? []) }}</span>
                                 </td>
                                 <td class="text-center">
                                     @can('orders.update')

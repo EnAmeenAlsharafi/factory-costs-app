@@ -30,6 +30,7 @@ class CustomerOrderLine extends Model
         'customer_product_alias_id',
         'custom_design',
         'custom_design_name',
+        'custom_design_image_path',
         'requested_width_cm',
         'requested_length_cm',
         'reference_width_cm',
@@ -41,6 +42,7 @@ class CustomerOrderLine extends Model
         'fabric_color_code',
         'fabric_supplier_color_code',
         'fabric_notes',
+        'special_fabric',
         'quantity',
         'unit_price',
         'discount_amount',
@@ -53,6 +55,7 @@ class CustomerOrderLine extends Model
     {
         return [
             'custom_design' => 'boolean',
+            'special_fabric' => 'boolean',
             'is_incomplete' => 'boolean',
             'has_storage' => 'boolean',
             'requested_width_cm' => 'decimal:2',

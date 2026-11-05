@@ -11,7 +11,9 @@ use App\Services\CustomerPortalService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class CustomerPortalController extends Controller
 {
@@ -57,6 +59,22 @@ class CustomerPortalController extends Controller
         $submission->load('events', 'order');
 
         return view('portal.show', compact('submission'));
+    }
+
+    public function designImage(Request $request, CustomerPortalRequest $submission, string $lineKey): BinaryFileResponse
+    {
+        if ($request->user()->isCustomerAccount()) {
+            $this->own($request, $submission);
+        } else {
+            abort_unless($request->user()->can('orders.update') && $submission->status !== 'DRAFT', 403);
+        }
+        $line = collect($submission->lines)->firstWhere('line_key', $lineKey);
+        $path = $line['custom_design_image_path'] ?? null;
+        abort_unless($path && Storage::disk('local')->exists($path), 404);
+
+        return response()->file(Storage::disk('local')->path($path), [
+            'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff',
+        ])->setPrivate();
     }
 
     public function edit(Request $request, CustomerPortalRequest $submission, CustomerPortalService $portal): View
