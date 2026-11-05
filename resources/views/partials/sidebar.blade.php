@@ -492,7 +492,7 @@
 
             <!-- Section 8: Commercial & Sales -->
             @php
-                $isSalesActive = request()->routeIs('sales.quotations.*') || request()->routeIs('sales.orders.*') || request()->routeIs('sales.ready-stock-products.*') || request()->routeIs('sales.bundles.*') || request()->routeIs('sales.item-mappings.*') || request()->routeIs('sales.imports.*');
+                $isSalesActive = request()->routeIs('sales.quotations.*') || request()->routeIs('sales.orders.*') || request()->routeIs('sales.ready-stock-products.*') || request()->routeIs('sales.bundles.*') || request()->routeIs('sales.item-mappings.*') || request()->routeIs('sales.imports.*') || request()->routeIs('sales.incomplete-imports.*');
             @endphp
             @if (auth()->user() && (auth()->user()->can('quotations.view') || auth()->user()->can('orders.view') || auth()->user()->can('materials.view') || auth()->user()->can('sales_imports.view')))
                 <div class="sidebar-section">
@@ -523,6 +523,15 @@
                                 <a href="{{ route('sales.orders.index') }}" class="sidebar-nav-link {{ request()->routeIs('sales.orders.*') ? 'active' : '' }}" title="طلبات العملاء">
                                     <span class="sidebar-icon"><i class="fas fa-shopping-bag"></i></span>
                                     <span class="sidebar-text">طلبات العملاء</span>
+                                </a>
+                            </li>
+                        @endcan
+
+                        @can('orders.update')
+                            <li class="nav-item">
+                                <a href="{{ route('sales.incomplete-imports.index') }}" class="sidebar-nav-link {{ request()->routeIs('sales.incomplete-imports.*') ? 'active' : '' }}" title="طلبات مستوردة بانتظار الاستكمال">
+                                    <span class="sidebar-icon"><i class="fas fa-hourglass-half"></i></span>
+                                    <span class="sidebar-text">طلبات بانتظار الاستكمال</span>
                                 </a>
                             </li>
                         @endcan

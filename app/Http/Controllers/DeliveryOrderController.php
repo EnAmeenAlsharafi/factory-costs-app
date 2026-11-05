@@ -9,6 +9,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Services\DeliveryOrderService;
 use App\Services\FinishedGoodsService;
+use App\Services\InventoryService;
 use App\Services\OperationalDashboardService;
 use App\Services\OrderPaymentEligibilityService;
 use Exception;
@@ -22,6 +23,7 @@ class DeliveryOrderController extends Controller
     public function __construct(
         protected DeliveryOrderService $deliveryService,
         protected FinishedGoodsService $finishedGoodsService,
+        protected InventoryService $inventoryService,
         protected OperationalDashboardService $dashboardService
     ) {}
 
@@ -96,6 +98,7 @@ class DeliveryOrderController extends Controller
                 'lines.productionOrder.fabricMaterial',
                 'lines.productionOrder.fabricColor',
                 'lines.productionOrder.customerOrderLine.productModel',
+                'lines.material',
             ])
             ->orderByRaw('scheduled_delivery_date IS NULL')
             ->orderBy('scheduled_delivery_date')
@@ -141,7 +144,7 @@ class DeliveryOrderController extends Controller
         abort_if(! $request->user()->can('delivery.create'), 403);
 
         $orderId = $request->query('customer_order_id');
-        $customerOrder = CustomerOrder::with('customer', 'lines.productionOrders')->findOrFail($orderId);
+        $customerOrder = CustomerOrder::with('customer', 'lines.productionOrders', 'lines.material')->findOrFail($orderId);
 
         $deliveryRole = Role::where('name', 'delivery_user')->first();
         $drivers = $deliveryRole
@@ -150,13 +153,21 @@ class DeliveryOrderController extends Controller
 
         // Calculate available ready quantities for each line's production order
         $lineAvailabilities = [];
+        $readyAvailabilities = [];
         foreach ($customerOrder->lines as $orderLine) {
             foreach ($orderLine->productionOrders as $po) {
                 $lineAvailabilities[$po->id] = $this->finishedGoodsService->getAvailableQuantity($po);
             }
+
+            if ($orderLine->line_type === 'READY_STOCK' && $orderLine->material) {
+                // on_hand, not "available" — the sales-side figure already nets out this
+                // very order line's own commitment, which would under-report what's
+                // physically in the warehouse to deliver against a confirmed order.
+                $readyAvailabilities[$orderLine->material_id] = $this->inventoryService->getReadyProductAvailability($orderLine->material)['on_hand'];
+            }
         }
 
-        return view('delivery.orders.create', compact('customerOrder', 'drivers', 'lineAvailabilities'));
+        return view('delivery.orders.create', compact('customerOrder', 'drivers', 'lineAvailabilities', 'readyAvailabilities'));
     }
 
     public function store(DeliveryOrderFormRequest $request): RedirectResponse
@@ -190,6 +201,7 @@ class DeliveryOrderController extends Controller
             'lines.productionOrder.productModel',
             'lines.productionOrder.fabricMaterial',
             'lines.productionOrder.fabricColor',
+            'lines.material',
             'events.user',
             'returns',
         ]);

@@ -135,7 +135,9 @@
                                                 <td class="ps-3">
                                                     <div class="fw-bold text-dark">{{ $orderLine->productModel->name_ar ?? 'منتج أثاث' }}</div>
                                                     <div class="small text-muted">أمر إنتاج: {{ $po->production_order_number }}</div>
+                                                    <input type="hidden" name="lines[{{ $lineIndex }}][line_type]" value="MANUFACTURED">
                                                     <input type="hidden" name="lines[{{ $lineIndex }}][production_order_id]" value="{{ $po->id }}">
+                                                    <input type="hidden" name="lines[{{ $lineIndex }}][customer_order_line_id]" value="{{ $orderLine->id }}">
                                                 </td>
                                                 <td>
                                                     <span class="badge bg-light text-dark border">{{ (float)$po->planned_quantity }}</span>
@@ -156,6 +158,38 @@
                                             </tr>
                                             @php $lineIndex++; @endphp
                                         @endforeach
+                                    @endforeach
+
+                                    @foreach($customerOrder->lines->where('line_type', 'READY_STOCK') as $orderLine)
+                                        @php
+                                            $readyAvailable = $readyAvailabilities[$orderLine->material_id] ?? 0.0;
+                                        @endphp
+                                        <tr>
+                                            <td class="ps-3">
+                                                <div class="fw-bold text-dark">{{ $orderLine->material->sales_display_name ?: $orderLine->material->name_ar }}</div>
+                                                <div class="small text-muted">منتج جاهز — SKU: {{ $orderLine->material->sales_sku ?? '-' }}</div>
+                                                <input type="hidden" name="lines[{{ $lineIndex }}][line_type]" value="READY_STOCK">
+                                                <input type="hidden" name="lines[{{ $lineIndex }}][material_id]" value="{{ $orderLine->material_id }}">
+                                                <input type="hidden" name="lines[{{ $lineIndex }}][customer_order_line_id]" value="{{ $orderLine->id }}">
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-light text-dark border">{{ (float) $orderLine->quantity }}</span>
+                                            </td>
+                                            <td>
+                                                @if($readyAvailable > 0)
+                                                    <span class="badge bg-soft-success text-success fw-bold">{{ $readyAvailable }} قطعة</span>
+                                                @else
+                                                    <span class="badge bg-light text-danger border">0 - لا يوجد رصيد جاهز</span>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                <input type="number" step="1" min="0" max="{{ $readyAvailable }}"
+                                                       name="lines[{{ $lineIndex }}][quantity]"
+                                                       class="form-control form-control-sm @error("lines.{$lineIndex}.quantity") is-invalid @enderror"
+                                                       value="{{ old("lines.{$lineIndex}.quantity", $readyAvailable > 0 ? $readyAvailable : 0) }}" required>
+                                            </td>
+                                        </tr>
+                                        @php $lineIndex++; @endphp
                                     @endforeach
                                 </tbody>
                             </table>

@@ -148,6 +148,10 @@ class CustomerOrderService
                     'line_total' => $lineTotal,
                     'notes' => $line['notes'] ?? $existingLine?->notes,
                     'production_notes' => $line['production_notes'] ?? $existingLine?->production_notes,
+                    // A MANUFACTURED line reaching this point has already passed CustomerOrderRequest's
+                    // required_if width/length/fabric validation, so saving it successfully is itself
+                    // proof the line is no longer incomplete (e.g. a Salla-imported draft being completed).
+                    'is_incomplete' => ($line['line_type'] ?? $existingLine?->line_type) === 'MANUFACTURED' ? false : ($existingLine?->is_incomplete ?? false),
                 ];
 
                 if ($existingLine) {

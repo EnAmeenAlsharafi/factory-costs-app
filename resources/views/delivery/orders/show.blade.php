@@ -118,24 +118,32 @@
                         @endphp
                         <li class="border rounded-3 p-2 d-flex justify-content-between gap-2">
                             <div class="min-w-0">
-                                <div class="fw-bold text-dark">{{ $linePo?->productModel?->name_ar ?? $linePo?->customerOrderLine?->productModel?->name_ar ?? 'منتج أثاث' }}</div>
-                                <div class="fs-7 text-muted d-flex flex-wrap gap-2">
-                                    @if ($linePo?->requested_width_cm)
-                                        <span><i class="fas fa-ruler-combined" aria-hidden="true"></i> <span class="ltr-isolate">{{ (int) $linePo->requested_width_cm }}×{{ (int) $linePo->requested_length_cm }}</span> سم</span>
+                                @if ($line->line_type === 'READY_STOCK' && $line->material)
+                                    <div class="fw-bold text-dark">{{ $line->material->sales_display_name ?: $line->material->name_ar }}</div>
+                                    <div class="fs-7 text-muted">
+                                        <span class="badge bg-success bg-opacity-10 text-success">منتج جاهز</span>
+                                        <span class="ltr-isolate">SKU: {{ $line->material->sales_sku ?? '-' }}</span>
+                                    </div>
+                                @else
+                                    <div class="fw-bold text-dark">{{ $linePo?->productModel?->name_ar ?? $linePo?->customerOrderLine?->productModel?->name_ar ?? 'منتج أثاث' }}</div>
+                                    <div class="fs-7 text-muted d-flex flex-wrap gap-2">
+                                        @if ($linePo?->requested_width_cm)
+                                            <span><i class="fas fa-ruler-combined" aria-hidden="true"></i> <span class="ltr-isolate">{{ (int) $linePo->requested_width_cm }}×{{ (int) $linePo->requested_length_cm }}</span> سم</span>
+                                        @endif
+                                        @if ($linePo?->fabricMaterial)
+                                            <span><i class="fas fa-scroll" aria-hidden="true"></i> {{ $linePo->fabricMaterial->name_ar }}</span>
+                                        @endif
+                                        @if ($colorCode)
+                                            <span><span class="color-dot" style="background: {{ $linePo->fabricColor?->hex_code ?? '#cbd5e1' }};" aria-hidden="true"></span> <span class="ltr-isolate">{{ $colorCode }}</span></span>
+                                        @endif
+                                    </div>
+                                    @if ($linePo)
+                                        @can('production.view')
+                                            <a href="{{ route('production.orders.show', $linePo) }}" class="fs-8 ltr-isolate">{{ $linePo->production_order_number }}</a>
+                                        @else
+                                            <span class="fs-8 text-muted ltr-isolate">{{ $linePo->production_order_number }}</span>
+                                        @endcan
                                     @endif
-                                    @if ($linePo?->fabricMaterial)
-                                        <span><i class="fas fa-scroll" aria-hidden="true"></i> {{ $linePo->fabricMaterial->name_ar }}</span>
-                                    @endif
-                                    @if ($colorCode)
-                                        <span><span class="color-dot" style="background: {{ $linePo->fabricColor?->hex_code ?? '#cbd5e1' }};" aria-hidden="true"></span> <span class="ltr-isolate">{{ $colorCode }}</span></span>
-                                    @endif
-                                </div>
-                                @if ($linePo)
-                                    @can('production.view')
-                                        <a href="{{ route('production.orders.show', $linePo) }}" class="fs-8 ltr-isolate">{{ $linePo->production_order_number }}</a>
-                                    @else
-                                        <span class="fs-8 text-muted ltr-isolate">{{ $linePo->production_order_number }}</span>
-                                    @endcan
                                 @endif
                             </div>
                             <span class="fs-5 fw-bold flex-shrink-0">× {{ (float) $line->quantity }}</span>

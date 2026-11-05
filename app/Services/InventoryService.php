@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\CustomerOrderLine;
+use App\Models\DeliveryOrderLine;
 use App\Models\FabricColor;
 use App\Models\InventoryAdjustment;
 use App\Models\InventoryLot;
@@ -724,6 +725,108 @@ class InventoryService
             'committed' => $committed,
             'available' => max(0.0, round($onHand - $committed, 4)),
         ];
+    }
+
+    /**
+     * Deduct a ready-stock material's inventory (FIFO across active lots) when a
+     * delivery order line for it is dispatched (Stage 16.6 — mixed delivery).
+     * Mirrors postIssue()'s lock -> check -> decrement -> InventoryMovement pattern,
+     * but auto-selects lots FIFO since a delivery line names a material, not a lot.
+     */
+    public function deductReadyStockForDelivery(Material $material, float $quantity, DeliveryOrderLine $line, User $user): void
+    {
+        $remainingToDeduct = $quantity;
+
+        $lots = InventoryLot::where('material_id', $material->id)
+            ->where('status', 'ACTIVE')
+            ->orderBy('received_date')
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->get();
+
+        foreach ($lots as $lot) {
+            if ($remainingToDeduct <= 0) {
+                break;
+            }
+
+            $deductFromLot = min($remainingToDeduct, (float) $lot->remaining_quantity);
+            if ($deductFromLot <= 0) {
+                continue;
+            }
+
+            $lot->remaining_quantity -= $deductFromLot;
+            if ($lot->remaining_quantity <= 0) {
+                $lot->remaining_quantity = 0;
+                $lot->status = 'EXHAUSTED';
+            }
+            $lot->save();
+
+            InventoryMovement::create([
+                'movement_number' => DocumentNumberService::generateMovementNumber(),
+                'movement_type' => 'SALES_DISPATCH',
+                'material_id' => $material->id,
+                'warehouse_id' => $lot->warehouse_id,
+                'inventory_lot_id' => $lot->id,
+                'quantity' => $deductFromLot,
+                'unit_id' => $material->base_unit_id,
+                'direction' => 'OUT',
+                'unit_cost' => $lot->unit_cost,
+                'total_cost' => round($deductFromLot * $lot->unit_cost, 4),
+                'reference_type' => DeliveryOrderLine::class,
+                'reference_id' => $line->id,
+                'occurred_at' => now(),
+                'performed_by_user_id' => $user->id,
+                'notes' => "خروج للتوصيل بموجب أمر التوصيل {$line->deliveryOrder->delivery_number}",
+            ]);
+
+            $remainingToDeduct -= $deductFromLot;
+        }
+
+        if ($remainingToDeduct > 0) {
+            throw new Exception("تعذر خصم كمية المنتج الجاهز: الرصيد المتاح لمادة {$material->name_ar} أقل من الكمية المطلوبة ({$quantity}).");
+        }
+    }
+
+    /**
+     * Reverse a prior deductReadyStockForDelivery() when a dispatched delivery
+     * fails/is rescheduled and the ready-stock items physically return to the
+     * warehouse (Stage 16.6 — mixed delivery). Credits back the exact lots
+     * debited originally, found via the SALES_DISPATCH movements' reference.
+     */
+    public function returnReadyStockForDelivery(DeliveryOrderLine $line, User $user, ?string $reason = null): void
+    {
+        $dispatchMovements = InventoryMovement::where('reference_type', DeliveryOrderLine::class)
+            ->where('reference_id', $line->id)
+            ->where('movement_type', 'SALES_DISPATCH')
+            ->get();
+
+        foreach ($dispatchMovements as $dispatchMovement) {
+            $lot = InventoryLot::where('id', $dispatchMovement->inventory_lot_id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $lot->remaining_quantity += $dispatchMovement->quantity;
+            $lot->status = 'ACTIVE';
+            $lot->save();
+
+            InventoryMovement::create([
+                'movement_number' => DocumentNumberService::generateMovementNumber(),
+                'movement_type' => 'SALES_RETURN',
+                'material_id' => $dispatchMovement->material_id,
+                'warehouse_id' => $lot->warehouse_id,
+                'inventory_lot_id' => $lot->id,
+                'quantity' => $dispatchMovement->quantity,
+                'unit_id' => $dispatchMovement->unit_id,
+                'direction' => 'IN',
+                'unit_cost' => $lot->unit_cost,
+                'total_cost' => round($dispatchMovement->quantity * $lot->unit_cost, 4),
+                'reference_type' => DeliveryOrderLine::class,
+                'reference_id' => $line->id,
+                'occurred_at' => now(),
+                'performed_by_user_id' => $user->id,
+                'notes' => "إعادة المنتج الجاهز للمستودع بسبب تعثر/إعادة جدولة التوصيل: {$reason}",
+            ]);
+        }
     }
 
     /**

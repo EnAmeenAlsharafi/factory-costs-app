@@ -70,9 +70,14 @@
                     @php $linePo = $line->productionOrder; @endphp
                     <li class="d-flex justify-content-between gap-2 py-1">
                         <span class="min-w-0">
-                            {{ $linePo?->productModel?->name_ar ?? $linePo?->customerOrderLine?->productModel?->name_ar ?? 'منتج أثاث' }}
-                            @if ($linePo?->requested_width_cm)
-                                <span class="text-muted">— <span class="ltr-isolate">{{ (int) $linePo->requested_width_cm }}×{{ (int) $linePo->requested_length_cm }}</span></span>
+                            @if ($line->line_type === 'READY_STOCK' && $line->material)
+                                {{ $line->material->sales_display_name ?: $line->material->name_ar }}
+                                <span class="text-muted">— منتج جاهز</span>
+                            @else
+                                {{ $linePo?->productModel?->name_ar ?? $linePo?->customerOrderLine?->productModel?->name_ar ?? 'منتج أثاث' }}
+                                @if ($linePo?->requested_width_cm)
+                                    <span class="text-muted">— <span class="ltr-isolate">{{ (int) $linePo->requested_width_cm }}×{{ (int) $linePo->requested_length_cm }}</span></span>
+                                @endif
                             @endif
                         </span>
                         <strong class="flex-shrink-0">× {{ (float) $line->quantity }}</strong>

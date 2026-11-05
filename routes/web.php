@@ -55,6 +55,7 @@ use App\Http\Controllers\Reports\ProfitabilityReportController;
 use App\Http\Controllers\Reports\ReceivablesManagementReportController;
 use App\Http\Controllers\Reports\ReportsCenterController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\Sales\IncompleteImportedOrderController;
 use App\Http\Controllers\Sales\ReadyStockProductController;
 use App\Http\Controllers\Sales\SalesBundleDefinitionController;
 use App\Http\Controllers\Sales\SalesImportController;
@@ -135,6 +136,7 @@ Route::middleware('auth')->group(function () {
     // Stage 16.6: Salla Excel Import & Ready-Stock Products — Screens
     Route::prefix('sales')->name('sales.')->group(function () {
         Route::get('/ready-stock-products', [ReadyStockProductController::class, 'index'])->name('ready-stock-products.index');
+        Route::get('/incomplete-imports', [IncompleteImportedOrderController::class, 'index'])->name('incomplete-imports.index');
 
         Route::post('/bundles/{bundle}/toggle-status', [SalesBundleDefinitionController::class, 'toggleStatus'])->name('bundles.toggle-status');
         Route::resource('bundles', SalesBundleDefinitionController::class)->except(['show', 'destroy']);

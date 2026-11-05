@@ -11,6 +11,19 @@ class DeliveryOrderFormRequest extends FormRequest
         return $this->user()?->can('delivery.create') ?? false;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $lines = $this->input('lines', []);
+        if (is_array($lines)) {
+            foreach ($lines as $i => $line) {
+                if (empty($line['line_type'])) {
+                    $lines[$i]['line_type'] = 'MANUFACTURED';
+                }
+            }
+            $this->merge(['lines' => $lines]);
+        }
+    }
+
     public function rules(): array
     {
         return [
@@ -28,7 +41,9 @@ class DeliveryOrderFormRequest extends FormRequest
             'delivery_notes' => ['nullable', 'string', 'max:1000'],
             'installation_notes' => ['nullable', 'string', 'max:1000'],
             'lines' => ['required', 'array', 'min:1'],
-            'lines.*.production_order_id' => ['required', 'exists:production_orders,id'],
+            'lines.*.line_type' => ['required', 'in:MANUFACTURED,READY_STOCK'],
+            'lines.*.production_order_id' => ['required_if:lines.*.line_type,MANUFACTURED', 'nullable', 'exists:production_orders,id'],
+            'lines.*.material_id' => ['required_if:lines.*.line_type,READY_STOCK', 'nullable', 'exists:materials,id'],
             'lines.*.customer_order_line_id' => ['nullable', 'exists:customer_order_lines,id'],
             'lines.*.quantity' => ['required', 'numeric', 'gt:0'],
             'lines.*.notes' => ['nullable', 'string', 'max:500'],

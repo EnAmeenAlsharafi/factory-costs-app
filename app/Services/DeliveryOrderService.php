@@ -7,6 +7,7 @@ use App\Models\CustomerOrder;
 use App\Models\DeliveryEvent;
 use App\Models\DeliveryOrder;
 use App\Models\FinishedGoodsMovement;
+use App\Models\Material;
 use App\Models\ProductionOrder;
 use App\Models\User;
 use App\Models\Warehouse;
@@ -29,7 +30,8 @@ class DeliveryOrderService
     ];
 
     public function __construct(
-        protected FinishedGoodsService $finishedGoodsService
+        protected FinishedGoodsService $finishedGoodsService,
+        protected InventoryService $inventoryService
     ) {}
 
     /**
@@ -65,15 +67,50 @@ class DeliveryOrderService
 
             if (isset($data['lines']) && is_array($data['lines'])) {
                 $requestedByProductionOrder = [];
+                $requestedByMaterial = [];
 
                 foreach ($data['lines'] as $lineData) {
-                    $po = ProductionOrder::query()->whereKey($lineData['production_order_id'])->lockForUpdate()->firstOrFail();
                     $qty = (float) $lineData['quantity'];
 
                     if ($qty <= 0) {
                         continue;
                     }
 
+                    $lineType = $lineData['line_type'] ?? 'MANUFACTURED';
+
+                    if ($lineType === 'READY_STOCK') {
+                        $material = Material::query()->whereKey($lineData['material_id'])->lockForUpdate()->firstOrFail();
+                        $lineId = (int) ($lineData['customer_order_line_id'] ?? 0);
+                        $belongsToOrder = $customerOrder->lines()->whereKey($lineId)
+                            ->where('line_type', 'READY_STOCK')
+                            ->where('material_id', $material->id)
+                            ->exists();
+
+                        if (! $belongsToOrder) {
+                            throw new Exception('بند المنتج الجاهز لا ينتمي إلى طلب العميل المحدد للتوصيل.');
+                        }
+
+                        // Physical on_hand, not the sales-side "available" figure — that already
+                        // nets out this very order line's own commitment, which would make a
+                        // confirmed order's own stock look insufficient to deliver itself.
+                        $requestedByMaterial[$material->id] = ($requestedByMaterial[$material->id] ?? 0) + $qty;
+                        $onHand = $this->inventoryService->getReadyProductAvailability($material)['on_hand'];
+                        if ($requestedByMaterial[$material->id] > $onHand) {
+                            throw new Exception("كمية التوصيل المطلوبة من {$material->name_ar} تتجاوز الرصيد الفعلي بالمستودع ({$onHand}).");
+                        }
+
+                        $delivery->lines()->create([
+                            'customer_order_line_id' => $lineId,
+                            'line_type' => 'READY_STOCK',
+                            'material_id' => $material->id,
+                            'quantity' => $qty,
+                            'notes' => $lineData['notes'] ?? null,
+                        ]);
+
+                        continue;
+                    }
+
+                    $po = ProductionOrder::query()->whereKey($lineData['production_order_id'])->lockForUpdate()->firstOrFail();
                     $lineId = (int) ($lineData['customer_order_line_id'] ?? $po->customer_order_line_id);
                     $belongsToOrder = $customerOrder->lines()->whereKey($lineId)->exists();
 
@@ -92,6 +129,7 @@ class DeliveryOrderService
 
                     $delivery->lines()->create([
                         'customer_order_line_id' => $lineId,
+                        'line_type' => 'MANUFACTURED',
                         'production_order_id' => $po->id,
                         'quantity' => $qty,
                         'notes' => $lineData['notes'] ?? null,
@@ -115,6 +153,16 @@ class DeliveryOrderService
             $this->assertTransition($delivery->status, 'READY_FOR_DELIVERY');
 
             foreach ($delivery->lines()->lockForUpdate()->get() as $line) {
+                if ($line->line_type === 'READY_STOCK') {
+                    $material = Material::query()->whereKey($line->material_id)->firstOrFail();
+                    $onHand = $this->inventoryService->getReadyProductAvailability($material)['on_hand'];
+                    if ((float) $line->quantity > $onHand) {
+                        throw new Exception("الكمية المطلوبة بالتوصيل ({$line->quantity}) من {$material->name_ar} تتجاوز الرصيد الفعلي بالمستودع ({$onHand}).");
+                    }
+
+                    continue;
+                }
+
                 $productionOrder = ProductionOrder::query()->whereKey($line->production_order_id)->lockForUpdate()->firstOrFail();
                 $available = $this->finishedGoodsService->getAvailableQuantity($productionOrder);
                 if ((float) $line->quantity > $available) {
@@ -167,6 +215,13 @@ class DeliveryOrderService
             $this->assertTransition($delivery->status, 'OUT_FOR_DELIVERY');
 
             foreach ($delivery->lines()->lockForUpdate()->get() as $line) {
+                if ($line->line_type === 'READY_STOCK') {
+                    $material = Material::query()->whereKey($line->material_id)->firstOrFail();
+                    $this->inventoryService->deductReadyStockForDelivery($material, (float) $line->quantity, $line, $dispatcher);
+
+                    continue;
+                }
+
                 $po = ProductionOrder::where('id', $line->production_order_id)->lockForUpdate()->firstOrFail();
                 $available = $this->finishedGoodsService->getAvailableQuantity($po, $fgWarehouse);
 
@@ -270,6 +325,12 @@ class DeliveryOrderService
 
             if ($delivery->isDispatched() && $returnedToFactory) {
                 foreach ($delivery->lines()->lockForUpdate()->get() as $line) {
+                    if ($line->line_type === 'READY_STOCK') {
+                        $this->inventoryService->returnReadyStockForDelivery($line, $user, $reason);
+
+                        continue;
+                    }
+
                     FinishedGoodsMovement::create([
                         'movement_number' => DocumentNumberService::generateFinishedGoodsMovementNumber(),
                         'production_order_id' => $line->production_order_id,

@@ -22,6 +22,8 @@
                     <span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i> بانتظار مراجعة الإنتاج</span>
                 @elseif($order->status === 'APPROVED_FOR_PRODUCTION')
                     <span class="badge bg-success"><i class="fas fa-check-double me-1"></i> معتمد للإنتاج</span>
+                @elseif($order->status === 'APPROVED_FOR_FULFILLMENT')
+                    <span class="badge bg-success"><i class="fas fa-box-open me-1"></i> معتمد للتوصيل (منتج جاهز)</span>
                 @elseif($order->status === 'CANCELLED')
                     <span class="badge bg-danger"><i class="fas fa-ban me-1"></i> ملغى</span>
                 @endif
@@ -52,7 +54,7 @@
                 @endcan
             @endif
 
-            @if($order->status === 'APPROVED_FOR_PRODUCTION' && auth()->user()->can('delivery.create'))
+            @if(in_array($order->status, ['APPROVED_FOR_PRODUCTION', 'APPROVED_FOR_FULFILLMENT']) && auth()->user()->can('delivery.create'))
                 <a href="{{ route('delivery.orders.create', ['customer_order_id' => $order->id]) }}" class="btn btn-primary fw-bold">
                     <i class="fas fa-truck-loading me-1"></i> إنشاء أمر توصيل وتركيب
                 </a>
@@ -461,7 +463,7 @@
             <h5 class="card-title mb-0 fw-bold fs-6 text-dark">
                 <i class="fas fa-truck text-primary me-2"></i>أوامر التوصيل والتركيب الميداني ({{ $deliveries->count() }})
             </h5>
-            @if($order->status === 'APPROVED_FOR_PRODUCTION' && auth()->user()->can('delivery.create'))
+            @if(in_array($order->status, ['APPROVED_FOR_PRODUCTION', 'APPROVED_FOR_FULFILLMENT']) && auth()->user()->can('delivery.create'))
                 <a href="{{ route('delivery.orders.create', ['customer_order_id' => $order->id]) }}" class="btn btn-sm btn-primary">
                     <i class="fas fa-plus me-1"></i>أمر توصيل جديد
                 </a>
