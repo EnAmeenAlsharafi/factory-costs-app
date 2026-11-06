@@ -12,6 +12,7 @@
                 </div>
                 <x-status-badge domain="portal_request" :status="$submission->status" />
             </div>
+            @include('portal.line-cards', ['lines' => $lineCards[$submission->id] ?? [], 'detailsUrl' => route('portal.requests.show', $submission)])
             <div class="task-card-meta">
                 <span><i class="far fa-clock" aria-hidden="true"></i> آخر تحديث <span class="ltr-isolate">{{ $submission->updated_at->format('Y-m-d') }}</span></span>
             </div>

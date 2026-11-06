@@ -9,6 +9,7 @@ use App\Models\CustomerPortalRequest;
 use App\Models\DeliveryOrder;
 use App\Models\Material;
 use App\Models\MaterialCategory;
+use App\Models\ProductModel;
 use App\Models\Role;
 use App\Models\UnitOfMeasure;
 use App\Models\User;
@@ -109,6 +110,96 @@ class CustomerPortalMobilePresentationTest extends TestCase
             ->assertOk()
             ->assertSee('portal-facts', false)
             ->assertSee('تم التسليم جزئيًا');
+    }
+
+    public function test_request_card_nests_a_product_card_with_each_line_image(): void
+    {
+        $user = $this->client();
+        $model = ProductModel::factory()->create(['reference_image_path' => 'models/milan.jpg']);
+        $ready = $this->readyProduct();
+        $ready->update(['sales_image_url' => 'https://cdn.example.test/ready.jpg']);
+        $withoutImage = ProductModel::factory()->create(['reference_image_path' => null]);
+        $submission = $this->request($user, [
+            ['line_type' => 'MANUFACTURED', 'product_model_id' => $model->id, 'product_name' => 'سرير ميلان', 'requested_width_cm' => 90, 'requested_length_cm' => 190, 'has_storage' => 0, 'quantity' => 2],
+            ['line_type' => 'READY_STOCK', 'material_id' => $ready->id, 'product_name' => 'مرتبة جاهزة', 'quantity' => 1],
+            ['line_type' => 'MANUFACTURED', 'product_model_id' => $withoutImage->id, 'product_name' => 'كنبة بلا صورة', 'requested_width_cm' => 100, 'requested_length_cm' => 200, 'quantity' => 1],
+        ]);
+
+        foreach (['portal.home', 'portal.requests.index'] as $route) {
+            $this->actingAs($user)->get(route($route))->assertOk()
+                ->assertSee('order-line-card', false)
+                ->assertSee($model->image_url, false)
+                ->assertSee('https://cdn.example.test/ready.jpg', false)
+                ->assertSee('سرير ميلان')->assertSee('90 × 190')->assertSee('كنبة بلا صورة')
+                ->assertSee('fa-couch', false)
+                ->assertDontSee('عرض كل المنتجات');
+        }
+        $this->get(route('portal.requests.show', $submission))->assertOk()->assertSee($model->image_url, false);
+    }
+
+    public function test_long_request_card_limits_nested_products_and_links_to_the_full_list(): void
+    {
+        $user = $this->client();
+        $model = ProductModel::factory()->create();
+        $lines = collect(range(1, 5))->map(fn (int $number): array => [
+            'line_type' => 'MANUFACTURED', 'product_model_id' => $model->id, 'product_name' => "منتج رقم {$number}",
+            'requested_width_cm' => 90, 'requested_length_cm' => 190, 'quantity' => 1,
+        ])->all();
+        $this->request($user, $lines);
+
+        $this->actingAs($user)->get(route('portal.requests.index'))->assertOk()
+            ->assertSee('منتج رقم 3')->assertDontSee('منتج رقم 4')
+            ->assertSee('عرض كل المنتجات (5)');
+    }
+
+    public function test_order_card_and_details_show_product_images_and_a_customer_design_stays_on_its_own_request(): void
+    {
+        $user = $this->client();
+        $model = ProductModel::factory()->create(['reference_image_path' => 'models/oslo.jpg']);
+        $order = CustomerOrder::factory()->create(['customer_id' => $user->customer_id, 'status' => 'APPROVED']);
+        $submission = $this->request($user, [[
+            'line_key' => '5f6f1f3e-7d9e-4f3a-9d0a-0d6a2f1b7c11', 'line_type' => 'MANUFACTURED', 'custom_design' => true,
+            'custom_design_image_path' => 'customer-order-designs/client.png', 'product_name' => 'تصميم العميل',
+            'requested_width_cm' => 160, 'requested_length_cm' => 200, 'quantity' => 1,
+        ]], ['customer_order_id' => $order->id, 'status' => 'CONFIRMED']);
+        CustomerOrderLine::factory()->create(['customer_order_id' => $order->id, 'product_model_id' => $model->id]);
+        CustomerOrderLine::factory()->create([
+            'customer_order_id' => $order->id, 'custom_design' => true, 'custom_design_name' => 'تصميم العميل',
+            'custom_design_image_path' => 'customer-order-designs/client.png',
+        ]);
+        $designUrl = route('portal.requests.design-image', [$submission, '5f6f1f3e-7d9e-4f3a-9d0a-0d6a2f1b7c11']);
+
+        foreach ([route('portal.orders.index'), route('portal.orders.show', $order)] as $url) {
+            $this->actingAs($user)->get($url)->assertOk()
+                ->assertSee($model->image_url, false)
+                ->assertSee($designUrl, false);
+        }
+    }
+
+    public function test_order_form_receives_product_images_and_hides_storage_only_for_customer_factory_models(): void
+    {
+        $user = $this->client();
+        $model = ProductModel::factory()->create(['is_active' => true, 'reference_image_path' => 'models/milan.jpg']);
+        $ready = $this->readyProduct();
+        $ready->update(['sales_image_url' => 'https://cdn.example.test/ready.jpg', 'has_ready_options' => false]);
+
+        $this->actingAs($user)->get(route('portal.requests.create'))->assertOk()
+            ->assertViewHas('models', fn ($models): bool => $models->firstWhere('id', $model->id)['image_url'] === $model->image_url)
+            ->assertViewHas('readyProducts', fn ($products): bool => $products->firstWhere('id', $ready->id)['image_url'] === 'https://cdn.example.test/ready.jpg')
+            ->assertSee('imageFor(line, previewUrl)', false)
+            ->assertSee("line.line_type === 'MANUFACTURED' && (false || line.custom_design)", false);
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $lines
+     * @param  array<string, mixed>  $attributes
+     */
+    protected function request(User $user, array $lines, array $attributes = []): CustomerPortalRequest
+    {
+        return CustomerPortalRequest::create(array_merge([
+            'customer_id' => $user->customer_id, 'created_by_user_id' => $user->id,
+            'status' => 'DRAFT', 'revision' => 1, 'lines' => $lines,
+        ], $attributes));
     }
 
     protected function client(): User

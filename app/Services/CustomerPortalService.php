@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Customer;
 use App\Models\CustomerOrder;
+use App\Models\CustomerOrderLine;
 use App\Models\CustomerPortalRequest;
 use App\Models\CustomerProductAlias;
 use App\Models\FabricColor;
@@ -28,13 +29,104 @@ class CustomerPortalService
     public function catalog(Customer $customer): array
     {
         $aliases = CustomerProductAlias::where('customer_id', $customer->id)->where('is_active', true)->orderByDesc('is_default')->get()->unique('product_model_id')->keyBy('product_model_id');
-        $models = ProductModel::where('is_active', true)->orderBy('name_ar')->get(['id', 'name_ar'])->map(fn ($model): array => ['id' => $model->id, 'name' => $aliases->get($model->id)?->customer_product_name ?: $model->name_ar]);
-        $readyProducts = Material::active()->sellableReady()->where('has_ready_options', false)->orderBy('name_ar')->get(['id', 'name_ar', 'sales_display_name'])->map(fn ($material): array => ['id' => $material->id, 'name' => $material->sales_display_name ?: $material->name_ar]);
+        $models = ProductModel::where('is_active', true)->orderBy('name_ar')->get(['id', 'name_ar', 'reference_image_path'])->map(fn ($model): array => ['id' => $model->id, 'name' => $aliases->get($model->id)?->customer_product_name ?: $model->name_ar, 'image_url' => $model->image_url]);
+        $readyProducts = Material::active()->sellableReady()->where('has_ready_options', false)->orderBy('name_ar')->get(['id', 'name_ar', 'sales_display_name', 'sales_image_url'])->map(fn ($material): array => ['id' => $material->id, 'name' => $material->sales_display_name ?: $material->name_ar, 'image_url' => $material->sales_image_url]);
         $fabrics = Material::active()->whereHas('category', fn ($query) => $query->where('code', 'FABRIC'))->orderBy('name_ar')->get(['id', 'name_ar']);
         $colors = FabricColor::active()->available()->whereIn('material_id', $fabrics->pluck('id'))->get(['id', 'material_id', 'color_name_ar', 'color_code']);
         $configurations = ProductConfiguration::where('is_active', true)->get()->map(fn ($configuration): array => ['id' => $configuration->id, 'product_model_id' => $configuration->product_model_id, 'has_storage' => $configuration->has_storage, 'width_cm' => $configuration->width_cm, 'length_cm' => $configuration->length_cm, 'name' => $configuration->display_name]);
 
         return compact('models', 'readyProducts', 'fabrics', 'colors', 'configurations');
+    }
+
+    /**
+     * Build the product cards shown for each portal request, keyed by request id.
+     *
+     * @param  iterable<CustomerPortalRequest>  $submissions
+     * @return array<int, list<array{name: string, image_url: ?string, quantity: float, size: ?string, description: string}>>
+     */
+    public function requestLineCards(iterable $submissions): array
+    {
+        $submissions = collect($submissions);
+        $lines = $submissions->flatMap(fn (CustomerPortalRequest $submission): array => $submission->lines ?? []);
+        $models = ProductModel::whereIn('id', $lines->pluck('product_model_id')->filter()->unique())->get(['id', 'reference_image_path'])->keyBy('id');
+        $materialImages = Material::whereIn('id', $lines->pluck('material_id')->filter()->unique())->pluck('sales_image_url', 'id');
+
+        return $submissions->mapWithKeys(fn (CustomerPortalRequest $submission): array => [
+            $submission->id => collect($submission->lines ?? [])->map(function (array $line) use ($submission, $models, $materialImages): array {
+                $isManufactured = $line['line_type'] === 'MANUFACTURED';
+                $isCustomDesign = ! empty($line['custom_design']);
+                $imageUrl = match (true) {
+                    ! $isManufactured => $materialImages->get($line['material_id'] ?? null),
+                    $isCustomDesign => ! empty($line['custom_design_image_path']) && ! empty($line['line_key'])
+                        ? route('portal.requests.design-image', [$submission, $line['line_key']]) : null,
+                    default => $models->get($line['product_model_id'] ?? null)?->image_url,
+                };
+
+                return [
+                    'name' => $line['product_name'] ?? 'منتج',
+                    'image_url' => $imageUrl ?: null,
+                    'quantity' => (float) $line['quantity'],
+                    'size' => $isManufactured ? $this->sizeLabel($line['requested_width_cm'] ?? null, $line['requested_length_cm'] ?? null) : null,
+                    'description' => $this->lineDescription($isManufactured, $isCustomDesign, ! empty($line['has_storage'])),
+                ];
+            })->all(),
+        ])->all();
+    }
+
+    /**
+     * Build the product cards shown for each confirmed order, keyed by order id.
+     *
+     * Expects lines.productModel, lines.material, lines.customerProductAlias and portalRequest to be eager loaded.
+     *
+     * @param  iterable<CustomerOrder>  $orders
+     * @return array<int, list<array{name: string, image_url: ?string, quantity: float, size: ?string, description: string}>>
+     */
+    public function orderLineCards(iterable $orders): array
+    {
+        return collect($orders)->mapWithKeys(fn (CustomerOrder $order): array => [
+            $order->id => $order->lines->map(function (CustomerOrderLine $line) use ($order): array {
+                $isManufactured = $line->line_type === 'MANUFACTURED';
+                $imageUrl = match (true) {
+                    $line->line_type === 'READY_STOCK' => $line->material?->sales_image_url,
+                    (bool) $line->custom_design => $this->orderDesignImageUrl($order, $line),
+                    default => $line->productModel?->image_url,
+                };
+
+                return [
+                    'name' => $line->display_name,
+                    'image_url' => $imageUrl ?: null,
+                    'quantity' => (float) $line->quantity,
+                    'size' => $isManufactured ? $this->sizeLabel($line->requested_width_cm, $line->requested_length_cm) : null,
+                    'description' => $this->lineDescription($isManufactured, (bool) $line->custom_design, (bool) $line->has_storage),
+                ];
+            })->values()->all(),
+        ])->all();
+    }
+
+    protected function lineDescription(bool $isManufactured, bool $isCustomDesign, bool $hasStorage): string
+    {
+        return match (true) {
+            ! $isManufactured => 'منتج جاهز',
+            $isCustomDesign => 'تصميم خاص',
+            default => $hasStorage ? 'مع تخزين' : 'بدون تخزين',
+        };
+    }
+
+    protected function sizeLabel(mixed $width, mixed $length): ?string
+    {
+        return $width && $length ? (float) $width.' × '.(float) $length : null;
+    }
+
+    /** Customers read a design only through the portal request that carries the same stored file. */
+    protected function orderDesignImageUrl(CustomerOrder $order, CustomerOrderLine $line): ?string
+    {
+        if (! $line->custom_design_image_path || ! $order->portalRequest) {
+            return null;
+        }
+        $requestLine = collect($order->portalRequest->lines)->firstWhere('custom_design_image_path', $line->custom_design_image_path);
+
+        return ! empty($requestLine['line_key'])
+            ? route('portal.requests.design-image', [$order->portalRequest, $requestLine['line_key']]) : null;
     }
 
     /** @param array<string, mixed> $data */

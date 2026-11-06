@@ -33,6 +33,7 @@
                 </div>
                 <x-status-badge domain="portal_order" :status="$progress[$order->id]['state']" />
             </div>
+            @include('portal.line-cards', ['lines' => $lineCards[$order->id] ?? [], 'detailsUrl' => route('portal.orders.show', $order)])
             <div class="task-card-meta">
                 <span><i class="far fa-calendar" aria-hidden="true"></i> <span class="ltr-isolate">{{ $order->order_date?->format('Y-m-d') ?? '—' }}</span></span>
                 <span><i class="fas fa-layer-group" aria-hidden="true"></i> مستلم {{ number_format($progress[$order->id]['delivered_quantity'], 0) }} من {{ number_format($progress[$order->id]['ordered_quantity'], 0) }}</span>

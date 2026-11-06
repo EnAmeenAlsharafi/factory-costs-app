@@ -13,11 +13,14 @@
             </tr>
         </thead>
         <tbody>
-            @foreach($submission->lines as $line)
+            @foreach($submission->lines as $lineIndex => $line)
                 @php($lineTotal = ($line['unit_price'] ?? 0) * $line['quantity'] - ($line['discount_amount'] ?? 0))
                 <tr>
                     <td class="stack-head">
-                        <span class="min-w-0">{{ $line['product_name'] ?? 'منتج' }}</span>
+                        <span class="d-flex align-items-center gap-2 min-w-0">
+                            @include('portal.line-image', ['imageUrl' => $lineCards[$lineIndex]['image_url'] ?? null, 'imageAlt' => $line['product_name'] ?? 'منتج'])
+                            <span class="min-w-0">{{ $line['product_name'] ?? 'منتج' }}</span>
+                        </span>
                         @if($showPrices)
                             <span class="stack-only fw-bold flex-shrink-0">{{ number_format($lineTotal, 2) }} ر.س</span>
                         @endif
@@ -38,12 +41,6 @@
                         @endif
                         @if(! empty($line['notes']))
                             <small class="d-block text-muted mt-1">{{ $line['notes'] }}</small>
-                        @endif
-                        @if(! empty($line['custom_design_image_path']) && ! empty($line['line_key']))
-                            @php($designImageUrl = route(auth()->user()->isCustomerAccount() ? 'portal.requests.design-image' : 'sales.portal-requests.design-image', [$submission, $line['line_key']]))
-                            <a href="{{ $designImageUrl }}" target="_blank" rel="noopener" class="d-block mt-2">
-                                <img src="{{ $designImageUrl }}" alt="صورة التصميم الخاص" class="img-thumbnail" style="max-width:140px;max-height:120px;object-fit:contain;">
-                            </a>
                         @endif
                     </td>
                     <td data-label="الكمية" class="stack-half">{{ $line['quantity'] }}</td>

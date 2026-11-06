@@ -42,9 +42,14 @@
         <table class="table table-stack-sm align-middle mb-0">
             <thead><tr><th>المنتج</th><th>المواصفات</th><th>الكمية</th><th>قيمة البند</th></tr></thead>
             <tbody>
-                @foreach($order->lines as $line)
+                @foreach($order->lines->values() as $lineIndex => $line)
                     <tr>
-                        <td class="stack-head">{{ $line->display_name }}</td>
+                        <td class="stack-head">
+                        <span class="d-flex align-items-center gap-2 min-w-0">
+                            @include('portal.line-image', ['imageUrl' => $lineCards[$lineIndex]['image_url'] ?? null, 'imageAlt' => $line->display_name])
+                            <span class="min-w-0">{{ $line->display_name }}</span>
+                        </span>
+                        </td>
                         <td data-label="المواصفات">
                             @if($line->line_type === 'MANUFACTURED')
                                 <span class="ltr-isolate">{{ $line->requested_width_cm }} × {{ $line->requested_length_cm }}</span> سم — {{ $line->has_storage ? 'مع تخزين' : 'بدون تخزين' }}

@@ -17,7 +17,7 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class CustomerPortalController extends Controller
 {
-    public function home(Request $request, CustomerPortalAccountService $accounts): View
+    public function home(Request $request, CustomerPortalAccountService $accounts, CustomerPortalService $portal): View
     {
         $customer = $request->user()->customer;
         $summary = $accounts->account($customer)['summary'];
@@ -25,10 +25,12 @@ class CustomerPortalController extends Controller
         $openRequests = CustomerPortalRequest::where('customer_id', $customer->id)->whereIn('status', ['SUBMITTED', 'OFFERED', 'CHANGES_REQUESTED'])->count();
         $deliveredOrders = $customer->orders()->whereHas('deliveryOrders', fn ($query) => $query->whereIn('status', ['DELIVERED', 'INSTALLATION_COMPLETED']))->count();
 
-        return view('portal.home', compact('customer', 'summary', 'submissions', 'openRequests', 'deliveredOrders'));
+        $lineCards = $portal->requestLineCards($submissions);
+
+        return view('portal.home', compact('customer', 'summary', 'submissions', 'openRequests', 'deliveredOrders', 'lineCards'));
     }
 
-    public function requests(Request $request): View
+    public function requests(Request $request, CustomerPortalService $portal): View
     {
         $query = CustomerPortalRequest::where('customer_id', $request->user()->customer_id);
         if (array_key_exists((string) $request->query('status'), CustomerPortalRequest::STATUSES)) {
@@ -36,7 +38,9 @@ class CustomerPortalController extends Controller
         }
         $submissions = $query->latest('id')->paginate(20)->withQueryString();
 
-        return view('portal.requests', compact('submissions'));
+        $lineCards = $portal->requestLineCards($submissions->getCollection());
+
+        return view('portal.requests', compact('submissions', 'lineCards'));
     }
 
     public function create(Request $request, CustomerPortalService $portal): View
@@ -53,12 +57,14 @@ class CustomerPortalController extends Controller
         return redirect()->route('portal.requests.show', $submission)->with('success', 'تم حفظ المسودة. راجعها ثم أرسلها للمصنع.');
     }
 
-    public function show(Request $request, CustomerPortalRequest $submission): View
+    public function show(Request $request, CustomerPortalRequest $submission, CustomerPortalService $portal): View
     {
         $this->own($request, $submission);
         $submission->load('events', 'order');
 
-        return view('portal.show', compact('submission'));
+        $lineCards = $portal->requestLineCards([$submission])[$submission->id];
+
+        return view('portal.show', compact('submission', 'lineCards'));
     }
 
     public function designImage(Request $request, CustomerPortalRequest $submission, string $lineKey): BinaryFileResponse
@@ -119,9 +125,9 @@ class CustomerPortalController extends Controller
         return back()->with('success', 'تم تسجيل طلب التعديل لخدمة العملاء. لا تتغير المواصفات المعتمدة دون مراجعة المصنع.');
     }
 
-    public function orders(Request $request, CustomerPortalAccountService $accounts): View
+    public function orders(Request $request, CustomerPortalAccountService $accounts, CustomerPortalService $portal): View
     {
-        $query = $request->user()->customer->orders()->with(['lines', 'deliveryOrders.lines', 'productionOrders', 'customerReturns']);
+        $query = $request->user()->customer->orders()->with(['lines.productModel', 'lines.material', 'lines.customerProductAlias', 'deliveryOrders.lines', 'productionOrders', 'customerReturns', 'portalRequest']);
         if ($request->filled('search')) {
             $search = $request->string('search')->toString();
             $query->where(fn ($query) => $query->where('order_number', 'like', "%{$search}%")->orWhere('customer_reference', 'like', "%{$search}%"));
@@ -129,16 +135,20 @@ class CustomerPortalController extends Controller
         $orders = $query->latest('id')->paginate(15)->withQueryString();
         $progress = $orders->getCollection()->mapWithKeys(fn (CustomerOrder $order): array => [$order->id => $accounts->progress($order)]);
 
-        return view('portal.orders', compact('orders', 'progress'));
+        $lineCards = $portal->orderLineCards($orders->getCollection());
+
+        return view('portal.orders', compact('orders', 'progress', 'lineCards'));
     }
 
-    public function order(Request $request, CustomerOrder $order, CustomerPortalAccountService $accounts): View
+    public function order(Request $request, CustomerOrder $order, CustomerPortalAccountService $accounts, CustomerPortalService $portal): View
     {
         abort_unless($order->customer_id === $request->user()->customer_id, 404);
-        $order->load(['lines.productModel', 'lines.material', 'lines.fabricMaterial', 'lines.fabricColor', 'portalRequest']);
+        $order->load(['lines.productModel', 'lines.material', 'lines.customerProductAlias', 'lines.fabricMaterial', 'lines.fabricColor', 'portalRequest']);
         $progress = $accounts->progress($order);
 
-        return view('portal.order', compact('order', 'progress'));
+        $lineCards = $portal->orderLineCards([$order])[$order->id];
+
+        return view('portal.order', compact('order', 'progress', 'lineCards'));
     }
 
     public function receipts(Request $request): View
