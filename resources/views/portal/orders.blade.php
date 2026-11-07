@@ -17,8 +17,8 @@
     </div>
 @endif
 
-{{-- Phone: one card per order. Tablet/desktop: the same rows as a table. --}}
-<div class="task-list mobile-cards-only-lg">
+{{-- One card per order on every screen size: one column on phones, two from tablet width up. --}}
+<div class="task-list portal-card-list">
     @forelse($orders as $order)
         @php($presented = \App\Services\StatusPresenter::present('portal_order', $progress[$order->id]['state']))
         <article class="task-card tone-{{ $presented['tone'] }}">
@@ -49,28 +49,6 @@
             <p class="mb-0">لا توجد طلبات مسجلة.</p>
         </div>
     @endforelse
-</div>
-
-<div class="card has-mobile-cards-lg">
-    <div class="table-responsive">
-        <table class="table align-middle mb-0">
-            <thead><tr><th>رقم الطلب</th><th>التاريخ</th><th>الحالة</th><th>الكمية المطلوبة</th><th>صافي المستلم</th><th>التفاصيل</th></tr></thead>
-            <tbody>
-                @forelse($orders as $order)
-                    <tr>
-                        <td><span class="ltr-isolate">{{ $order->order_number }}</span><small class="d-block text-muted">{{ $order->customer_reference }}</small></td>
-                        <td><span class="ltr-isolate">{{ $order->order_date?->format('Y-m-d') }}</span></td>
-                        <td><x-status-badge domain="portal_order" :status="$progress[$order->id]['state']" /></td>
-                        <td>{{ number_format($progress[$order->id]['ordered_quantity'], 0) }}</td>
-                        <td>{{ number_format($progress[$order->id]['delivered_quantity'], 0) }}</td>
-                        <td><a class="btn btn-sm btn-outline-primary" href="{{ route('portal.orders.show', $order) }}">عرض التفاصيل</a></td>
-                    </tr>
-                @empty
-                    <tr><td colspan="6" class="p-4 text-center">لا توجد طلبات مسجلة.</td></tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
 </div>
 
 <div class="mt-3 d-flex justify-content-center">{{ $orders->links() }}</div>

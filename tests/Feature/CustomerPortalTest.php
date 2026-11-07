@@ -63,7 +63,18 @@ class CustomerPortalTest extends TestCase
         $client = $this->client();
         $client->customer->update(['is_active' => false]);
         $this->actingAs($client)->get(route('portal.home'))->assertForbidden();
-        $this->actingAs($this->admin())->get(route('portal.home'))->assertForbidden();
+    }
+
+    public function test_staff_session_is_sent_to_the_portal_sign_in_notice_and_cannot_write_to_the_portal(): void
+    {
+        $this->actingAs($this->admin());
+
+        foreach (['portal.home', 'portal.requests.index', 'portal.orders.index', 'portal.account'] as $route) {
+            $this->get(route($route))->assertRedirect(route('portal.login'));
+        }
+        $this->get(route('portal.login'))->assertOk()->assertSee('يوجد حساب موظف');
+        $this->post(route('portal.requests.store'), $this->data())->assertForbidden();
+        $this->assertSame(0, CustomerPortalRequest::count());
     }
 
     public function test_customer_cannot_view_or_mutate_another_customers_request_or_order(): void

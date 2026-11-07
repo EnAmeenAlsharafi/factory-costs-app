@@ -14,6 +14,11 @@
         .portal-signin-icon { width: 56px; height: 56px; display: grid; place-items: center; background: #ffffff18; border-radius: 16px; }
         .portal-signin-form { max-width: 420px; margin-inline: auto; }
         .portal-signin .form-control, .portal-signin button { min-height: 48px; }
+        /* 1366×768 laptops leave about 625px of browser height: keep the whole card on screen. */
+        @media (min-width: 992px) and (max-height: 720px) {
+            .portal-signin { padding-block: 12px; }
+            .portal-signin section.p-lg-5 { padding: 1.5rem 3rem !important; }
+        }
     </style>
 </head>
 <body>

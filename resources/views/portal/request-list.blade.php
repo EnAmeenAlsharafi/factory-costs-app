@@ -1,5 +1,5 @@
-{{-- Phone: one card per request. Tablet/desktop: the same rows as a table. --}}
-<div class="task-list mobile-cards-only-lg">
+{{-- One card per request on every screen size: one column on phones, two from tablet width up. --}}
+<div class="task-list portal-card-list">
     @forelse($submissions as $submission)
         @php($presented = \App\Services\StatusPresenter::present('portal_request', $submission->status))
         <article class="task-card tone-{{ $presented['tone'] }}">
@@ -31,25 +31,4 @@
             <p class="mb-0">لا توجد طلبات في هذه القائمة.</p>
         </div>
     @endforelse
-</div>
-
-<div class="card border-0 shadow-sm has-mobile-cards-lg">
-    <div class="table-responsive">
-        <table class="table align-middle mb-0">
-            <thead><tr><th>رقم الطلب</th><th>مرجعك</th><th>الحالة</th><th>آخر تحديث</th><th>التفاصيل</th></tr></thead>
-            <tbody>
-                @forelse($submissions as $submission)
-                    <tr>
-                        <td><span class="ltr-isolate">PR-{{ $submission->id }}</span></td>
-                        <td>{{ $submission->customer_reference ?: '—' }}</td>
-                        <td><x-status-badge domain="portal_request" :status="$submission->status" /></td>
-                        <td><span class="ltr-isolate">{{ $submission->updated_at->format('Y-m-d') }}</span></td>
-                        <td><a class="btn btn-sm btn-outline-primary" href="{{ route('portal.requests.show', $submission) }}">عرض الطلب</a></td>
-                    </tr>
-                @empty
-                    <tr><td colspan="5" class="text-center p-4">لا توجد طلبات في هذه القائمة.</td></tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
 </div>

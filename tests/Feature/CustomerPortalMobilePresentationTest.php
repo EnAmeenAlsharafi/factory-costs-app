@@ -128,6 +128,7 @@ class CustomerPortalMobilePresentationTest extends TestCase
         foreach (['portal.home', 'portal.requests.index'] as $route) {
             $this->actingAs($user)->get(route($route))->assertOk()
                 ->assertSee('order-line-card', false)
+                ->assertDontSee('has-mobile-cards-lg', false)
                 ->assertSee($model->image_url, false)
                 ->assertSee('https://cdn.example.test/ready.jpg', false)
                 ->assertSee('سرير ميلان')->assertSee('90 × 190')->assertSee('كنبة بلا صورة')
