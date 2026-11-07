@@ -88,8 +88,11 @@ class CustomerPortalService
                 $isManufactured = $line->line_type === 'MANUFACTURED';
                 $imageUrl = match (true) {
                     $line->line_type === 'READY_STOCK' => $line->material?->sales_image_url,
-                    (bool) $line->custom_design => $this->orderDesignImageUrl($order, $line),
-                    default => $line->productModel?->image_url,
+                    (bool) $line->custom_design => $this->orderDesignImageUrl($order, $line)
+                        ?: $line->productModel?->image_url
+                        ?: $line->customerProductAlias?->productModel?->image_url,
+                    default => $line->productModel?->image_url
+                        ?: $line->customerProductAlias?->productModel?->image_url,
                 };
 
                 return [
