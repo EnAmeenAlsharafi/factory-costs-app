@@ -199,6 +199,24 @@ class ProductionOrder extends Model
         };
     }
 
+    /**
+     * What the shop floor calls this item: the custom design, the model, or its size when neither exists.
+     */
+    public function getDisplayNameAttribute(): string
+    {
+        if ($this->is_custom_design) {
+            return $this->custom_design_name ?: 'تصميم خاص';
+        }
+
+        if ($this->productModel) {
+            return $this->productModel->name_ar;
+        }
+
+        return (float) $this->requested_width_cm > 0
+            ? 'منتج بمقاس '.(float) $this->requested_width_cm.'×'.(float) $this->requested_length_cm.' سم'
+            : 'منتج بدون موديل';
+    }
+
     public function getStatusArabicAttribute(): string
     {
         return match ($this->status) {

@@ -30,4 +30,21 @@ class ProductionMaterialRequestFormRequest extends FormRequest
             'lines.*.notes' => 'nullable|string|max:500',
         ];
     }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'warehouse_id.required' => 'اختر المستودع الموجه له الطلب.',
+            'request_date.required' => 'حدد تاريخ الطلب.',
+            'lines.required' => 'أضف خامة واحدة على الأقل للطلب.',
+            'lines.min' => 'أضف خامة واحدة على الأقل للطلب.',
+            'lines.*.material_id.required' => 'اختر الخامة في كل سطر.',
+            'lines.*.base_unit_id.required' => 'الخامة المختارة ليس لها وحدة قياس أساسية.',
+            'lines.*.requested_quantity.required' => 'أدخل الكمية المطلوبة في كل سطر.',
+            'lines.*.requested_quantity.gt' => 'الكمية المطلوبة يجب أن تكون أكبر من صفر.',
+        ];
+    }
 }

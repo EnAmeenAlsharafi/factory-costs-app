@@ -18,7 +18,7 @@
                         default => 'bg-secondary'
                     };
                 @endphp
-                <span class="badge {{ $sevBadge }} fs-6">{{ $qualityIncident->severity }}</span>
+                <span class="badge {{ $sevBadge }} fs-6">{{ \App\Models\QualityIncident::SEVERITY_LABELS[$qualityIncident->severity][0] ?? $qualityIncident->severity }}</span>
             </div>
             <p class="page-header-subtitle text-muted mb-0 fs-7">
                 أمر الإنتاج: <a href="{{ route('production.orders.show', $qualityIncident->productionOrder) }}" class="fw-bold font-monospace text-primary text-decoration-none">{{ $qualityIncident->productionOrder->production_order_number }}</a>
@@ -43,7 +43,7 @@
                     <table class="table table-sm table-borderless">
                         <tr>
                             <td class="text-muted" style="width: 140px;">نوع العيب:</td>
-                            <td class="fw-bold"><span class="badge bg-light text-dark border fs-7">{{ $qualityIncident->incident_type }}</span></td>
+                            <td class="fw-bold"><span class="badge bg-light text-dark border fs-7">{{ \App\Models\QualityIncident::TYPE_LABELS[$qualityIncident->incident_type] ?? $qualityIncident->incident_type }}</span></td>
                         </tr>
                         <tr>
                             <td class="text-muted">الكمية المتأثرة:</td>
@@ -69,7 +69,7 @@
                             <td class="text-muted">قرار المعالجة:</td>
                             <td>
                                 @if($qualityIncident->disposition)
-                                    <span class="badge bg-primary fs-6">{{ $qualityIncident->disposition }}</span>
+                                    <span class="badge bg-primary fs-6">{{ \App\Models\QualityIncident::DISPOSITION_LABELS[$qualityIncident->disposition] ?? $qualityIncident->disposition }}</span>
                                 @else
                                     <span class="text-muted">لم يُحدد بعد</span>
                                 @endif
@@ -139,7 +139,7 @@
                                 @forelse($qualityIncident->reworkActions as $rework)
                                     <tr>
                                         <td class="fw-bold font-monospace">{{ $rework->rework_number }}</td>
-                                        <td><span class="badge bg-light text-dark border">{{ $rework->action_type }}</span></td>
+                                        <td><span class="badge bg-light text-dark border">{{ \App\Models\ProductionReworkAction::ACTION_LABELS[$rework->action_type] ?? $rework->action_type }}</span></td>
                                         <td>{{ $rework->assignedDepartment?->name_ar }}</td>
                                         <td class="fw-bold">{{ $rework->quantity }} قطعة</td>
                                         <td>

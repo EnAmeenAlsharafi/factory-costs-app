@@ -72,8 +72,23 @@ class ProductionMaterialRequestController extends Controller
         }
 
         $departments = Department::all();
-        $materials = Material::with('baseUnit')->where('is_active', true)->get();
+        $materials = Material::with(['baseUnit', 'category'])
+            ->where('is_active', true)
+            ->where('is_sellable_ready_product', false)
+            ->orderBy('name_ar')
+            ->get();
         $fabricColors = FabricColor::where('is_active', true)->get();
+        $materialOptions = $materials->map(fn (Material $material): array => [
+            'id' => $material->id,
+            'label' => trim($material->name_ar.' — '.$material->code, ' —'),
+            'unit_id' => $material->base_unit_id,
+            'unit_name' => $material->baseUnit?->name_ar,
+            'colors' => $material->category?->code === 'FABRIC'
+                ? $fabricColors->where('material_id', $material->id)
+                    ->map(fn (FabricColor $color): array => ['id' => $color->id, 'name' => $color->color_name_ar])
+                    ->values()->all()
+                : [],
+        ])->values();
         $units = UnitOfMeasure::all();
 
         return view('production.material_requests.create', compact(
@@ -82,7 +97,8 @@ class ProductionMaterialRequestController extends Controller
             'departments',
             'materials',
             'fabricColors',
-            'units'
+            'units',
+            'materialOptions'
         ));
     }
 

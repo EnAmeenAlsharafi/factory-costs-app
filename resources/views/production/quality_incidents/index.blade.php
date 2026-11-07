@@ -38,10 +38,10 @@
                 <div class="col-md-3">
                     <select name="severity" class="form-select" onchange="this.form.submit()">
                         <option value="">جميع درجات الأهمية</option>
-                        <option value="LOW" {{ request('severity') === 'LOW' ? 'selected' : '' }}>منخفضة (LOW)</option>
-                        <option value="MEDIUM" {{ request('severity') === 'MEDIUM' ? 'selected' : '' }}>متوسطة (MEDIUM)</option>
-                        <option value="HIGH" {{ request('severity') === 'HIGH' ? 'selected' : '' }}>عالية (HIGH)</option>
-                        <option value="CRITICAL" {{ request('severity') === 'CRITICAL' ? 'selected' : '' }}>حرجة (CRITICAL)</option>
+                        <option value="LOW" {{ request('severity') === 'LOW' ? 'selected' : '' }}>منخفضة</option>
+                        <option value="MEDIUM" {{ request('severity') === 'MEDIUM' ? 'selected' : '' }}>متوسطة</option>
+                        <option value="HIGH" {{ request('severity') === 'HIGH' ? 'selected' : '' }}>عالية</option>
+                        <option value="CRITICAL" {{ request('severity') === 'CRITICAL' ? 'selected' : '' }}>حرجة</option>
                     </select>
                 </div>
                 <div class="col-md-2 d-flex gap-2">
@@ -85,24 +85,16 @@
                                         {{ $inc->productionOrder?->production_order_number }}
                                     </a>
                                 </td>
-                                <td><span class="badge bg-light text-dark border">{{ $inc->incident_type }}</span></td>
+                                <td><span class="badge bg-light text-dark border">{{ \App\Models\QualityIncident::TYPE_LABELS[$inc->incident_type] ?? $inc->incident_type }}</span></td>
                                 <td>
-                                    @php
-                                        $sevBadge = match($inc->severity) {
-                                            'LOW' => 'bg-info text-dark',
-                                            'MEDIUM' => 'bg-warning text-dark',
-                                            'HIGH' => 'bg-danger',
-                                            'CRITICAL' => 'bg-dark text-white',
-                                            default => 'bg-secondary'
-                                        };
-                                    @endphp
-                                    <span class="badge {{ $sevBadge }}">{{ $inc->severity }}</span>
+                                    @php $severity = \App\Models\QualityIncident::SEVERITY_LABELS[$inc->severity] ?? [$inc->severity, 'secondary']; @endphp
+                                    <span class="status-chip status-chip-{{ $severity[1] }}">{{ $severity[0] }}</span>
                                 </td>
                                 <td>{{ $inc->detectedDepartment?->name_ar }}</td>
                                 <td><strong class="text-dark">{{ $inc->responsibleDepartment?->name_ar ?? 'غير محدد بعد' }}</strong></td>
                                 <td>
                                     @if($inc->disposition)
-                                        <span class="badge bg-primary fs-7">{{ $inc->disposition }}</span>
+                                        <span class="status-chip status-chip-primary">{{ \App\Models\QualityIncident::DISPOSITION_LABELS[$inc->disposition] ?? $inc->disposition }}</span>
                                     @else
                                         <span class="text-muted small">قيد المعاينة</span>
                                     @endif

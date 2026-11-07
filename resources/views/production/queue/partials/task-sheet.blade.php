@@ -1,6 +1,6 @@
 @php
     $po = $op->productionOrder;
-    $productName = $po->is_custom_design ? $po->custom_design_name : ($po->productModel?->name_ar ?? 'منتج');
+    $productName = $po->display_name;
     $remaining = max(0, $op->required_quantity - $op->completed_quantity);
     $user = auth()->user();
     $canRecord = $user->can('production.update_progress') && $remaining > 0 && ! in_array($op->status, ['COMPLETED', 'BLOCKED', 'SKIPPED'], true);

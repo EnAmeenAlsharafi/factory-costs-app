@@ -90,7 +90,7 @@
             @foreach ($operations as $op)
                 @php
                     $po = $op->productionOrder;
-                    $productName = $po->is_custom_design ? $po->custom_design_name : ($po->productModel?->name_ar ?? 'منتج');
+                    $productName = $po->display_name;
                     $remaining = max(0, $op->required_quantity - $op->completed_quantity);
                     $isRework = $op->targetReworkActions->isNotEmpty();
                     $tone = \App\Services\StatusPresenter::present('operation', $op->status)['tone'];
@@ -148,7 +148,7 @@
                             <th>المنتج والمقاس</th>
                             <th>العملية / القسم</th>
                             <th>القماش واللون</th>
-                            <th class="text-center">المطلوب / المنجز / المتبقي</th>
+                            <th style="min-width: 150px;">الإنجاز</th>
                             <th>الحالة</th>
                             <th class="text-end">الإجراء</th>
                         </tr>
@@ -162,9 +162,12 @@
                             @endphp
                             <tr @class(['table-warning' => $isRework])>
                                 <td>
-                                    <div class="fw-bold text-dark">{{ $po->is_custom_design ? $po->custom_design_name : $po->productModel?->name_ar }}</div>
+                                    <div class="fw-bold text-dark">{{ $po->display_name }}</div>
                                     <small class="text-muted d-block"><span class="ltr-isolate">{{ (int) $po->requested_width_cm }}×{{ (int) $po->requested_length_cm }}</span> سم {{ $po->has_storage ? '(مع تخزين)' : '' }}</small>
-                                    <a href="{{ route('production.orders.show', $po) }}" class="fs-8 font-monospace text-decoration-none">{{ $po->production_order_number }}</a>
+                                    <a href="{{ route('production.orders.show', $po) }}" class="fs-8 text-decoration-none text-nowrap"><bdi>{{ $po->production_order_number }}</bdi></a>
+                                    @if (in_array($po->priority, ['URGENT', 'VIP'], true))
+                                        <span class="status-chip status-chip-danger ms-1"><i class="fas fa-bolt" aria-hidden="true"></i> {{ $priorityLabels[$po->priority] }}</span>
+                                    @endif
                                     @if ($isRework)
                                         <span class="rework-flag ms-1"><i class="fas fa-rotate" aria-hidden="true"></i> إعادة عمل</span>
                                     @endif
@@ -179,15 +182,22 @@
                                         <small class="text-muted"><span class="color-dot" style="background: {{ $po->fabricColor?->hex_code ?? '#cbd5e1' }};" aria-hidden="true"></span> <span class="ltr-isolate">{{ $po->fabric_color_code ?? $po->fabricColor?->color_code }}</span></small>
                                     @endif
                                 </td>
-                                <td class="text-center text-nowrap">
-                                    <span class="fw-bold">{{ $op->required_quantity }}</span> /
-                                    <span class="fw-bold text-success">{{ $op->completed_quantity }}</span> /
-                                    <span class="fw-bold text-warning-emphasis">{{ $remaining }}</span>
+                                @php $donePct = $op->required_quantity > 0 ? (int) round($op->completed_quantity / $op->required_quantity * 100) : 0; @endphp
+                                <td>
+                                    <div class="d-flex justify-content-between fs-8 mb-1 text-nowrap">
+                                        <span><strong class="text-success">{{ $op->completed_quantity }}</strong> من {{ $op->required_quantity }}</span>
+                                        @if ($remaining > 0)
+                                            <span class="text-muted">متبقي {{ $remaining }}</span>
+                                        @endif
+                                    </div>
+                                    <div class="progress" style="height: 6px;" role="progressbar" aria-label="نسبة الإنجاز" aria-valuenow="{{ $donePct }}" aria-valuemin="0" aria-valuemax="100">
+                                        <div class="progress-bar bg-success" style="width: {{ $donePct }}%"></div>
+                                    </div>
                                 </td>
                                 <td><x-status-badge domain="operation" :status="$op->status" /></td>
                                 <td class="text-end">
-                                    <button type="button" class="btn btn-sm btn-factory-primary" data-bs-toggle="modal" data-bs-target="#task-sheet-{{ $op->id }}">
-                                        <i class="fas fa-folder-open" aria-hidden="true"></i> فتح المهمة
+                                    <button type="button" class="btn btn-sm btn-outline-primary text-nowrap" data-bs-toggle="modal" data-bs-target="#task-sheet-{{ $op->id }}">
+                                        <i class="fas fa-folder-open" aria-hidden="true"></i> فتح
                                     </button>
                                 </td>
                             </tr>

@@ -10,6 +10,16 @@ class ProductionReworkAction extends Model
 {
     use HasFactory;
 
+    /**
+     * @var array<string, string>
+     */
+    public const ACTION_LABELS = [
+        'REPAIR' => 'إصلاح',
+        'REWORK' => 'إعادة تصنيع',
+        'REMAKE_COMPONENT' => 'إعادة عمل مكوّن',
+        'REMANUFACTURE' => 'إعادة إنتاج',
+    ];
+
     protected $fillable = [
         'rework_number',
         'quality_incident_id',

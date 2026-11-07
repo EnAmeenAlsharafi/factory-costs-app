@@ -39,6 +39,7 @@ use App\Http\Controllers\ProductionMaterialRequestController;
 use App\Http\Controllers\ProductionMyTasksController;
 use App\Http\Controllers\ProductionOperationController;
 use App\Http\Controllers\ProductionOrderController;
+use App\Http\Controllers\ProductionPipelineController;
 use App\Http\Controllers\ProductionReportController;
 use App\Http\Controllers\ProductionReviewController;
 use App\Http\Controllers\ProductionReworkController;
@@ -219,6 +220,15 @@ Route::middleware('auth')->group(function () {
 
     // Stage 9 & 10: Work Centers, Production Routing, Orders, WIP, Consumption, Quality & Waste
     Route::prefix('production')->name('production.')->group(function () {
+        // Production pipeline: move several orders through a stage at once
+        Route::get('/pipeline/{stage?}', [ProductionPipelineController::class, 'index'])
+            ->whereIn('stage', ProductionPipelineController::STAGES)
+            ->name('pipeline.index');
+        Route::post('/pipeline/approve', [ProductionPipelineController::class, 'approve'])->name('pipeline.approve');
+        Route::post('/pipeline/release', [ProductionPipelineController::class, 'release'])->name('pipeline.release');
+        Route::post('/pipeline/materials', [ProductionPipelineController::class, 'requestMaterials'])->name('pipeline.materials');
+        Route::post('/pipeline/assign', [ProductionPipelineController::class, 'assign'])->name('pipeline.assign');
+
         // Production Orders
         Route::get('/orders', [ProductionOrderController::class, 'index'])->name('orders.index');
         Route::get('/orders/create', [ProductionOrderController::class, 'create'])->name('orders.create');

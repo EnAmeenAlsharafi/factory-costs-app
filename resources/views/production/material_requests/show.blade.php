@@ -30,6 +30,28 @@
         <x-status-badge domain="material_request" :status="$materialRequest->status" size="lg" />
     </div>
 
+    @php
+        $linesTotal = $materialRequest->lines->count();
+        $linesDone = $materialRequest->lines->filter(fn ($line) => (float) $line->issued_quantity >= (float) ($line->approved_quantity ?? $line->requested_quantity))->count();
+        $issuePct = $linesTotal ? (int) round($linesDone / $linesTotal * 100) : 0;
+    @endphp
+    <div class="card-factory p-3 mb-4 d-flex flex-wrap align-items-center gap-3" role="status">
+        <div class="flex-grow-1 min-w-0">
+            <div class="d-flex justify-content-between fs-7 mb-1">
+                <span class="fw-semibold text-dark">تم صرف {{ $linesDone }} من {{ $linesTotal }} بنود</span>
+                <span class="text-muted">{{ $issuePct }}%</span>
+            </div>
+            <div class="progress" style="height: 8px;" role="progressbar" aria-valuenow="{{ $issuePct }}" aria-valuemin="0" aria-valuemax="100" aria-label="نسبة صرف البنود">
+                <div class="progress-bar {{ $issuePct === 100 ? 'bg-success' : 'bg-primary' }}" style="width: {{ $issuePct }}%"></div>
+            </div>
+        </div>
+        @if ($canIssue)
+            <a href="{{ route('production.material-requests.fulfill.form', $materialRequest) }}" class="btn btn-success fw-bold d-none d-md-inline-flex align-items-center"><i class="fas fa-dolly me-1" aria-hidden="true"></i> صرف المواد</a>
+        @elseif ($materialRequest->status === 'SUBMITTED')
+            <span class="text-muted fs-7"><i class="fas fa-hourglass-half me-1" aria-hidden="true"></i> بانتظار أمين المستودع</span>
+        @endif
+    </div>
+
     <!-- Info Cards -->
     <div class="row g-4 mb-4">
         <div class="col-md-4">
@@ -105,12 +127,12 @@
                                                 <span class="text-muted">—</span>
                                             @endif
                                         </td>
-                                        <td data-label="المطلوب" class="fw-bold text-primary stack-half">{{ (float)$line->requested_quantity }} {{ $line->baseUnit?->name_ar }}</td>
+                                        <td data-label="المطلوب" class="fw-bold text-primary stack-half text-nowrap">{{ (float)$line->requested_quantity }} {{ $line->baseUnit?->name_ar }}</td>
                                         <td data-label="المعتمد" class="stack-half">{{ $line->approved_quantity !== null ? (float) $line->approved_quantity : '—' }}</td>
-                                        <td data-label="المصروف" class="fw-bold stack-half {{ $lineRemaining <= 0 ? 'text-success' : 'text-warning-emphasis' }}">
+                                        <td data-label="المصروف" class="fw-bold stack-half text-nowrap {{ $lineRemaining <= 0 ? 'text-success' : 'text-warning-emphasis' }}">
                                             {{ (float)$line->issued_quantity }} {{ $line->baseUnit?->name_ar }}
                                         </td>
-                                        <td data-label="المتبقي" class="fw-bold stack-half">{{ $lineRemaining }} {{ $line->baseUnit?->name_ar }}</td>
+                                        <td data-label="المتبقي" class="fw-bold stack-half text-nowrap">{{ $lineRemaining }} {{ $line->baseUnit?->name_ar }}</td>
                                         <td data-label="سبب الطلب" class="stack-half">
                                             <span class="badge bg-light text-dark border fs-8">
                                                 {{ match($line->request_reason) {

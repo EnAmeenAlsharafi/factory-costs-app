@@ -70,7 +70,7 @@
                                         <span class="text-muted small">سري</span>
                                     @endcan
                                 </td>
-                                <td>{{ $waste->occurred_at?->format('Y-m-d H:i') }}</td>
+                                <td class="text-nowrap">{{ $waste->occurred_at?->format('Y-m-d H:i') }}</td>
                                 <td>
                                     @if($waste->approved_by_user_id)
                                         <span class="badge bg-success">معتمد</span>

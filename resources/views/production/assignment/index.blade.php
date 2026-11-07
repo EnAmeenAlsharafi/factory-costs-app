@@ -20,9 +20,16 @@
                 </h1>
                 <p class="page-header-subtitle text-muted mb-0 fs-7">إسناد وإعادة إسناد العمليات الجاهزة للموظفين، مع عرض حمل العمل الحالي لكل موظف.</p>
             </div>
-            <a href="{{ route('production.board.index') }}" class="btn btn-outline-primary">
-                <i class="fas fa-table-columns" aria-hidden="true"></i> لوحة متابعة الإنتاج
-            </a>
+            <div class="d-flex flex-wrap gap-2">
+                @can('production.assignment.manage')
+                    <a href="{{ route('production.pipeline.index', 'assign') }}" class="btn btn-primary">
+                        <i class="fas fa-layer-group" aria-hidden="true"></i> إسناد عدة عمليات دفعة واحدة
+                    </a>
+                @endcan
+                <a href="{{ route('production.board.index') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-table-columns" aria-hidden="true"></i> لوحة متابعة الإنتاج
+                </a>
+            </div>
         </div>
     </div>
 
@@ -84,7 +91,7 @@
                                     @endphp
                                     <tr>
                                         <td>
-                                            <div class="fw-bold text-dark">{{ $po->is_custom_design ? $po->custom_design_name : $po->productModel?->name_ar }}</div>
+                                            <div class="fw-bold text-dark">{{ $po->display_name }}</div>
                                             <a href="{{ route('production.orders.show', $po) }}" class="fs-8 font-monospace text-decoration-none">{{ $po->production_order_number }}</a>
                                             @if (in_array($po->priority, ['URGENT', 'VIP'], true))
                                                 <span class="status-chip status-chip-danger ms-1"><i class="fas fa-bolt" aria-hidden="true"></i> {{ $priorityLabels[$po->priority] }}</span>

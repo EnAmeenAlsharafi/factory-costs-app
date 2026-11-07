@@ -34,6 +34,16 @@ class StatusPresenter
             'BLOCKED' => ['label' => 'متوقف', 'tone' => 'danger', 'icon' => 'fa-hand'],
             'SKIPPED' => ['label' => 'متخطى', 'tone' => 'dark', 'icon' => 'fa-forward'],
         ],
+        'production_order' => [
+            'DRAFT' => ['label' => 'مسودة', 'tone' => 'secondary', 'icon' => 'fa-file-pen'],
+            'READY_FOR_RELEASE' => ['label' => 'جاهز للإطلاق', 'tone' => 'info', 'icon' => 'fa-flag'],
+            'RELEASED' => ['label' => 'تم الإطلاق', 'tone' => 'primary', 'icon' => 'fa-rocket'],
+            'IN_PROGRESS' => ['label' => 'قيد التنفيذ', 'tone' => 'warning', 'icon' => 'fa-gears'],
+            'PARTIALLY_COMPLETED' => ['label' => 'مكتمل جزئياً', 'tone' => 'primary', 'icon' => 'fa-circle-half-stroke'],
+            'COMPLETED' => ['label' => 'مكتمل', 'tone' => 'success', 'icon' => 'fa-circle-check'],
+            'ON_HOLD' => ['label' => 'معلّق', 'tone' => 'dark', 'icon' => 'fa-pause'],
+            'CANCELLED' => ['label' => 'ملغى', 'tone' => 'secondary', 'icon' => 'fa-ban'],
+        ],
         'material_request' => [
             'DRAFT' => ['label' => 'مسودة', 'tone' => 'secondary', 'icon' => 'fa-file-pen'],
             'SUBMITTED' => ['label' => 'بانتظار الصرف', 'tone' => 'warning', 'icon' => 'fa-hourglass-half'],

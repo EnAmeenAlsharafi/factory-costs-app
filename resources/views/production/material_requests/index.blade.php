@@ -10,7 +10,12 @@
             <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">طلبات خامات الإنتاج</h1>
             <p class="page-header-subtitle text-muted mb-0 fs-7">إدارة وصرف طلبات الخامات الصادرة من أقسام الورشة إلى المستودع</p>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex flex-wrap gap-2">
+            @can('production.material_requests')
+                <a href="{{ route('production.pipeline.index', 'materials') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-layer-group me-1" aria-hidden="true"></i> طلب مواد لعدة أوامر
+                </a>
+            @endcan
             <a href="{{ route('production.orders.index') }}" class="btn btn-factory-warning">
                 <i class="fas fa-plus me-1"></i> طلب جديد من أمر إنتاج
             </a>

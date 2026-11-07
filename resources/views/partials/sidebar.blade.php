@@ -298,9 +298,12 @@
 
             <!-- Section 5: Manufacturing Execution -->
             @php
-                $isProductionActive = request()->routeIs('production.orders.*') || request()->routeIs('production.material-requests.*') || request()->routeIs('production.queue.*') || request()->routeIs('production.my-tasks') || request()->routeIs('production.assignment.*') || request()->routeIs('production.quality-incidents.*') || request()->routeIs('production.rework.*') || request()->routeIs('production.waste.*') || request()->routeIs('production.routings.*') || request()->routeIs('production.board.*') || request()->routeIs('production.reports.*');
+                $isProductionActive = request()->routeIs('production.pipeline.*') || request()->routeIs('production.orders.*') || request()->routeIs('production.material-requests.*') || request()->routeIs('production.queue.*') || request()->routeIs('production.my-tasks') || request()->routeIs('production.assignment.*') || request()->routeIs('production.quality-incidents.*') || request()->routeIs('production.rework.*') || request()->routeIs('production.waste.*') || request()->routeIs('production.routings.*') || request()->routeIs('production.board.*') || request()->routeIs('production.reports.*');
             @endphp
-            @if (auth()->user() && auth()->user()->can('production.view'))
+            @php
+                $canUsePipeline = auth()->user() && collect(['orders.approve_production', 'production.release', 'production.material_requests', 'production.assignment.manage'])->contains(fn ($permission) => auth()->user()->can($permission));
+            @endphp
+            @if (auth()->user() && (auth()->user()->can('production.view') || $canUsePipeline))
                 <div class="sidebar-section">
                     <button type="button"
                             @click="toggleSection('production', {{ $isProductionActive ? 'true' : 'false' }})"
@@ -315,6 +318,15 @@
                     <ul class="nav flex-column gap-1 sidebar-sub-menu ps-0"
                         x-show="sidebarCollapsed || isSectionOpen('production', {{ $isProductionActive ? 'true' : 'false' }})"
                         x-transition>
+                        @if ($canUsePipeline)
+                            <li class="nav-item">
+                                <a href="{{ route('production.pipeline.index') }}" class="sidebar-nav-link {{ request()->routeIs('production.pipeline.*') ? 'active' : '' }}" title="مركز تمرير الإنتاج">
+                                    <span class="sidebar-icon"><i class="fas fa-diagram-next"></i></span>
+                                    <span class="sidebar-text">مركز تمرير الإنتاج</span>
+                                </a>
+                            </li>
+                        @endif
+                        @can('production.view')
                         <li class="nav-item">
                             <a href="{{ route('production.orders.index') }}" class="sidebar-nav-link {{ request()->routeIs('production.orders.*') ? 'active' : '' }}" title="أوامر الإنتاج">
                                 <span class="sidebar-icon"><i class="fas fa-industry"></i></span>
@@ -385,6 +397,7 @@
                                 <span class="sidebar-text">تقارير التكلفة والجودة</span>
                             </a>
                         </li>
+                        @endcan
                     </ul>
                 </div>
             @endif

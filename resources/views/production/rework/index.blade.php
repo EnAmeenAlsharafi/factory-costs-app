@@ -44,10 +44,10 @@
                                         {{ $rework->productionOrder?->production_order_number }}
                                     </a>
                                 </td>
-                                <td><span class="badge bg-light text-dark border">{{ $rework->action_type }}</span></td>
+                                <td><span class="badge bg-light text-dark border">{{ \App\Models\ProductionReworkAction::ACTION_LABELS[$rework->action_type] ?? $rework->action_type }}</span></td>
                                 <td><span class="fw-bold">{{ $rework->quantity }} قطعة</span></td>
                                 <td>{{ $rework->assignedDepartment?->name_ar }}</td>
-                                <td>{{ $rework->created_at?->format('Y-m-d H:i') }}</td>
+                                <td class="text-nowrap">{{ $rework->created_at?->format('Y-m-d H:i') }}</td>
                                 <td>
                                     @if($rework->status === 'COMPLETED')
                                         <span class="badge bg-success">مكتمل ומُنجز</span>

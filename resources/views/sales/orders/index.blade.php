@@ -23,11 +23,18 @@
             <h1 id="page-heading" class="h3 mb-1 text-dark fw-bold">طلبات العملاء</h1>
             <p class="text-muted mb-0 fs-7 d-none d-md-block">إدارة طلبات البيع التجارية، المراجعة الفنية، والاعتماد النهائي للإنتاج</p>
         </div>
-        @can('orders.create')
-            <a href="{{ route('sales.orders.create') }}" class="btn btn-warning px-3 fw-semibold">
-                <i class="fas fa-plus" aria-hidden="true"></i> طلب جديد
-            </a>
-        @endcan
+        <div class="d-flex flex-wrap gap-2">
+            @can('orders.approve_production')
+                <a href="{{ route('production.pipeline.index', 'approve') }}" class="btn btn-outline-primary fw-semibold">
+                    <i class="fas fa-layer-group" aria-hidden="true"></i> اعتماد عدة طلبات للإنتاج
+                </a>
+            @endcan
+            @can('orders.create')
+                <a href="{{ route('sales.orders.create') }}" class="btn btn-warning px-3 fw-semibold">
+                    <i class="fas fa-plus" aria-hidden="true"></i> طلب جديد
+                </a>
+            @endcan
+        </div>
     </div>
 
     {{-- Flash messages are rendered once by the layout (partials.flash). --}}

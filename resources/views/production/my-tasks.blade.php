@@ -29,11 +29,11 @@
                 <p class="mb-0 fw-semibold">لا توجد مهام مُسندة إليك حالياً. استلم مهمة من القائمة أدناه.</p>
             </div>
         @else
-            <div class="task-list">
+            <div class="task-list task-grid">
                 @foreach ($myTasks as $op)
                     @php
                         $po = $op->productionOrder;
-                        $productName = $po->is_custom_design ? $po->custom_design_name : ($po->productModel?->name_ar ?? 'منتج');
+                        $productName = $po->display_name;
                         $remaining = max(0, $op->required_quantity - $op->completed_quantity);
                         $isRework = $op->targetReworkActions->isNotEmpty();
                         $tone = \App\Services\StatusPresenter::present('operation', $op->status)['tone'];
@@ -87,11 +87,11 @@
                     <p class="mb-0 fw-semibold">لا توجد مهام جاهزة غير مُسندة في قسمك حالياً.</p>
                 </div>
             @else
-                <div class="task-list">
+                <div class="task-list task-grid">
                     @foreach ($claimable as $op)
                         @php
                             $po = $op->productionOrder;
-                            $productName = $po->is_custom_design ? $po->custom_design_name : ($po->productModel?->name_ar ?? 'منتج');
+                            $productName = $po->display_name;
                         @endphp
                         <article class="task-card tone-info" aria-labelledby="claimable-title-{{ $op->id }}">
                             <div class="task-card-head">

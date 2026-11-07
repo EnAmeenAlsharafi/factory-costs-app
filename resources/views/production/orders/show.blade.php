@@ -12,63 +12,7 @@
             </p>
         </div>
     @endif
-    <!-- Header -->
-    <div class="page-header-card d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
-        <div>
-            <div class="d-flex align-items-center gap-2">
-                <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">أمر إنتاج: {{ $order->production_order_number }}</h1>
-                <span class="badge {{ $order->status_badge_class }} fs-6">{{ $order->status_arabic }}</span>
-                @if($order->has_customer_order_changed)
-                    <span class="badge bg-warning text-dark fs-7" title="تم تعديل طلب العميل في قسم المبيعات بعد إطلاق أمر الإنتاج"><i class="fas fa-exclamation-triangle me-1"></i>تم تعديل طلب العميل الأصلي</span>
-                @endif
-            </div>
-            <p class="page-header-subtitle text-muted mb-0 fs-7">
-                مرتبط بطلب العميل: <a href="{{ route('sales.orders.show', $order->customerOrder) }}" class="fw-bold text-decoration-none font-monospace">{{ $order->customerOrder?->order_number }}</a>
-                &bull; العميل: <strong>{{ $order->customerOrder?->customer?->name }}</strong>
-            </p>
-        </div>
-        <div class="d-flex flex-wrap gap-2">
-            <!-- Stage 10 Actions -->
-            <a href="{{ route('production.material-requests.create', ['production_order_id' => $order->id]) }}" class="btn btn-factory-warning">
-                <i class="fas fa-clipboard-list me-1"></i> طلب خامات إنتاج
-            </a>
-            <a href="{{ route('production.quality-incidents.create', ['production_order_id' => $order->id]) }}" class="btn btn-outline-danger">
-                <i class="fas fa-exclamation-circle me-1"></i> بلاغ جودة
-            </a>
-            <a href="{{ route('production.waste.create', ['production_order_id' => $order->id]) }}" class="btn btn-outline-secondary">
-                <i class="fas fa-dumpster me-1"></i> تسجيل هدر
-            </a>
-
-            @if((float)$order->completed_quantity > 0 && auth()->user()->can('finished_goods.receive'))
-                <a href="{{ route('finished-goods.receipts.create', ['production_order_id' => $order->id]) }}" class="btn btn-outline-success">
-                    <i class="fas fa-boxes me-1"></i> تسليم للمخزن الجاهز
-                </a>
-            @endif
-
-            @if(in_array($order->status, ['DRAFT', 'READY_FOR_RELEASE']) && auth()->user()->can('production.release'))
-                <a href="{{ route('production.orders.release.form', $order) }}" class="btn btn-success">
-                    <i class="fas fa-play me-1"></i> إطلاق للورشة
-                </a>
-            @endif
-
-            @if(in_array($order->status, ['RELEASED', 'IN_PROGRESS', 'PARTIALLY_COMPLETED']) && auth()->user()->can('production.hold'))
-                <button type="button" class="btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#holdModal">
-                    <i class="fas fa-pause me-1"></i> تعليق
-                </button>
-            @elseif($order->status === 'ON_HOLD' && auth()->user()->can('production.hold'))
-                <form action="{{ route('production.orders.resume', $order) }}" method="POST" class="d-inline">
-                    @csrf
-                    <button type="submit" class="btn btn-outline-success">
-                        <i class="fas fa-play me-1"></i> استئناف
-                    </button>
-                </form>
-            @endif
-
-            <a href="{{ route('production.orders.index') }}" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-right me-1"></i> عودة
-            </a>
-        </div>
-    </div>
+    @include('production.orders.partials.header')
 
     <!-- Quick Stats Cards -->
     <div class="row g-3 mb-4">
@@ -127,40 +71,40 @@
     </div>
 
     <!-- Navigation Tabs -->
-    <ul class="nav nav-tabs border-bottom mb-4" id="orderTabs" role="tablist">
+    <ul class="nav nav-tabs order-tabs border-bottom mb-4" id="orderTabs" role="tablist">
         <li class="nav-item">
             <button class="nav-link active fw-bold" id="wip-tab" data-bs-toggle="tab" data-bs-target="#wip-pane" type="button">
-                <i class="fas fa-tasks me-1"></i> مراحل وعمليات الورشة (WIP)
+                <i class="fas fa-tasks me-1"></i> المراحل والمواصفات
             </button>
         </li>
         <li class="nav-item">
             <button class="nav-link fw-bold" id="materials-tab" data-bs-toggle="tab" data-bs-target="#materials-pane" type="button">
-                <i class="fas fa-clipboard-list me-1"></i> طلبات وصرف الخامات ({{ $order->materialRequests->count() }})
+                <i class="fas fa-clipboard-list me-1"></i> الخامات ({{ $order->materialRequests->count() }})
             </button>
         </li>
         <li class="nav-item">
             <button class="nav-link fw-bold" id="quality-tab" data-bs-toggle="tab" data-bs-target="#quality-pane" type="button">
-                <i class="fas fa-exclamation-triangle me-1"></i> حالات الجودة وإعادة التصنيع ({{ $order->qualityIncidents->count() }})
+                <i class="fas fa-exclamation-triangle me-1"></i> الجودة ({{ $order->qualityIncidents->count() }})
             </button>
         </li>
         <li class="nav-item">
             <button class="nav-link fw-bold" id="waste-tab" data-bs-toggle="tab" data-bs-target="#waste-pane" type="button">
-                <i class="fas fa-dumpster me-1"></i> الهدر والتلف التحليلي ({{ $order->wasteRecords->count() }})
+                <i class="fas fa-dumpster me-1"></i> الهدر ({{ $order->wasteRecords->count() }})
             </button>
         </li>
         <li class="nav-item">
             <button class="nav-link fw-bold" id="cost-tab" data-bs-toggle="tab" data-bs-target="#cost-pane" type="button">
-                <i class="fas fa-calculator me-1"></i> ملخص تكلفة المواد والإستيعاب
+                <i class="fas fa-calculator me-1"></i> التكلفة
             </button>
         </li>
         <li class="nav-item">
             <button class="nav-link fw-bold" id="fg-tab" data-bs-toggle="tab" data-bs-target="#fg-pane" type="button">
-                <i class="fas fa-boxes me-1"></i> تسليم المنتج الجاهز للمخزن ({{ $order->finishedGoodsReceipts->count() }})
+                <i class="fas fa-boxes me-1"></i> الاستلام بالمخزون ({{ $order->finishedGoodsReceipts->count() }})
             </button>
         </li>
         <li class="nav-item">
             <button class="nav-link fw-bold" id="timeline-tab" data-bs-toggle="tab" data-bs-target="#timeline-pane" type="button">
-                <i class="fas fa-timeline me-1"></i> سجل رحلة الطلب
+                <i class="fas fa-timeline me-1"></i> السجل
             </button>
         </li>
     </ul>
@@ -173,7 +117,7 @@
                 <div class="col-md-5">
                     <div class="card border-0 shadow-sm mb-4">
                         <div class="card-header bg-white py-3">
-                            <h6 class="fw-bold mb-0 text-primary"><i class="fas fa-bed me-1"></i> مواصفات المصنع المعتمدة (Manufacturing Snapshot)</h6>
+                            <h6 class="fw-bold mb-0 text-primary"><i class="fas fa-bed me-1"></i> مواصفات التصنيع المعتمدة</h6>
                         </div>
                         <div class="card-body">
                             <table class="table table-sm table-borderless">
@@ -256,9 +200,9 @@
                 </div>
 
                 <div class="col-md-7">
-                    <div class="card border-0 shadow-sm mb-4">
+                    <div class="card border-0 shadow-sm mb-4" id="operations" tabindex="-1">
                         <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                            <h6 class="fw-bold mb-0 text-primary"><i class="fas fa-tasks me-1"></i> مراحل وعمليات الورشة (Work Center Operations)</h6>
+                            <h6 class="fw-bold mb-0 text-primary"><i class="fas fa-tasks me-1"></i> مراحل التصنيع في الأقسام</h6>
                             <a href="{{ route('production.queue.index') }}" class="btn btn-sm btn-outline-primary"><i class="fas fa-external-link-alt me-1"></i> طابور الأقسام</a>
                         </div>
                         <div class="card-body">
@@ -303,6 +247,23 @@
                                                 <span><i class="fas fa-flag-checkered me-1" aria-hidden="true"></i>اكتمال: {{ $op->completed_at->format('Y-m-d H:i') }}</span>
                                             @endif
                                         </div>
+
+                                        @if (in_array($op->status, ['READY', 'ASSIGNED'], true) && $assignableEmployees !== null)
+                                            @php $departmentEmployees = $assignableEmployees->get($op->workCenter?->department_id, collect()); @endphp
+                                            @if ($departmentEmployees->isNotEmpty())
+                                                <form action="{{ route('production.operations.assign', $op) }}" method="POST" class="op-assign-form mt-2">
+                                                    @csrf
+                                                    <label for="assign-op-{{ $op->id }}" class="visually-hidden">إسناد «{{ $op->operation_name_snapshot }}» إلى</label>
+                                                    <select id="assign-op-{{ $op->id }}" name="employee_id" class="form-select form-select-sm" required>
+                                                        <option value="">{{ $op->assigned_user_id ? 'إعادة الإسناد إلى...' : 'إسناد إلى...' }}</option>
+                                                        @foreach ($departmentEmployees as $employee)
+                                                            <option value="{{ $employee->id }}" @selected($op->assigned_user_id === $employee->id)>{{ $employee->name }} — {{ $employee->open_tasks }} مهام مفتوحة</option>
+                                                        @endforeach
+                                                    </select>
+                                                    <button type="submit" class="btn btn-sm btn-primary text-nowrap">{{ $op->assigned_user_id ? 'إعادة إسناد' : 'إسناد' }}</button>
+                                                </form>
+                                            @endif
+                                        @endif
 
                                         @if ($op->status === 'BLOCKED' && $op->activeBlock)
                                             <div class="alert alert-danger py-2 mt-2 mb-0 fs-8" role="alert">
@@ -416,8 +377,8 @@
                                                 {{ $inc->incident_number }}
                                             </a>
                                         </td>
-                                        <td>{{ $inc->incident_type }}</td>
-                                        <td><span class="badge bg-warning text-dark">{{ $inc->severity }}</span></td>
+                                        <td>{{ \App\Models\QualityIncident::TYPE_LABELS[$inc->incident_type] ?? $inc->incident_type }}</td>
+                                        <td><span class="badge bg-warning text-dark">{{ \App\Models\QualityIncident::SEVERITY_LABELS[$inc->severity][0] ?? $inc->severity }}</span></td>
                                         <td>{{ $inc->detectedDepartment?->name_ar }}</td>
                                         <td>{{ $inc->responsibleDepartment?->name_ar ?? 'غير محدد' }}</td>
                                         <td><span class="badge bg-primary">{{ $inc->disposition ?? 'قيد الدراسة' }}</span></td>

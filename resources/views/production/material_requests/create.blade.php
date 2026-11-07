@@ -15,7 +15,29 @@
         </a>
     </div>
 
-    <form action="{{ route('production.material-requests.store') }}" method="POST">
+    @php
+        $oldManualLines = collect(old('lines', []))
+            ->filter(fn ($line, $key) => str_starts_with((string) $key, 'm'))
+            ->map(fn ($line, $key) => [
+                'key' => $key,
+                'material_id' => isset($line['material_id']) && $line['material_id'] !== '' ? (int) $line['material_id'] : '',
+                'fabric_color_id' => $line['fabric_color_id'] ?? '',
+                'requested_quantity' => $line['requested_quantity'] ?? '',
+                'request_reason' => $line['request_reason'] ?? 'PLANNED_PRODUCTION',
+            ])->values();
+        $startWithEmptyLine = $oldManualLines->isEmpty() && $productionOrder->materialRequirements->isEmpty();
+        $defaultManualReason = $productionOrder->materialRequirements->isEmpty() ? 'PLANNED_PRODUCTION' : 'ADDITIONAL_REQUIREMENT';
+    @endphp
+    <form action="{{ route('production.material-requests.store') }}" method="POST"
+          x-data="{
+              materials: @js($materialOptions),
+              manualLines: @js($oldManualLines),
+              nextKey: {{ (int) $oldManualLines->map(fn ($line) => (int) substr($line['key'], 1))->max() + 1 }},
+              materialOf(line) { return this.materials.find(m => m.id === Number(line.material_id)); },
+              addLine() { this.manualLines.push({ key: 'm' + this.nextKey++, material_id: '', fabric_color_id: '', requested_quantity: '', request_reason: '{{ $defaultManualReason }}' }); },
+              removeLine(key) { this.manualLines = this.manualLines.filter(l => l.key !== key); },
+          }"
+          @if($startWithEmptyLine) x-init="addLine()" @endif>
         @csrf
         <input type="hidden" name="production_order_id" value="{{ $productionOrder->id }}">
 
@@ -31,7 +53,7 @@
                             <label class="form-label required">المستودع الموجه له الطلب</label>
                             <select name="warehouse_id" class="form-select" required>
                                 @foreach($warehouses as $wh)
-                                    <option value="{{ $wh->id }}">{{ $wh->name_ar }} ({{ $wh->type }})</option>
+                                    <option value="{{ $wh->id }}" @selected(old('warehouse_id') == $wh->id)>{{ $wh->name_ar }}@if($wh->type) ({{ $wh->type }})@endif</option>
                                 @endforeach
                             </select>
                         </div>
@@ -71,7 +93,7 @@
                             <table class="table table-hover align-middle mb-0" id="lines-table">
                                 <thead class="bg-light">
                                     <tr>
-                                        <th style="width: 35%;">المادة الخام</th>
+                                        <th style="min-width: 14rem;">المادة الخام</th>
                                         <th>لون القماش</th>
                                         <th>الكمية المطلوبة</th>
                                         <th>سبب الطلب</th>
@@ -104,7 +126,7 @@
                                                 <input type="number" step="0.0001" name="lines[{{ $index }}][requested_quantity]" class="form-control form-control-sm" value="{{ (float)$req->total_planned_quantity }}" required min="0.0001">
                                             </td>
                                             <td>
-                                                <select name="lines[{{ $index }}][request_reason]" class="form-select form-select-sm">
+                                                <select name="lines[{{ $index }}][request_reason]" class="form-select form-select-sm" style="min-width: 9rem;">
                                                     <option value="PLANNED_PRODUCTION" selected>إنتاج مخطط (PLANNED)</option>
                                                     <option value="ADDITIONAL_REQUIREMENT">احتياج إضافي (ADDITIONAL)</option>
                                                     <option value="REWORK">إعادة تصنيع (REWORK)</option>
@@ -117,14 +139,63 @@
                                             </td>
                                         </tr>
                                     @empty
-                                        <tr>
+                                        <tr x-show="manualLines.length === 0">
                                             <td colspan="5" class="text-center py-4 text-muted">
-                                                لا تتوفر وصفة رسمية مسجلة لهذا أمر الإنتاج. يمكنك إضافة سطر طلب عادي مخصص.
+                                                لا توجد وصفة تصنيع معتمدة لهذا الأمر، لذلك لم تُحسب الخامات تلقائياً. أضف الخامات المطلوبة يدوياً.
                                             </td>
                                         </tr>
                                     @endforelse
+                                    <template x-for="line in manualLines" :key="line.key">
+                                        <tr>
+                                            <td data-label="المادة الخام">
+                                                <select class="form-select form-select-sm" :name="'lines[' + line.key + '][material_id]'" x-model.number="line.material_id" @change="line.fabric_color_id = ''" required aria-label="المادة الخام">
+                                                    <option value="">اختر الخامة...</option>
+                                                    <template x-for="material in materials" :key="material.id">
+                                                        <option :value="material.id" x-text="material.label" :selected="material.id === line.material_id"></option>
+                                                    </template>
+                                                </select>
+                                                <input type="hidden" :name="'lines[' + line.key + '][base_unit_id]'" :value="materialOf(line)?.unit_id ?? ''">
+                                            </td>
+                                            <td data-label="لون القماش">
+                                                <template x-if="materialOf(line)?.colors.length">
+                                                    <select class="form-select form-select-sm" :name="'lines[' + line.key + '][fabric_color_id]'" x-model="line.fabric_color_id" aria-label="لون القماش">
+                                                        <option value="">تحديد اللون...</option>
+                                                        <template x-for="color in materialOf(line).colors" :key="color.id">
+                                                            <option :value="color.id" x-text="color.name"></option>
+                                                        </template>
+                                                    </select>
+                                                </template>
+                                                <span class="text-muted" x-show="!materialOf(line)?.colors.length">—</span>
+                                            </td>
+                                            <td data-label="الكمية المطلوبة">
+                                                <input type="number" step="0.0001" min="0.0001" class="form-control form-control-sm" :name="'lines[' + line.key + '][requested_quantity]'" x-model="line.requested_quantity" required aria-label="الكمية المطلوبة">
+                                            </td>
+                                            <td data-label="سبب الطلب">
+                                                <select class="form-select form-select-sm" style="min-width: 9rem;" :name="'lines[' + line.key + '][request_reason]'" x-model="line.request_reason" aria-label="سبب الطلب">
+                                                    <option value="PLANNED_PRODUCTION">إنتاج مخطط</option>
+                                                    <option value="ADDITIONAL_REQUIREMENT">احتياج إضافي</option>
+                                                    <option value="REWORK">إعادة تصنيع</option>
+                                                    <option value="REMANUFACTURE">إعادة إنتاج</option>
+                                                    <option value="CORRECTION">تصحيح</option>
+                                                </select>
+                                            </td>
+                                            <td data-label="الوحدة">
+                                                <div class="d-flex align-items-center gap-2 justify-content-between">
+                                                    <span class="badge bg-light text-dark border" x-text="materialOf(line)?.unit_name ?? '—'"></span>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger" @click="removeLine(line.key)" aria-label="حذف السطر">
+                                                        <i class="fas fa-trash" aria-hidden="true"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </template>
                                 </tbody>
                             </table>
+                        </div>
+                        <div class="p-3 border-top">
+                            <button type="button" class="btn btn-outline-primary btn-sm" @click="addLine()">
+                                <i class="fas fa-plus me-1" aria-hidden="true"></i> إضافة خامة
+                            </button>
                         </div>
                     </div>
                     <div class="card-footer bg-white text-end py-3">

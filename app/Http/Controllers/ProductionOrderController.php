@@ -17,6 +17,7 @@ use App\Services\ProductionCostService;
 use App\Services\ProductionOrderService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class ProductionOrderController extends Controller
@@ -151,7 +152,30 @@ class ProductionOrderController extends Controller
         $canViewCost = $request->user()->can('costing.view');
         $timeline = $this->timelineService->forProductionOrder($order, viewer: $user);
 
-        return view('production.orders.show', compact('order', 'costSummary', 'canViewCost', 'timeline'));
+        $assignableEmployees = $user->can('production.assignment.manage')
+            ? $this->employeesForOperations($order, $user)
+            : null;
+
+        return view('production.orders.show', compact('order', 'costSummary', 'canViewCost', 'timeline', 'assignableEmployees'));
+    }
+
+    /**
+     * Active workers of the departments that own this order's operations, with their open task count.
+     *
+     * @return Collection<int, Collection<int, User>>
+     */
+    private function employeesForOperations(ProductionOrder $order, User $user): Collection
+    {
+        $departmentIds = $order->operations->pluck('workCenter.department_id')->filter()->unique()
+            ->when($user->isDepartmentRestricted(), fn (Collection $ids) => $ids->intersect([$user->productionDepartmentId()]));
+
+        return User::query()
+            ->where('is_active', true)
+            ->whereIn('department_id', $departmentIds)
+            ->withCount(['assignedOperations as open_tasks' => fn ($q) => $q->whereIn('status', ['ASSIGNED', 'IN_PROGRESS', 'PARTIALLY_COMPLETED'])])
+            ->orderBy('name')
+            ->get()
+            ->groupBy('department_id');
     }
 
     /**

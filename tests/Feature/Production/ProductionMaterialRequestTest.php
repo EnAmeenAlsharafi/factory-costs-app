@@ -138,6 +138,41 @@ class ProductionMaterialRequestTest extends TestCase
         $this->assertEquals(20, (float) $request->lines->first()->requested_quantity);
     }
 
+    public function test_order_without_recipe_offers_manual_material_lines(): void
+    {
+        $this->actingAs($this->manager)
+            ->get(route('production.material-requests.create', ['production_order_id' => $this->productionOrder->id]))
+            ->assertOk()
+            ->assertSee('إضافة خامة')
+            ->assertSee($this->material->name_ar)
+            ->assertDontSee('validation.required');
+
+        $this->actingAs($this->manager)
+            ->from(route('production.material-requests.create', ['production_order_id' => $this->productionOrder->id]))
+            ->post(route('production.material-requests.store'), [
+                'production_order_id' => $this->productionOrder->id,
+                'warehouse_id' => $this->warehouse->id,
+                'request_date' => now()->toDateString(),
+            ])
+            ->assertSessionHasErrors(['lines' => 'أضف خامة واحدة على الأقل للطلب.']);
+
+        $this->actingAs($this->manager)->post(route('production.material-requests.store'), [
+            'production_order_id' => $this->productionOrder->id,
+            'warehouse_id' => $this->warehouse->id,
+            'request_date' => now()->toDateString(),
+            'lines' => [
+                'm1' => [
+                    'material_id' => $this->material->id,
+                    'requested_quantity' => 3.5,
+                    'base_unit_id' => $this->material->base_unit_id,
+                    'request_reason' => 'PLANNED_PRODUCTION',
+                ],
+            ],
+        ])->assertRedirect();
+
+        $this->assertEquals(3.5, (float) ProductionMaterialRequest::firstOrFail()->lines->first()->requested_quantity);
+    }
+
     public function test_can_submit_and_fulfill_material_request(): void
     {
         $service = app(ProductionMaterialRequestService::class);

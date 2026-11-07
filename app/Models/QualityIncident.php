@@ -10,6 +10,45 @@ class QualityIncident extends Model
 {
     use HasFactory;
 
+    /**
+     * @var array<string, string>
+     */
+    public const TYPE_LABELS = [
+        'WRONG_DIMENSION' => 'خطأ في المقاسات',
+        'WRONG_FABRIC' => 'خطأ في نوع القماش',
+        'WRONG_COLOR' => 'خطأ في اللون',
+        'MATERIAL_DAMAGE' => 'تلف أو عيب خامة',
+        'WORKMANSHIP_DEFECT' => 'عيب تصنيع',
+        'LOADING_DAMAGE' => 'تلف مناولة وتحميل',
+        'MISSING_COMPONENT' => 'نقص مكوّن',
+        'ASSEMBLY_ERROR' => 'خطأ تجميع',
+        'TRANSPORT_DAMAGE' => 'تلف أثناء النقل',
+        'OTHER' => 'أخرى',
+    ];
+
+    /**
+     * Severity => [Arabic label, tone].
+     *
+     * @var array<string, array{0: string, 1: string}>
+     */
+    public const SEVERITY_LABELS = [
+        'LOW' => ['منخفضة', 'info'],
+        'MEDIUM' => ['متوسطة', 'warning'],
+        'HIGH' => ['عالية', 'danger'],
+        'CRITICAL' => ['حرجة', 'dark'],
+    ];
+
+    /**
+     * @var array<string, string>
+     */
+    public const DISPOSITION_LABELS = [
+        'REPAIR' => 'إصلاح بسيط',
+        'REWORK' => 'إعادة تصنيع',
+        'REMANUFACTURE' => 'إعادة إنتاج كاملة',
+        'SCRAP' => 'إتلاف',
+        'ACCEPT_AS_IS' => 'قبول بحالته',
+    ];
+
     protected $fillable = [
         'incident_number',
         'production_order_id',

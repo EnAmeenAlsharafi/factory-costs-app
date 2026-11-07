@@ -9,7 +9,12 @@
             <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2"><i class="fas fa-chart-kanban text-warning fs-5" aria-hidden="true"></i>لوحة متابعة الإنتاج والورش</h1>
             <p class="page-header-subtitle text-muted mb-0 fs-7">متابعة شاملة لتقدم العمليات التشغيلية بالأقسام وتحليل اختناقات الورش</p>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex flex-wrap gap-2">
+            @if (collect(['orders.approve_production', 'production.release', 'production.material_requests', 'production.assignment.manage'])->contains(fn ($permission) => auth()->user()->can($permission)))
+                <a href="{{ route('production.pipeline.index') }}" class="btn btn-primary">
+                    <i class="fas fa-diagram-next me-1" aria-hidden="true"></i> مركز تمرير الإنتاج
+                </a>
+            @endif
             <a href="{{ route('production.orders.index') }}" class="btn btn-outline-primary">
                 <i class="fas fa-industry me-1"></i> أوامر الإنتاج
             </a>
@@ -66,9 +71,9 @@
     <h6 class="fw-bold mb-3 text-dark"><i class="fas fa-triangle-exclamation me-1 text-warning"></i> يحتاج اهتماماً الآن</h6>
     <div class="row g-3 mb-4">
         <div class="col-6 col-lg-2 col-md-4">
-            <a href="{{ route('production.assignment.index', ['unassigned_only' => 1]) }}" class="card border-0 shadow-sm text-decoration-none h-100 {{ $attention['ready_unassigned'] > 0 ? 'border-start border-info border-4' : '' }}">
+            <a href="{{ auth()->user()->can('production.assignment.manage') ? route('production.pipeline.index', 'assign') : route('production.assignment.index', ['unassigned_only' => 1]) }}" class="card border-0 shadow-sm text-decoration-none h-100 {{ $attention['ready_unassigned'] > 0 ? 'border-start border-info border-4' : '' }}">
                 <div class="card-body p-3">
-                    <small class="text-muted d-block">جاهز وغير مُسند</small>
+                    <small class="text-muted d-block">جاهز وغير مُسند <i class="fas fa-arrow-left fs-8" aria-hidden="true"></i></small>
                     <span class="fs-4 fw-bold text-info">{{ $attention['ready_unassigned'] }}</span>
                 </div>
             </a>
@@ -221,7 +226,7 @@
                                     </a>
                                 </td>
                                 <td class="fw-semibold">{{ $lPo->customerOrder?->customer?->name }}</td>
-                                <td>{{ $lPo->is_custom_design ? $lPo->custom_design_name : $lPo->productModel?->name_ar }} ({{ (int)$lPo->requested_width_cm }}×{{ (int)$lPo->requested_length_cm }})</td>
+                                <td>{{ $lPo->display_name }} ({{ (int)$lPo->requested_width_cm }}×{{ (int)$lPo->requested_length_cm }})</td>
                                 <td class="text-center fw-bold">
                                     <span class="text-success fs-6">{{ $lPo->completed_quantity }}</span> / {{ $lPo->released_quantity }}
                                 </td>

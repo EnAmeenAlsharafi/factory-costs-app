@@ -181,7 +181,7 @@
             @endforeach
         </div>
 
-        <x-mobile-action-bar>
+        <x-mobile-action-bar class="action-bar-sticky">
             <a href="{{ route('production.material-requests.show', $materialRequest) }}" class="btn btn-light border">إلغاء</a>
             <button type="submit" class="btn btn-success fw-bold" :disabled="!anySelected || hasErrors">
                 <i class="fas fa-dolly" aria-hidden="true"></i> صرف المواد

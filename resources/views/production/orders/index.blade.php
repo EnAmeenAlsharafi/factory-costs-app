@@ -10,9 +10,14 @@
             <p class="page-header-subtitle text-muted mb-0 fs-7">إدارة أوامر التصنيع، متابعة حالات الإطلاق والإنجاز والإيقاف بالورشة</p>
         </div>
         @can('production.release')
-            <a href="{{ route('production.orders.create') }}" class="btn btn-factory-warning">
-                <i class="fas fa-plus me-1"></i> إنشاء أمر إنتاج
-            </a>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{{ route('production.pipeline.index', 'release') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-layer-group me-1" aria-hidden="true"></i> إطلاق عدة طلبات
+                </a>
+                <a href="{{ route('production.orders.create') }}" class="btn btn-factory-warning">
+                    <i class="fas fa-plus me-1"></i> إنشاء أمر إنتاج
+                </a>
+            </div>
         @endcan
     </div>
 
