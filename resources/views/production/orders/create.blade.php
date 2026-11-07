@@ -4,10 +4,10 @@
 
 @section('content')
 <div class="container-fluid px-4 py-3">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-header-card d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="fw-bold mb-1"><i class="fas fa-plus-circle text-primary me-2"></i>إنشاء أمر إنتاج من طلب عميل</h4>
-            <p class="text-muted mb-0">تحويل بنود طلبات العملاء المعتمدة للإنتاج إلى أمر تصنيع بالورشة</p>
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2"><i class="fas fa-plus-circle text-warning fs-5" aria-hidden="true"></i>إنشاء أمر إنتاج من طلب عميل</h1>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">تحويل بنود طلبات العملاء المعتمدة للإنتاج إلى أمر تصنيع بالورشة</p>
         </div>
         <a href="{{ route('production.orders.index') }}" class="btn btn-outline-secondary">
             <i class="fas fa-arrow-right me-1"></i> عودة لأوامر الإنتاج
@@ -29,7 +29,7 @@
                             <select name="customer_order_line_id" id="order-line-select" class="form-select @error('customer_order_line_id') is-invalid @enderror" required>
                                 <option value="">-- اختر البند المعتمد للإنتاج --</option>
                                 @foreach($approvedOrders as $ord)
-                                    <optgroup label="طلب رقم: {{ $ord->order_number }} (العميل: {{ $ord->customer?->name_ar }})">
+                                    <optgroup label="طلب رقم: {{ $ord->order_number }} (العميل: {{ $ord->customer?->name }})">
                                         @foreach($ord->lines as $line)
                                             @php
                                                 $alreadyReleased = (int) ($line->released_quantity_sum ?? 0);

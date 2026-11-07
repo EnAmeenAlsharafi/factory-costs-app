@@ -6,9 +6,11 @@
     $initialOptions = old('options', $savedOptions);
 @endphp
 <div class="container-fluid px-4 py-4">
-    <a href="{{ route('sales.ready-stock-products.edit', $material) }}">العودة لبيانات المنتج</a>
-    <h1 class="h3 mt-3">خيارات ومقاسات {{ $material->sales_display_name ?: $material->name_ar }}</h1>
-    <p class="text-muted">لكل مقاس سعره وصنفه في المخزون. عند إدخال الطلب تختار المنتج ثم المقاس، ويُعبّأ سعره تلقائيًا.</p>
+    <div class="page-header-card mb-4">
+        <a href="{{ route('sales.ready-stock-products.edit', $material) }}" class="text-decoration-none text-secondary fs-7 d-inline-block mb-2"><i class="fas fa-arrow-right me-1" aria-hidden="true"></i> العودة لبيانات المنتج</a>
+        <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2"><i class="fas fa-ruler-combined text-warning fs-5" aria-hidden="true"></i>خيارات ومقاسات {{ $material->sales_display_name ?: $material->name_ar }}</h1>
+        <p class="page-header-subtitle text-muted mb-0 fs-7">لكل مقاس سعره وصنفه في المخزون. عند إدخال الطلب تختار المنتج ثم المقاس، ويُعبّأ سعره تلقائيًا.</p>
+    </div>
     <form method="POST" action="{{ route('sales.ready-stock-products.options.store', $material) }}" data-unsaved-warning
           x-data="{ rows: (@js($initialOptions)).map(row => ({...row, key: crypto.randomUUID()})), add(label = '') { if(this.rows.length < 100) this.rows.push({id: '', label, sales_sku: '', sales_price: '', is_active: 1, key: crypto.randomUUID()}); }, common() { ['90×190','100×200','120×190','120×200','140×200','150×200','160×200','180×200','200×200'].forEach(label => { if(!this.rows.some(row => row.label === label)) this.add(label); }); } }">
         @csrf

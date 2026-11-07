@@ -4,11 +4,11 @@
 
 @section('content')
 <div class="container-fluid px-4 py-3">
-    <div class="mb-4">
-        <h1 class="h3 fw-bold text-dark mb-1">
-            <i class="fas fa-plus-circle text-warning me-2"></i> تسجيل دفعة عميل تشغيلية جديدة
+    <div class="page-header-card mb-4">
+        <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+            <i class="fas fa-plus-circle text-warning fs-5" aria-hidden="true"></i> تسجيل دفعة عميل تشغيلية جديدة
         </h1>
-        <p class="text-muted mb-0 small">إدخال بيانات استلام دفعة مالية لحساب العميل أو لطلب مخصص.</p>
+        <p class="page-header-subtitle text-muted mb-0 fs-7">إدخال بيانات استلام دفعة مالية لحساب العميل أو لطلب مخصص.</p>
     </div>
 
     <div class="row justify-content-center">

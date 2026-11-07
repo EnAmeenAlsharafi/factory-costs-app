@@ -4,13 +4,13 @@
 
 @section('content')
 <div class="container-fluid px-4 py-3">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div class="page-header-card d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <div>
-            <h4 class="fw-bold mb-1"><i class="fas fa-route text-primary me-2"></i>مسارات التصنيع (Production Routings)</h4>
-            <p class="text-muted mb-0">إدارة القوالب التشغيلية ومسارات العمليات المتعاقبة والمتوازية للورشة</p>
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2"><i class="fas fa-route text-warning fs-5" aria-hidden="true"></i>مسارات التصنيع</h1>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">إدارة القوالب التشغيلية ومسارات العمليات المتعاقبة والمتوازية للورشة</p>
         </div>
         @can('production.manage_routing')
-            <a href="{{ route('production.routings.create') }}" class="btn btn-primary">
+            <a href="{{ route('production.routings.create') }}" class="btn btn-factory-warning">
                 <i class="fas fa-plus me-1"></i> إنشاء مسار تصنيع جديد
             </a>
         @endcan
@@ -32,7 +32,7 @@
                 </div>
                 <div class="col-md-2 d-flex gap-2">
                     <button type="submit" class="btn btn-primary w-100"><i class="fas fa-search me-1"></i> تصفية</button>
-                    <a href="{{ route('production.routings.index') }}" class="btn btn-outline-secondary" title="إعادة ضبط"><i class="fas fa-undo"></i></a>
+                    <a href="{{ route('production.routings.index') }}" class="btn btn-outline-secondary" title="إعادة ضبط الفلاتر" aria-label="إعادة ضبط الفلاتر"><i class="fas fa-undo" aria-hidden="true"></i></a>
                 </div>
             </form>
         </div>

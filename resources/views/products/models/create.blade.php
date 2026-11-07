@@ -6,16 +6,16 @@
 <div class="container-fluid px-4 py-3">
 
     <!-- Header & Breadcrumbs -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div class="page-header-card d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
         <div>
             <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-1">
+                <ol class="breadcrumb mb-2 fs-8">
                     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}" class="text-decoration-none">الرئيسية</a></li>
                     <li class="breadcrumb-item"><a href="{{ route('products.models.index') }}" class="text-decoration-none">موديلات المصنع</a></li>
                     <li class="breadcrumb-item active" aria-current="page">إضافة موديل جديد</li>
                 </ol>
             </nav>
-            <h1 class="h3 fw-bold mb-0 text-dark">إضافة موديل جديد بمصنع سدير (New Product Model)</h1>
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">إضافة موديل جديد بمصنع سدير</h1>
         </div>
         <div>
             <a href="{{ route('products.models.index') }}" class="btn btn-outline-secondary">

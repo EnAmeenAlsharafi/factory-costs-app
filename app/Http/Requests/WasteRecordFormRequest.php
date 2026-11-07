@@ -2,10 +2,14 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\ValidatesProductionDepartmentScope;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 class WasteRecordFormRequest extends FormRequest
 {
+    use ValidatesProductionDepartmentScope;
+
     public function authorize(): bool
     {
         return $this->user()?->can('production.record_waste') ?? false;
@@ -29,5 +33,10 @@ class WasteRecordFormRequest extends FormRequest
             'occurred_at' => 'required|date',
             'notes' => 'nullable|string|max:1000',
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(fn (Validator $validator) => $this->validateProductionDepartmentScope($validator));
     }
 }

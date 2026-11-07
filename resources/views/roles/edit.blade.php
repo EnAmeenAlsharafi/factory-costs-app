@@ -7,34 +7,18 @@
 <div class="d-flex flex-column gap-4">
     @include('partials.page-header', [
         'title' => 'تعديل صلاحيات ' . $role->display_name,
-        'subtitle' => 'حدد الصلاحيات الممنوحة للدور. تظهر المفاتيح التقنية كمرجع ثانوي فقط.',
+        'subtitle' => $role->department
+            ? 'دور خاص بقسم ' . $role->department->name_ar . ' — تظهر فقط الصلاحيات التي تُطبَّق داخل حدود القسم.'
+            : 'حدد الصلاحيات الممنوحة للدور. تظهر المفاتيح التقنية كمرجع ثانوي فقط.',
         'icon' => 'fas fa-sliders-h',
         'breadcrumbs' => [
-            ['title' => 'الأدوار والصلاحيات', 'url' => route('roles.index')],
+            ['title' => 'الأدوار والصلاحيات', 'url' => route('roles.index', $role->department_id ? ['department' => $role->department_id] : [])],
             ['title' => $role->display_name],
         ],
     ])
 
     @php
-        $moduleLabels = [
-            'users' => 'المستخدمون',
-            'roles' => 'الأدوار والصلاحيات',
-            'customers' => 'العملاء',
-            'quotations' => 'عروض الأسعار',
-            'orders' => 'طلبات العملاء',
-            'production' => 'الإنتاج',
-            'inventory' => 'المخزون',
-            'materials' => 'المواد الخام',
-            'products' => 'المنتجات',
-            'suppliers' => 'الموردون',
-            'costing' => 'التكاليف',
-            'delivery' => 'التوصيل',
-            'reports' => 'التقارير',
-            'sales_channels' => 'قنوات البيع',
-            'customer_types' => 'أنواع العملاء',
-            'units' => 'وحدات القياس',
-            'departments' => 'أقسام المصنع',
-        ];
+        $moduleLabels = \App\Models\Permission::MODULE_LABELS;
     @endphp
 
     <form action="{{ route('roles.update', $role) }}"
@@ -43,6 +27,29 @@
           @permissions-changed.window="selectedCount = $event.detail.count">
         @csrf
         @method('PUT')
+
+        @if ($role->department_id)
+            <div class="card p-3 mb-3">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="display_name" class="form-label">اسم الدور <span class="text-danger">*</span></label>
+                        <input type="text" name="display_name" id="display_name" value="{{ old('display_name', $role->display_name) }}"
+                               class="form-control @error('display_name') is-invalid @enderror" required>
+                        @error('display_name')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+                    <div class="col-md-6">
+                        <label for="description" class="form-label">الوصف</label>
+                        <input type="text" name="description" id="description" value="{{ old('description', $role->description) }}"
+                               class="form-control @error('description') is-invalid @enderror">
+                        @error('description')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+                </div>
+            </div>
+        @endif
 
         <div class="row g-3">
             @foreach ($groupedPermissions as $module => $permissions)
@@ -107,7 +114,7 @@
                 <i class="fas fa-shield-halved text-success me-1" aria-hidden="true"></i>
                 المحدد: <strong x-text="selectedCount"></strong> صلاحية
             </span>
-            <a href="{{ route('roles.index') }}" class="btn btn-light border px-4">إلغاء</a>
+            <a href="{{ route('roles.index', $role->department_id ? ['department' => $role->department_id] : []) }}" class="btn btn-light border px-4">إلغاء</a>
             <button type="submit" class="btn btn-factory-warning px-4 fw-bold">
                 <i class="fas fa-save" aria-hidden="true"></i> حفظ الصلاحيات
             </button>

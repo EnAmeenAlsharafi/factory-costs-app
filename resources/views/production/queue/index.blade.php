@@ -6,7 +6,7 @@
 @section('content')
 @php
     $user = auth()->user();
-    $canManageAllDepartments = $user->isAdministrator() || $user->hasRole('production_manager');
+    $canManageAllDepartments = ! $user->isDepartmentRestricted();
     $activeFilterCount = collect(['department_id', 'priority'])->filter(fn ($key) => request()->filled($key))->count();
     $priorityLabels = ['NORMAL' => 'عادي', 'URGENT' => 'عاجل', 'VIP' => 'VIP'];
     $emptyMessages = [

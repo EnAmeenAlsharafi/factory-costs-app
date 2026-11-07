@@ -28,7 +28,7 @@ class DevelopmentSeeder extends Seeder
             'production_manager',
             'customer_service',
             'warehouse_keeper',
-            'production_worker',
+            'carpentry.worker',
             'delivery_user',
         ])->get()->keyBy('name');
 
@@ -40,9 +40,9 @@ class DevelopmentSeeder extends Seeder
             ['username' => 'prod.manager', 'name' => 'م. خالد - مدير الإنتاج', 'email' => 'production@sadir-factory.com', 'password' => 'password', 'role' => 'production_manager', 'department_id' => null, 'is_active' => true],
             ['username' => 'cs.agent', 'name' => 'فاطمة - خدمة العملاء', 'email' => 'cs@sadir-factory.com', 'password' => 'password', 'role' => 'customer_service', 'department_id' => null, 'is_active' => true],
             ['username' => 'warehouse.keeper', 'name' => 'سعد - أمين المستودع', 'email' => 'warehouse@sadir-factory.com', 'password' => 'password', 'role' => 'warehouse_keeper', 'department_id' => $warehouseDepartmentId, 'is_active' => true],
-            ['username' => 'worker.carpenter', 'name' => 'عمر - نجار الإنتاج', 'email' => 'worker.carpenter@sadir-factory.com', 'password' => 'password', 'role' => 'production_worker', 'department_id' => $carpentryDepartmentId, 'is_active' => true],
+            ['username' => 'worker.carpenter', 'name' => 'عمر - نجار الإنتاج', 'email' => 'worker.carpenter@sadir-factory.com', 'password' => 'password', 'role' => 'carpentry.worker', 'department_id' => $carpentryDepartmentId, 'is_active' => true],
             ['username' => 'delivery.driver', 'name' => 'سامي - سائق التوصيل', 'email' => 'delivery@sadir-factory.com', 'password' => 'password', 'role' => 'delivery_user', 'department_id' => null, 'is_active' => true],
-            ['username' => 'inactive.user', 'name' => 'موظف سابق (معطل)', 'email' => 'inactive@sadir-factory.com', 'password' => 'password', 'role' => 'production_worker', 'department_id' => $carpentryDepartmentId, 'is_active' => false],
+            ['username' => 'inactive.user', 'name' => 'موظف سابق (معطل)', 'email' => 'inactive@sadir-factory.com', 'password' => 'password', 'role' => 'carpentry.worker', 'department_id' => $carpentryDepartmentId, 'is_active' => false],
         ];
 
         foreach ($users as $userData) {

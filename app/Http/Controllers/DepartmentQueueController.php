@@ -82,7 +82,7 @@ class DepartmentQueueController extends Controller
                 ->whereDate('completed_at', today());
 
             if ($this->dashboardService->isDepartmentScoped($user)) {
-                $query->whereHas('workCenter', fn ($wc) => $wc->where('department_id', $user->department_id));
+                $query->whereHas('workCenter', fn ($wc) => $wc->where('department_id', $user->productionDepartmentId()));
             }
         } else {
             $query = $this->dashboardService->operationsQueryFor($user);

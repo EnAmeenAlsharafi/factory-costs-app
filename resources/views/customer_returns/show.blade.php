@@ -7,44 +7,22 @@
     <!-- Header Card -->
     <div class="card border-0 shadow-sm rounded-3 mb-4">
         <div class="card-body p-4">
-            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div class="page-header-card d-flex flex-wrap align-items-center justify-content-between gap-3">
                 <div>
                     <div class="d-flex align-items-center gap-2 mb-1">
-                        <h1 class="h3 font-weight-bold text-gray-800 mb-0">مرتجع عميل: {{ $return->return_number }}</h1>
-                        @php
-                            $statusBadges = [
-                                'REPORTED' => 'bg-warning text-dark',
-                                'RECEIVED_AT_FACTORY' => 'bg-info',
-                                'LINKED_TO_QUALITY' => 'bg-danger',
-                            ];
-                            $statusLabels = [
-                                'REPORTED' => 'بلاغ مسجل',
-                                'RECEIVED_AT_FACTORY' => 'مستلم بالمصنع',
-                                'LINKED_TO_QUALITY' => 'مرتبط بحادثة جودة',
-                            ];
-                        @endphp
-                        <span class="badge {{ $statusBadges[$return->status] ?? 'bg-secondary' }} px-3 py-2 fs-6">
-                            {{ $statusLabels[$return->status] ?? $return->status }}
-                        </span>
+                        <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">مرتجع عميل: {{ $return->return_number }}</h1>
+                        <span class="status-chip status-chip-warning fs-7">{{ $return->statusLabel() }}</span>
                     </div>
-                    <p class="text-muted small mb-0">
+                    <p class="page-header-subtitle text-muted mb-0 fs-7">
                         تاريخ الإبلاغ: {{ $return->reported_at ? $return->reported_at->format('Y-m-d H:i') : '' }} | 
                         المبلغ عنه: {{ $return->reportedByUser->name ?? 'النظام' }}
                     </p>
                 </div>
 
                 <div class="d-flex flex-wrap gap-2">
-                    @if($return->status === 'REPORTED')
-                        @can('delivery.manage_returns')
-                        <button type="button" class="btn btn-info text-white shadow-sm" data-bs-toggle="modal" data-bs-target="#receiveModal">
-                            <i class="fas fa-warehouse me-1"></i>استلام المرتجع وإيداعه بالمخزون
-                        </button>
-                        @endcan
-                    @endif
-
                     @if(! $return->quality_incident_id)
                         @can('delivery.manage_returns')
-                        <a href="{{ route('quality-incidents.create', ['production_order_id' => $return->production_order_id, 'customer_return_id' => $return->id]) }}" class="btn btn-outline-danger shadow-sm">
+                        <a href="{{ route('production.quality-incidents.create', ['production_order_id' => $return->production_order_id, 'customer_return_id' => $return->id]) }}" class="btn btn-outline-danger shadow-sm">
                             <i class="fas fa-exclamation-triangle me-1"></i>إنشاء ورابط حادثة جودة جديد
                         </a>
                         @endcan
@@ -56,6 +34,10 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <div class="mb-4">
+        @include('customer_returns.partials.workflow', ['return' => $return])
     </div>
 
     <div class="row g-4">
@@ -162,7 +144,7 @@
                                 <div class="fw-bold text-danger">مرتبط بحادثة الجودة رقم: {{ $return->qualityIncident->incident_number }}</div>
                                 <div class="small text-muted">القسم المسؤول: {{ $return->qualityIncident->responsibleDepartment->name_ar ?? 'غير محدد' }}</div>
                             </div>
-                            <a href="{{ route('quality-incidents.show', $return->qualityIncident) }}" class="btn btn-sm btn-outline-danger">
+                            <a href="{{ route('production.quality-incidents.show', $return->qualityIncident) }}" class="btn btn-sm btn-outline-danger">
                                 عرض الحادثة
                             </a>
                         </div>
@@ -181,24 +163,25 @@
     <div class="modal-dialog modal-dialog-centered">
         <form action="{{ route('customer-returns.receive', $return) }}" method="POST" class="modal-content">
             @csrf
-            <div class="modal-header bg-info text-white">
-                <h5 class="modal-title fs-6 fw-bold">استلام المنتجات المرتجعة في مخزن المنتجات الجاهزة</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <div class="modal-header">
+                <h5 class="modal-title fs-6 fw-bold">استلام المرتجع إلى منطقة الفحص</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
             </div>
             <div class="modal-body">
+                <p class="fs-7 text-muted">يدخل المنتج منطقة الفحص ولا يُحسب ضمن المخزون المتاح حتى قرار الفحص.</p>
                 <div class="mb-3">
-                    <label class="form-label small fw-bold">تقييم حالة الأثاث عند الاستلام بالمصنع:</label>
-                    <select name="condition_code" class="form-select">
-                        <option value="GOOD">سليم وسالح للبيع المباشر (Good)</option>
-                        <option value="NEEDS_INSPECTION">يحتاج فحص فني وإعادة تجهيز (Needs Inspection)</option>
-                        <option value="DAMAGED">تالف يحتاج إعادة تصنيع (Damaged)</option>
-                        <option value="SCRAP_CANDIDATE">خردة / سكراب (Scrap)</option>
+                    <label for="receive-condition" class="form-label small fw-bold">الحالة الظاهرة عند الاستلام</label>
+                    <select name="condition_code" id="receive-condition" class="form-select">
+                        <option value="NEEDS_INSPECTION">يحتاج فحص</option>
+                        <option value="GOOD">يبدو سليماً</option>
+                                                <option value="DAMAGED">تالف ظاهرياً</option>
+                        <option value="SCRAP_CANDIDATE">غير قابل للإصلاح</option>
                     </select>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">إلغاء</button>
-                <button type="submit" class="btn btn-info text-white btn-sm">تأكيد الاستلام والتسليم للمخزن</button>
+                <button type="submit" class="btn btn-factory-warning btn-sm">تأكيد الاستلام</button>
             </div>
         </form>
     </div>

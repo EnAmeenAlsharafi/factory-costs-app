@@ -66,11 +66,20 @@ class UserUpdateRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator) {
-            if ($this->filled('role_id') && ! $this->filled('department_id')) {
-                $roleName = Role::find($this->input('role_id'))?->name;
-                if ($roleName === 'production_worker') {
-                    $validator->errors()->add('department_id', 'القسم التشغيلي إلزامي لموظفي الإنتاج.');
-                }
+            $role = $this->filled('role_id') ? Role::find($this->input('role_id')) : null;
+
+            if (! $role) {
+                return;
+            }
+
+            if (($role->name === 'production_worker' || $role->isDepartmentRole()) && ! $this->filled('department_id')) {
+                $validator->errors()->add('department_id', 'القسم التشغيلي إلزامي لموظفي الإنتاج.');
+
+                return;
+            }
+
+            if ($role->isDepartmentRole() && (int) $this->input('department_id') !== $role->department_id) {
+                $validator->errors()->add('role_id', 'الدور المختار يخص قسماً آخر، اختر دوراً من أدوار قسم الموظف.');
             }
         });
     }

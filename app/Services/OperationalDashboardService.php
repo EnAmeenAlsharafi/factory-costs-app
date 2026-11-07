@@ -79,7 +79,7 @@ class OperationalDashboardService
             ->whereHas('productionOrder', fn (Builder $po) => $po->whereNotIn('status', ['ON_HOLD', 'CANCELLED', 'COMPLETED']));
 
         if ($this->isDepartmentScoped($user)) {
-            $query->whereHas('workCenter', fn (Builder $wc) => $wc->where('department_id', $user->department_id));
+            $query->whereHas('workCenter', fn (Builder $wc) => $wc->where('department_id', $user->productionDepartmentId()));
         }
 
         return $query;
@@ -87,7 +87,7 @@ class OperationalDashboardService
 
     public function isDepartmentScoped(User $user): bool
     {
-        return ! $user->isAdministrator() && ! $user->hasRole('production_manager') && (bool) $user->department_id;
+        return $user->isDepartmentRestricted();
     }
 
     /**
@@ -116,7 +116,7 @@ class OperationalDashboardService
             ->where('status', 'COMPLETED')
             ->whereDate('completed_at', today());
         if ($this->isDepartmentScoped($user)) {
-            $completedTodayQuery->whereHas('workCenter', fn (Builder $wc) => $wc->where('department_id', $user->department_id));
+            $completedTodayQuery->whereHas('workCenter', fn (Builder $wc) => $wc->where('department_id', $user->productionDepartmentId()));
         }
 
         return [

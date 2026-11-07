@@ -6,10 +6,10 @@
 <div class="container-fluid px-4 py-4">
 
     {{-- Page Header --}}
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-header-card d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="h3 mb-1 text-dark fw-bold">تعديل عرض السعر: {{ $quotation->quotation_number }}</h1>
-            <p class="text-muted mb-0 fs-7">تحديث بيانات عرض السعر وتعديل أو إضافة البنود</p>
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">تعديل عرض السعر: {{ $quotation->quotation_number }}</h1>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">تحديث بيانات عرض السعر وتعديل أو إضافة البنود</p>
         </div>
         <a href="{{ route('sales.quotations.show', $quotation) }}" class="btn btn-outline-secondary">
             <i class="fas fa-arrow-right me-1"></i> إلغاء والتراجع
@@ -282,7 +282,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                @keydown.enter.prevent.stop="selectHighlighted"
                                @keydown.escape="closeDropdown"
                                placeholder="ابحث عن الموديل (كود / اسم)...">
-                        <button class="btn btn-outline-secondary btn-sm" type="button" x-show="selectedId" @click="clearSelection" tabindex="-1">
+                        <button class="btn btn-outline-secondary btn-sm" type="button" x-show="selectedId" @click="clearSelection" tabindex="-1" aria-label="مسح الاختيار">
                             <i class="fas fa-times fs-8"></i>
                         </button>
                     </div>

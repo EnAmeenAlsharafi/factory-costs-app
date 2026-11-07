@@ -10,6 +10,7 @@ use App\Services\CustomerReturnService;
 use Exception;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class CustomerReturnController extends Controller
@@ -89,6 +90,7 @@ class CustomerReturnController extends Controller
             'productionOrder.customerOrderLine.productModel',
             'reportedByUser',
             'receivedByUser',
+            'inspectedByUser',
             'qualityIncident.responsibleDepartment',
         ]);
 
@@ -127,6 +129,61 @@ class CustomerReturnController extends Controller
             $this->returnService->linkQualityIncident($customerReturn, $incident);
 
             return back()->with('success', "تم ربط بلاغ المرتجع بحادثة الجودة رقم {$incident->incident_number} بنجاح.");
+        } catch (Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    public function approve(CustomerReturn $customerReturn, Request $request): RedirectResponse
+    {
+        abort_if(! $request->user()->can('delivery.manage_returns'), 403);
+
+        return $this->runAction(fn () => $this->returnService->approve($customerReturn, $request->user()), 'تم اعتماد طلب الإرجاع.');
+    }
+
+    public function reject(CustomerReturn $customerReturn, Request $request): RedirectResponse
+    {
+        abort_if(! $request->user()->can('delivery.manage_returns'), 403);
+        $data = $request->validate(['reason' => ['required', 'string', 'max:500']], ['reason.required' => 'اذكر سبب رفض الإرجاع.']);
+
+        return $this->runAction(fn () => $this->returnService->reject($customerReturn, $request->user(), $data['reason']), 'تم رفض طلب الإرجاع.');
+    }
+
+    public function inspect(CustomerReturn $customerReturn, Request $request): RedirectResponse
+    {
+        abort_if(! $request->user()->can('delivery.manage_returns'), 403);
+        $data = $request->validate([
+            'decision' => ['required', Rule::in(array_keys(CustomerReturn::INSPECTION_DECISIONS))],
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ], ['decision.required' => 'اختر قرار الفحص.']);
+
+        return $this->runAction(fn () => $this->returnService->inspect($customerReturn, $request->user(), $data['decision'], $data['notes'] ?? null), 'تم حفظ قرار الفحص.');
+    }
+
+    public function completeRepair(CustomerReturn $customerReturn, Request $request): RedirectResponse
+    {
+        abort_if(! $request->user()->can('delivery.manage_returns'), 403);
+
+        return $this->runAction(fn () => $this->returnService->completeRepair($customerReturn, $request->user()), 'تم تسجيل اكتمال الإصلاح وإعادة المنتج للمخزون.');
+    }
+
+    public function resolve(CustomerReturn $customerReturn, Request $request): RedirectResponse
+    {
+        abort_if(! $request->user()->can('delivery.manage_returns'), 403);
+        $data = $request->validate([
+            'resolution_code' => ['required', Rule::in(array_keys(CustomerReturn::RESOLUTIONS))],
+            'resolution_notes' => ['nullable', 'string', 'max:1000'],
+        ], ['resolution_code.required' => 'اختر الحل المقدم للعميل.']);
+
+        return $this->runAction(fn () => $this->returnService->resolve($customerReturn, $request->user(), $data['resolution_code'], $data['resolution_notes'] ?? null), 'تم إغلاق المرتجع.');
+    }
+
+    private function runAction(callable $action, string $successMessage): RedirectResponse
+    {
+        try {
+            $action();
+
+            return back()->with('success', $successMessage);
         } catch (Exception $e) {
             return back()->with('error', $e->getMessage());
         }

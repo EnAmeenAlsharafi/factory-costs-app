@@ -5,13 +5,13 @@
 @section('content')
 <div class="container-fluid py-3">
     <!-- Header -->
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <div class="page-header-card d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
         <div>
-            <h1 class="h3 font-weight-bold text-gray-800 mb-1">
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">
                 <i class="fas fa-truck-loading text-primary me-2">
                 </i>أوامر التوصيل والتركيب
             </h1>
-            <p class="text-muted small mb-0">إدارة وشحن منتجات الأثاث الجاهزة، تعيين السائقين ومتابعة حالات التسليم والتركيب.</p>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">إدارة وشحن منتجات الأثاث الجاهزة، تعيين السائقين ومتابعة حالات التسليم والتركيب.</p>
         </div>
         <div class="d-flex gap-2">
             @can('delivery.view')
@@ -40,12 +40,13 @@
                 <div class="col-md-3">
                     <select name="status" class="form-select bg-light" onchange="this.form.submit()">
                         <option value="">-- جميع الحالات --</option>
-                        <option value="PENDING" {{ request('status') === 'PENDING' ? 'selected' : '' }}>جديد / مسودة</option>
+                        <option value="AWAITING_DECISION" {{ request('status') === 'AWAITING_DECISION' ? 'selected' : '' }}>متعذرة بانتظار قرار</option>
+                        <option value="DRAFT" {{ request('status') === 'DRAFT' ? 'selected' : '' }}>جديد / مسودة</option>
                         <option value="ASSIGNED" {{ request('status') === 'ASSIGNED' ? 'selected' : '' }}>تم تعيين الفني/السائق</option>
                         <option value="READY_FOR_DELIVERY" {{ request('status') === 'READY_FOR_DELIVERY' ? 'selected' : '' }}>جاهز للتوصيل</option>
                         <option value="OUT_FOR_DELIVERY" {{ request('status') === 'OUT_FOR_DELIVERY' ? 'selected' : '' }}>خرج للتوصيل (في الطريق)</option>
                         <option value="DELIVERED" {{ request('status') === 'DELIVERED' ? 'selected' : '' }}>تم التسليم للعميل</option>
-                        <option value="INSTALLED" {{ request('status') === 'INSTALLED' ? 'selected' : '' }}>تم التركيب النهائي</option>
+                        <option value="INSTALLATION_COMPLETED" {{ request('status') === 'INSTALLATION_COMPLETED' ? 'selected' : '' }}>تم التركيب النهائي</option>
                         <option value="FAILED" {{ request('status') === 'FAILED' ? 'selected' : '' }}>فشل التسليم</option>
                         <option value="RESCHEDULED" {{ request('status') === 'RESCHEDULED' ? 'selected' : '' }}>معاد جدولته</option>
                     </select>
@@ -127,33 +128,10 @@
                                 {{ $delivery->scheduled_delivery_date ? $delivery->scheduled_delivery_date->format('Y-m-d') : 'غير محدد' }}
                             </td>
                             <td>
-                                @php
-                                    $badgeClasses = [
-                                        'PENDING' => 'bg-secondary',
-                                        'ASSIGNED' => 'bg-info',
-                                        'READY_FOR_DELIVERY' => 'bg-primary',
-                                        'OUT_FOR_DELIVERY' => 'bg-warning text-dark',
-                                        'DELIVERED' => 'bg-success',
-                                        'INSTALLED' => 'bg-teal text-white',
-                                        'FAILED' => 'bg-danger',
-                                        'RESCHEDULED' => 'bg-dark',
-                                        'CANCELLED' => 'bg-secondary',
-                                    ];
-                                    $statusLabels = [
-                                        'PENDING' => 'مسودة',
-                                        'ASSIGNED' => 'تم التعيين',
-                                        'READY_FOR_DELIVERY' => 'جاهز للشحن',
-                                        'OUT_FOR_DELIVERY' => 'خرج للتوصيل',
-                                        'DELIVERED' => 'تم التسليم',
-                                        'INSTALLED' => 'تم التركيب',
-                                        'FAILED' => 'متعذر التسليم',
-                                        'RESCHEDULED' => 'معاد جدولته',
-                                        'CANCELLED' => 'ملغى',
-                                    ];
-                                @endphp
-                                <span class="badge {{ $badgeClasses[$delivery->status] ?? 'bg-secondary' }} px-2 py-1">
-                                    {{ $statusLabels[$delivery->status] ?? $delivery->status }}
-                                </span>
+                                <x-status-badge domain="delivery" :status="$delivery->status" />
+                                @if ($delivery->isAwaitingDecision())
+                                    <span class="status-chip status-chip-warning d-inline-block mt-1"><i class="fas fa-hourglass-half" aria-hidden="true"></i> بانتظار قرار</span>
+                                @endif
                             </td>
                             <td class="text-end pe-4">
                                 <a href="{{ route('delivery.orders.show', $delivery) }}" class="btn btn-sm btn-light rounded-circle shadow-sm" title="عرض التفاصيل">

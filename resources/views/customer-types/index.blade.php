@@ -8,7 +8,7 @@
 
     <!-- Page Header Component -->
     @include('partials.page-header', [
-        'title' => 'تصنيفات العملاء (Customer Types)',
+        'title' => 'تصنيفات العملاء',
         'subtitle' => 'فئات تصنيف العملاء (عميل مباشر/أفراد، تاجر جملة، متجر مفروشات سدير، شركات ومؤسسات).',
         'icon' => 'fas fa-id-badge',
         'breadcrumbs' => [

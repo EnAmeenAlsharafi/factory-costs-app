@@ -5,12 +5,12 @@
 @section('content')
 <div class="container-fluid px-4 py-4" x-data="bundleEditForm()">
 
-    <div class="mb-4">
+    <div class="page-header-card mb-4">
         <a href="{{ route('sales.bundles.index') }}" class="text-decoration-none text-muted fs-7 mb-2 d-inline-block">
             <i class="fas fa-arrow-right me-1"></i> العودة لقائمة البكجات
         </a>
-        <h1 class="h3 mb-1 text-dark fw-bold">تعديل بكج: {{ $bundle->name }}</h1>
-        <p class="text-muted mb-0 fs-7">تعديل بيانات البكج ومكوناته</p>
+        <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">تعديل بكج: {{ $bundle->name }}</h1>
+        <p class="page-header-subtitle text-muted mb-0 fs-7">تعديل بيانات البكج ومكوناته</p>
     </div>
 
     @if($errors->any())

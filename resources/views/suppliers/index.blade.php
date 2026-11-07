@@ -8,7 +8,7 @@
 
     <!-- Page Header Component -->
     @include('partials.page-header', [
-        'title' => 'سجل الموردين (Suppliers)',
+        'title' => 'سجل الموردين',
         'subtitle' => 'إدارة بيانات موردي الخشب، الإسفنج، الأقمشة، ومستلزمات الإنتاج والتغليف.',
         'icon' => 'fas fa-truck',
         'breadcrumbs' => [

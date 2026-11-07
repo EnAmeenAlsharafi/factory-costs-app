@@ -60,6 +60,8 @@
         </div>
     @endif
 
+    @include('delivery.orders.partials.exception-panel', ['delivery' => $delivery])
+
     <div class="row g-3">
         <div class="col-lg-5 d-flex flex-column gap-3">
             {{-- 3. Customer, phone, address --}}
@@ -214,8 +216,6 @@
         <x-mobile-action-bar>
             {!! $nextActionsHtml !!}
         </x-mobile-action-bar>
-    @elseif (in_array($delivery->status, ['FAILED', 'RESCHEDULED'], true))
-        <div class="alert alert-secondary mb-0" role="status"><i class="fas fa-circle-info" aria-hidden="true"></i> هذه المهمة بانتظار قرار الإدارة لإعادة الجدولة أو الإلغاء.</div>
     @endif
 </div>
 

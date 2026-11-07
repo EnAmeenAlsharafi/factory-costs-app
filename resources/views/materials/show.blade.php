@@ -254,7 +254,7 @@
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0 d-flex justify-content-between align-items-center">
                 <div>
-                    <h5 class="fw-bold text-dark mb-1"><i class="fas fa-palette text-primary me-2"></i>درجات ألوان الكتالوج</h5>
+                    <h1 id="page-heading" class="h5 fw-bold text-dark mb-1"><i class="fas fa-palette text-primary me-2"></i>درجات ألوان الكتالوج</h1>
                     <p class="text-muted fs-8 mb-0">يرتبط كل لون برقم داخلي (لخدمة العملاء) وكود مورد (للمشتريات والإنتاج).</p>
                 </div>
                 @can('materials.manage')

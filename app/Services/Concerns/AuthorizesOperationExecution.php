@@ -35,7 +35,19 @@ trait AuthorizesOperationExecution
 
         $departmentId = $operation->workCenter?->department_id;
 
-        if ($departmentId && $employee->department_id !== $departmentId) {
+        if ($departmentId && $employee->productionDepartmentId() !== $departmentId) {
+            throw ValidationException::withMessages([
+                'authorization' => 'لا يمكن تنفيذ عمليات خارج قسمك التشغيلي.',
+            ]);
+        }
+    }
+
+    /**
+     * Department-restricted users (department roles, or global roles with a department) only reach their own department's operations.
+     */
+    protected function assertWithinDepartment(User $user, ProductionOrderOperation $operation): void
+    {
+        if (! $user->canAccessDepartment($operation->workCenter?->department_id)) {
             throw ValidationException::withMessages([
                 'authorization' => 'لا يمكن تنفيذ عمليات خارج قسمك التشغيلي.',
             ]);
@@ -44,6 +56,6 @@ trait AuthorizesOperationExecution
 
     protected function hasDepartmentOverride(User $employee): bool
     {
-        return $employee->isAdministrator() || $employee->hasRole('production_manager');
+        return $employee->hasProductionDepartmentOverride();
     }
 }

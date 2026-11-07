@@ -4,12 +4,12 @@
 
 @section('content')
 <div class="container-fluid px-4 py-3">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
+    <div class="page-header-card d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
         <div>
-            <h1 class="h3 fw-bold text-dark mb-1">
-                <i class="fas fa-credit-card text-warning me-2"></i> إدارة الائتمان والحدود الائتمانية (Customer Credit Profiles)
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                <i class="fas fa-credit-card text-warning fs-5" aria-hidden="true"></i> إدارة الائتمان والحدود الائتمانية
             </h1>
-            <p class="text-muted mb-0 small">تحديد السقف الائتماني لعملاء الجملة والشركات ومتابعة التعرض المالي.</p>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">تحديد السقف الائتماني لعملاء الجملة والشركات ومتابعة التعرض المالي.</p>
         </div>
     </div>
 

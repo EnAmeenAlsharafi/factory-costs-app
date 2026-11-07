@@ -14,10 +14,17 @@
     @endphp
 
     {{-- Page Header --}}
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div class="page-header-card d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
         <div>
             <div class="d-flex align-items-center gap-2">
-                <h1 class="h3 mb-1 text-dark fw-bold">طلب عميل: {{ $order->order_number }}</h1>
+                <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">طلب عميل: {{ $order->order_number }}</h1>
+                @if ($order->portalRequest)
+                    @can('orders.update')
+                        <a href="{{ route('sales.portal-requests.show', $order->portalRequest) }}" class="status-chip status-chip-info text-decoration-none" title="الطلب الأصلي من بوابة العملاء">
+                            <i class="fas fa-inbox" aria-hidden="true"></i> من بوابة العملاء: <bdi>PR-{{ $order->portalRequest->id }}</bdi>
+                        </a>
+                    @endcan
+                @endif
                 @if($order->status === 'DRAFT')
                     <span class="badge bg-secondary">مسودة</span>
                 @elseif($order->status === 'PENDING_PRODUCTION_REVIEW')
@@ -30,7 +37,7 @@
                     <span class="badge bg-danger"><i class="fas fa-ban me-1"></i> ملغى</span>
                 @endif
             </div>
-            <p class="text-muted mb-0 fs-7">تم الإنشاء بتاريخ {{ $order->created_at->format('Y-m-d H:i') }} بواسطة {{ $order->creator?->name }}</p>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">تم الإنشاء بتاريخ {{ $order->created_at->format('Y-m-d H:i') }} بواسطة {{ $order->creator?->name }}</p>
         </div>
         <div class="d-flex flex-wrap gap-2">
             <a href="{{ route('sales.orders.index') }}" class="btn btn-outline-secondary">
@@ -41,7 +48,7 @@
                 @can('orders.submit_review')
                     <form action="{{ route('sales.orders.submit-review', $order) }}" method="POST" class="d-inline">
                         @csrf
-                        <button type="submit" class="btn btn-warning fw-semibold text-dark" onclick="return confirm('هل أنت تأكد من إرسال الطلب لمراجعة مدير الإنتاج؟')">
+                        <button type="submit" class="btn btn-factory-warning fw-semibold text-dark" onclick="return confirm('هل أنت تأكد من إرسال الطلب لمراجعة مدير الإنتاج؟')">
                             <i class="fas fa-paper-plane me-1"></i> إرسال لمراجعة الإنتاج
                         </button>
                     </form>
@@ -50,14 +57,14 @@
 
             @if($order->status === 'PENDING_PRODUCTION_REVIEW')
                 @can('orders.review_production')
-                    <a href="{{ route('sales.orders.review', $order) }}" class="btn btn-warning fw-bold text-dark">
+                    <a href="{{ route('sales.orders.review', $order) }}" class="btn btn-factory-warning fw-bold text-dark">
                         <i class="fas fa-clipboard-check me-1"></i> المراجعة الفنية والاعتماد للإنتاج
                     </a>
                 @endcan
             @endif
 
             @if(in_array($order->status, ['APPROVED_FOR_PRODUCTION', 'APPROVED_FOR_FULFILLMENT']) && auth()->user()->can('delivery.create'))
-                <a href="{{ route('delivery.orders.create', ['customer_order_id' => $order->id]) }}" class="btn btn-primary fw-bold">
+                <a href="{{ route('delivery.orders.create', ['customer_order_id' => $order->id]) }}" class="btn btn-factory-warning fw-bold">
                     <i class="fas fa-truck-loading me-1"></i> إنشاء أمر توصيل وتركيب
                 </a>
             @endif

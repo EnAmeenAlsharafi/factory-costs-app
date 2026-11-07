@@ -21,10 +21,12 @@ class ProductionBoardController extends Controller
 
     public function index(Request $request): View
     {
-        abort_if(! $request->user()->can('production.view'), 403);
+        $user = $request->user();
+        abort_if(! $user->can('production.view'), 403);
 
         $departments = Department::where('is_production_department', true)
             ->where('is_active', true)
+            ->when($user->isDepartmentRestricted(), fn ($q) => $q->whereKey($user->productionDepartmentId()))
             ->orderBy('sort_order')
             ->get();
 
@@ -35,6 +37,9 @@ class ProductionBoardController extends Controller
         $activeOperations = ProductionOrderOperation::whereHas(
             'productionOrder',
             fn ($po) => $po->whereNotIn('status', ['ON_HOLD', 'CANCELLED', 'COMPLETED'])
+        )->when(
+            $user->isDepartmentRestricted(),
+            fn ($q) => $q->whereHas('workCenter', fn ($wc) => $wc->where('department_id', $user->productionDepartmentId()))
         )->with('workCenter.department', 'routingOperation')->get();
 
         $departmentStats = [];

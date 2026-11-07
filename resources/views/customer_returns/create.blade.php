@@ -4,12 +4,12 @@
 
 @section('content')
 <div class="container-fluid py-3">
-    <div class="d-flex align-items-center justify-content-between mb-4">
+    <div class="page-header-card d-flex align-items-center justify-content-between mb-4">
         <div>
-            <h1 class="h3 font-weight-bold text-gray-800 mb-1">
-                <i class="fas fa-undo text-danger me-2"></i>تسجيل مرتجع عميل جديد
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                <i class="fas fa-undo text-warning fs-5" aria-hidden="true"></i>تسجيل مرتجع عميل جديد
             </h1>
-            <p class="text-muted small mb-0">
+            <p class="page-header-subtitle text-muted mb-0 fs-7">
                 لأمر الإنتاج: <strong class="text-dark">{{ $productionOrder->production_order_number }}</strong> 
                 (المنتج: {{ $productionOrder->customerOrderLine->productModel->name_ar ?? 'منتج أثاث' }})
             </p>

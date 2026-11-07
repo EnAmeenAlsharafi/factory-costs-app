@@ -50,20 +50,16 @@
 
 @if (in_array('DELIVERED', $allowed, true))
     @can('delivery.complete')
-        <form action="{{ route('delivery.orders.complete', $delivery) }}" method="POST"
-              data-confirm="تأكيد تسليم المنتجات إلى {{ $customer }}؟">
-            @csrf
-            <button type="submit" class="btn btn-success w-100">
-                <i class="fas fa-circle-check" aria-hidden="true"></i> تم التسليم
-            </button>
-        </form>
+        <button type="button" class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#complete-{{ $failSheetId }}">
+            <i class="fas fa-circle-check" aria-hidden="true"></i> تم التسليم
+        </button>
     @endcan
 @endif
 
 @if (in_array('FAILED', $allowed, true) || in_array('RESCHEDULED', $allowed, true))
     @can('delivery.reschedule')
         <button type="button" class="btn btn-outline-danger w-100" data-bs-toggle="modal" data-bs-target="#{{ $failSheetId }}">
-            <i class="fas fa-triangle-exclamation" aria-hidden="true"></i> تعذر / إعادة جدولة
+            <i class="fas fa-triangle-exclamation" aria-hidden="true"></i> تعذر التسليم
         </button>
     @endcan
 @endif

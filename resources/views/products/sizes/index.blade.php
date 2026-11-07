@@ -1,25 +1,25 @@
 @extends('layouts.app')
 
-@section('title', 'المقاسات القياسية للأسرة (Standard Bed Sizes)')
+@section('title', 'المقاسات القياسية للأسرة')
 
 @section('content')
 <div class="container-fluid px-4 py-3">
 
     <!-- Header & Breadcrumbs -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div class="page-header-card d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
         <div>
             <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-1">
+                <ol class="breadcrumb mb-2 fs-8">
                     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}" class="text-decoration-none">الرئيسية</a></li>
                     <li class="breadcrumb-item active" aria-current="page">المقاسات القياسية</li>
                 </ol>
             </nav>
-            <h1 class="h3 fw-bold mb-0 text-dark">دليل المقاسات القياسية بالمرجع المصنعي (Standard Bed Sizes)</h1>
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">دليل المقاسات القياسية بالمرجع المصنعي</h1>
         </div>
 
         @can('products.manage')
             <div>
-                <button type="button" class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#addSizeModal">
+                <button type="button" class="btn btn-factory-warning shadow-sm" data-bs-toggle="modal" data-bs-target="#addSizeModal">
                     <i class="fas fa-plus me-1"></i> إضافة مقاس قياسي جديد
                 </button>
             </div>

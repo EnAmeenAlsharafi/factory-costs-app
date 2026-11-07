@@ -5,22 +5,22 @@
 @section('content')
 <div class="container-fluid px-4 py-3">
     {{-- Header --}}
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
+    <div class="page-header-card d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
         <div>
             <div class="d-flex align-items-center gap-2 mb-1">
                 <a href="{{ route('receivables.customers.index') }}" class="btn btn-sm btn-outline-secondary" aria-label="العودة لأرصدة العملاء" title="العودة لأرصدة العملاء">
                     <i class="fas fa-arrow-right" aria-hidden="true"></i>
                 </a>
-                <h1 class="h3 fw-bold text-dark mb-0">
+                <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">
                     المرجع المالي للعميل: <span class="text-warning">{{ $customer->name }}</span>
                 </h1>
             </div>
-            <p class="text-muted mb-0 small">كود العميل: {{ $customer->customer_code }} | الجوال: {{ $customer->mobile ?: '-' }} | الجملة/التجزئة: {{ $customer->customerType->name_ar ?? '-' }}</p>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">كود العميل: {{ $customer->customer_code }} | الجوال: {{ $customer->mobile ?: '-' }} | الجملة/التجزئة: {{ $customer->customerType->name_ar ?? '-' }}</p>
         </div>
 
         <div class="d-flex gap-2">
             @can('receivables.payment.create')
-                <a href="{{ route('receivables.payments.create', ['customer_id' => $customer->id]) }}" class="btn btn-warning fw-bold px-3">
+                <a href="{{ route('receivables.payments.create', ['customer_id' => $customer->id]) }}" class="btn btn-factory-warning fw-bold px-3">
                     <i class="fas fa-plus-circle me-1"></i> تسجيل دفعة للعميل
                 </a>
             @endcan

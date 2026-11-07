@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -59,5 +60,20 @@ class ProductionReworkAction extends Model
     public function authorizedByUser()
     {
         return $this->belongsTo(User::class, 'authorized_by_user_id');
+    }
+
+    /**
+     * Scope to rework assigned to, or touching an operation of, a department-restricted user's department.
+     */
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        if (! $user->isDepartmentRestricted()) {
+            return $query;
+        }
+
+        return $query->where(fn (Builder $q) => $q
+            ->where('assigned_department_id', $user->productionDepartmentId())
+            ->orWhereHas('sourceOperation', fn (Builder $op) => $op->visibleTo($user))
+            ->orWhereHas('targetOperation', fn (Builder $op) => $op->visibleTo($user)));
     }
 }

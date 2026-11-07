@@ -4,15 +4,15 @@
 
 @section('content')
 <div class="container-fluid px-4 py-3">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
+    <div class="page-header-card d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
         <div>
-            <h1 class="h3 fw-bold text-dark mb-1">
-                <i class="fas fa-money-bill-wave text-warning me-2"></i> سجل دفعات العملاء (Customer Payments)
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                <i class="fas fa-money-bill-wave text-warning fs-5" aria-hidden="true"></i> سجل دفعات العملاء
             </h1>
-            <p class="text-muted mb-0 small">استعراض وتأكيد وعكس دفعات العملاء المسجلة في النظام.</p>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">استعراض وتأكيد وعكس دفعات العملاء المسجلة في النظام.</p>
         </div>
         @can('receivables.payment.create')
-            <a href="{{ route('receivables.payments.create') }}" class="btn btn-warning fw-bold px-3">
+            <a href="{{ route('receivables.payments.create') }}" class="btn btn-factory-warning fw-bold px-3">
                 <i class="fas fa-plus-circle me-1"></i> تسجيل دفعة جديدة
             </a>
         @endcan

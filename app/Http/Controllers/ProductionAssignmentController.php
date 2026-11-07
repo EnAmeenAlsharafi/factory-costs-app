@@ -18,15 +18,19 @@ class ProductionAssignmentController extends Controller
 {
     public function index(Request $request): View
     {
-        abort_if(! $request->user()->can('production.assignment.view'), 403);
+        $user = $request->user();
+        abort_if(! $user->can('production.assignment.view'), 403);
+
+        // Department-restricted users (e.g. a department supervisor) only see their own department.
+        $departmentId = $user->isDepartmentRestricted() ? $user->productionDepartmentId() : $request->input('department_id');
 
         $query = ProductionOrderOperation::query()
             ->whereHas('productionOrder', fn ($po) => $po->whereNotIn('status', ['ON_HOLD', 'CANCELLED', 'COMPLETED']))
             ->whereIn('status', ['READY', 'ASSIGNED'])
             ->with(['productionOrder.customerOrder.customer', 'productionOrder.productModel', 'workCenter.department', 'assignedUser']);
 
-        if ($request->filled('department_id')) {
-            $query->whereHas('workCenter', fn ($wc) => $wc->where('department_id', $request->department_id));
+        if (filled($departmentId)) {
+            $query->whereHas('workCenter', fn ($wc) => $wc->where('department_id', $departmentId));
         }
 
         if ($request->filled('priority')) {
@@ -47,7 +51,10 @@ class ProductionAssignmentController extends Controller
             ->paginate(25)
             ->withQueryString();
 
-        $departments = Department::production()->active()->orderBy('sort_order')->get();
+        $departments = Department::production()->active()
+            ->when($user->isDepartmentRestricted(), fn ($q) => $q->whereKey($user->productionDepartmentId()))
+            ->orderBy('sort_order')
+            ->get();
 
         $employeesQuery = User::query()
             ->where('is_active', true)
@@ -58,8 +65,8 @@ class ProductionAssignmentController extends Controller
                 'assignedOperations as ready_tasks_count' => fn ($q) => $q->where('status', 'READY'),
             ]);
 
-        if ($request->filled('department_id')) {
-            $employeesQuery->where('department_id', $request->department_id);
+        if (filled($departmentId)) {
+            $employeesQuery->where('department_id', $departmentId);
         }
 
         $employees = $employeesQuery->orderBy('name')->get();

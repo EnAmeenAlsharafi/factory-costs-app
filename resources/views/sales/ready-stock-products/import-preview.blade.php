@@ -2,10 +2,12 @@
 @section('title', 'معاينة استيراد المنتجات الجاهزة')
 @section('content')
 <div class="container-fluid px-4 py-4" x-data="{ selected: [], search: '', eligible: @js(array_values(array_map('intval', array_keys(array_filter($preview['rows'], fn ($row) => !$row['error']))))) }">
-    <a href="{{ route('sales.ready-stock-products.import') }}" class="text-decoration-none d-inline-block mb-3">رفع ملف آخر</a>
-    <h1 class="h3 fw-bold">معاينة المنتجات: {{ $fileName }}</h1>
+    <div class="page-header-card mb-4">
+        <a href="{{ route('sales.ready-stock-products.import') }}" class="text-decoration-none text-secondary fs-7 d-inline-block mb-2"><i class="fas fa-arrow-right me-1" aria-hidden="true"></i> رفع ملف آخر</a>
+        <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2"><i class="fas fa-eye text-warning fs-5" aria-hidden="true"></i>معاينة المنتجات: <span dir="ltr">{{ $fileName }}</span></h1>
+        <p class="page-header-subtitle text-muted mb-0 fs-7">عدد المنتجات: {{ count($preview['rows']) }}. الصفوف المستبعدة (خيارات، أنواع أخرى، منتجات مخفية أو كمية صفر): {{ $preview['skipped'] }}. لم يتم حفظ أي منتج بعد.</p>
+    </div>
     @if($errors->any())<div class="alert alert-danger" role="alert">@foreach($errors->all() as $error)<div>{{ $error }}</div>@endforeach</div>@endif
-    <p>عدد المنتجات: {{ count($preview['rows']) }}. الصفوف المستبعدة (خيارات، أنواع أخرى، منتجات مخفية أو كمية صفر): {{ $preview['skipped'] }}. لم يتم حفظ أي منتج بعد.</p>
     <p class="text-muted">سعر البيع مأخوذ من «السعر المخفض» فقط. المنتجات دون سعر مخفض صالح لا يمكن استيرادها.</p>
     <div class="alert alert-warning">اختر المنتجات التي تُباع من المخزون دون تصنيع. يُحدّث المنتج الموجود برقم سلة أو SKU، مع رفض أي تعارض بينهما. المنتجات دون SKU تحتاج إلى مطابقة يدوية للطلبات.</div>
     <form method="POST" action="{{ route('sales.ready-stock-products.import-confirm') }}">

@@ -4,10 +4,10 @@
 
 @section('content')
 <div class="container-fluid px-4 py-3">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-header-card d-flex justify-content-between align-items-center mb-4">
         <div>
             <div class="d-flex align-items-center gap-2">
-                <h4 class="fw-bold mb-0 text-dark">{{ $routing->name_ar }}</h4>
+                <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">{{ $routing->name_ar }}</h1>
                 <span class="badge bg-primary font-monospace fs-7">{{ $routing->routing_code }}</span>
                 @if($routing->is_active)
                     <span class="badge bg-success">نشط</span>
@@ -15,7 +15,7 @@
                     <span class="badge bg-danger">معطل</span>
                 @endif
             </div>
-            <p class="text-muted mb-0 mt-1">{{ $routing->description ?? 'لا يوجد وصف مضاف لهذا المسار' }}</p>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">{{ $routing->description ?? 'لا يوجد وصف مضاف لهذا المسار' }}</p>
         </div>
         <a href="{{ route('production.routings.index') }}" class="btn btn-outline-secondary">
             <i class="fas fa-arrow-right me-1"></i> عودة للمسارات

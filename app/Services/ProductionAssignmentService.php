@@ -39,6 +39,9 @@ class ProductionAssignmentService
             ]);
         }
 
+        // A department supervisor only assigns work inside their own department.
+        $this->assertWithinDepartment($actor, $operation);
+
         // Employee must be active, permitted, and belong to the operation's department.
         $this->assertEmployeeMayExecute($employee, $operation, 'production.operation.start');
 

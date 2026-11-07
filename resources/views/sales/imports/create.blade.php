@@ -6,12 +6,12 @@
 <div class="alert alert-info m-4">سيُحفظ العميل وتُضاف المنتجات البسيطة المطابقة فقط. المنتجات ذات الخيارات والأسرّة والبنود غير المطابقة تُضاف يدويًا من طلبات بانتظار الاستكمال. تُراجع الدفعات بعد اكتمال جميع البنود.</div>
 <div class="container-fluid px-4 py-4">
 
-    <div class="mb-4">
+    <div class="page-header-card mb-4">
         <a href="{{ route('sales.imports.index') }}" class="text-decoration-none text-muted fs-7 mb-2 d-inline-block">
             <i class="fas fa-arrow-right me-1"></i> العودة لسجل الاستيراد
         </a>
-        <h1 class="h3 mb-1 text-dark fw-bold">رفع ملف طلبات سلة (Excel / CSV)</h1>
-        <p class="text-muted mb-0 fs-7">يُقرأ الملف ويُعرض للمعاينة قبل أي إنشاء فعلي للطلبات أو العملاء.</p>
+        <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">رفع ملف طلبات سلة</h1>
+        <p class="page-header-subtitle text-muted mb-0 fs-7">يُقرأ الملف ويُعرض للمعاينة قبل أي إنشاء فعلي للطلبات أو العملاء.</p>
     </div>
 
     @if($errors->any())

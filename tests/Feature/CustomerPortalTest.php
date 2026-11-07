@@ -172,6 +172,25 @@ class CustomerPortalTest extends TestCase
         $this->assertSame('CHANGES_REQUESTED', $submission->fresh()->status);
     }
 
+    public function test_confirmed_portal_request_and_its_sales_order_reference_each_other(): void
+    {
+        $user = $this->client();
+        $submission = $this->draft($user);
+        $this->submit($user, $submission);
+        $this->actingAs($this->admin())->post(route('sales.portal-requests.offer', $submission), $this->offerData($submission->fresh()));
+        $this->actingAs($user)->post(route('portal.requests.confirm', $submission), ['revision' => $submission->fresh()->revision]);
+        $order = $submission->fresh()->order;
+
+        $this->actingAs($this->admin())->get(route('sales.portal-requests.index'))
+            ->assertOk()
+            ->assertSee('PR-'.$submission->id)
+            ->assertSee($order->order_number);
+
+        $this->actingAs($this->admin())->get(route('sales.orders.show', $order))
+            ->assertOk()
+            ->assertSee('PR-'.$submission->id);
+    }
+
     public function test_revision_after_confirmation_requires_new_acceptance_and_preserves_original_debt_until_then(): void
     {
         $user = $this->client();

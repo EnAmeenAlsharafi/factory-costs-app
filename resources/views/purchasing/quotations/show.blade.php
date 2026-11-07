@@ -4,12 +4,12 @@
 
 @section('content')
 <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-header-card d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="h3 mb-0 text-gray-800">
-                <i class="fas fa-scale-balanced me-2 text-primary"></i>عرض سعر المورد: {{ $supplierQuotation->supplier_quotation_number }}
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                <i class="fas fa-scale-balanced text-warning fs-5" aria-hidden="true"></i>عرض سعر المورد: {{ $supplierQuotation->supplier_quotation_number }}
             </h1>
-            <p class="text-muted small mb-0">المورد: {{ $supplierQuotation->supplier?->name }} | التاريخ: {{ $supplierQuotation->quotation_date->format('Y-m-d') }}</p>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">المورد: {{ $supplierQuotation->supplier?->name }} | التاريخ: {{ $supplierQuotation->quotation_date->format('Y-m-d') }}</p>
         </div>
         <div class="d-flex align-items-center gap-2">
             <a href="{{ route('purchasing.quotations.index') }}" class="btn btn-outline-secondary rounded-pill px-3">العودة للعروض</a>

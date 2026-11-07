@@ -8,7 +8,7 @@
 
     <!-- Page Header Component -->
     @include('partials.page-header', [
-        'title' => 'سجل العملاء (Customers)',
+        'title' => 'سجل العملاء',
         'subtitle' => 'إدارة بيانات عملاء المعارض، الموزعين بالجملة، والطلبات الخاصة، ومتابعة حدود الائتمان وقنوات البيع.',
         'icon' => 'fas fa-users',
         'breadcrumbs' => [

@@ -11,6 +11,49 @@ class DeliveryOrder extends Model
 {
     use HasFactory;
 
+    /**
+     * Why a delivery could not be completed at the customer's door.
+     *
+     * @var array<string, string>
+     */
+    public const FAILURE_REASONS = [
+        'CUSTOMER_UNAVAILABLE' => 'العميل غير متواجد / لا يرد',
+        'CUSTOMER_POSTPONED' => 'العميل طلب التأجيل',
+        'WRONG_ADDRESS' => 'تعذر الوصول للعنوان',
+        'REFUSED_DEFECT' => 'رفض الاستلام: عيب ظاهر في المنتج',
+        'REFUSED_WRONG_SPEC' => 'رفض الاستلام: مقاس أو لون أو موديل خطأ',
+        'REFUSED_CHANGED_MIND' => 'رفض الاستلام: تراجع العميل عن الطلب',
+        'REFUSED_PAYMENT' => 'رفض الاستلام: خلاف على الدفع',
+        'TRANSPORT_DAMAGE' => 'تلف أثناء النقل',
+        'VEHICLE_ISSUE' => 'مشكلة في المركبة أو الفريق',
+        'OTHER' => 'سبب آخر',
+    ];
+
+    /**
+     * Reasons whose returned goods must be inspected before they can be delivered again.
+     *
+     * @var list<string>
+     */
+    public const QUARANTINE_REASONS = ['REFUSED_DEFECT', 'REFUSED_WRONG_SPEC', 'TRANSPORT_DAMAGE'];
+
+    /**
+     * Reasons that are a product-quality problem and open a quality incident automatically.
+     *
+     * @var list<string>
+     */
+    public const QUALITY_REASONS = ['REFUSED_DEFECT', 'TRANSPORT_DAMAGE'];
+
+    /**
+     * Where the goods of a failed delivery are now.
+     *
+     * @var array<string, string>
+     */
+    public const GOODS_LOCATIONS = [
+        'FACTORY' => 'عادت لمخزن المنتجات الجاهزة',
+        'QUARANTINE' => 'في منطقة الفحص بانتظار قرار',
+        'WITH_DRIVER' => 'ما زالت مع فريق التوصيل',
+    ];
+
     protected $fillable = [
         'delivery_number',
         'customer_order_id',
@@ -36,6 +79,10 @@ class DeliveryOrder extends Model
         'dispatched_at',
         'delivered_at',
         'installed_at',
+        'failure_reason_code',
+        'goods_location',
+        'successor_delivery_order_id',
+        'recipient_name',
     ];
 
     protected $casts = [
@@ -100,6 +147,27 @@ class DeliveryOrder extends Model
     public function returns(): HasMany
     {
         return $this->hasMany(CustomerReturn::class);
+    }
+
+    /**
+     * The delivery order created when this failed delivery was rescheduled.
+     */
+    public function successor(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'successor_delivery_order_id');
+    }
+
+    /**
+     * A failed or postponed delivery still waiting for a management decision.
+     */
+    public function isAwaitingDecision(): bool
+    {
+        return in_array($this->status, ['FAILED', 'RESCHEDULED'], true) && $this->successor_delivery_order_id === null;
+    }
+
+    public function failureReasonLabel(): ?string
+    {
+        return $this->failure_reason_code ? (self::FAILURE_REASONS[$this->failure_reason_code] ?? $this->failure_reason_code) : null;
     }
 
     public function isDispatched(): bool

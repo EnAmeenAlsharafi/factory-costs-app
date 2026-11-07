@@ -24,7 +24,7 @@
     </div>
 
     {{-- Page Header --}}
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div class="page-header-card d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
         <div>
             <div class="d-flex align-items-center gap-2 mb-1">
                 <span class="badge bg-dark font-monospace fs-6 px-3 py-1">{{ $recipe->recipe_code }}</span>
@@ -39,8 +39,8 @@
                     <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">معطل</span>
                 @endif
             </div>
-            <h1 class="h3 mb-0 text-dark fw-bold">تعديل بيانات وصفة التصنيع</h1>
-            <p class="text-muted mb-0 fs-7">تحديث الاسم والوصف والهدف التشغيلي وحالة تنشيط الوصفة في النظام</p>
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">تعديل بيانات وصفة التصنيع</h1>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">تحديث الاسم والوصف والهدف التشغيلي وحالة تنشيط الوصفة في النظام</p>
         </div>
         <div>
             <a href="{{ route('recipes.show', $recipe) }}" class="btn btn-outline-secondary">

@@ -5,13 +5,13 @@
 @section('content')
 <div class="container-fluid px-4 py-3">
     {{-- Header Actions --}}
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
+    <div class="page-header-card d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
         <div>
             <div class="d-flex align-items-center gap-2 mb-1">
                 <a href="{{ route('receivables.payments.index') }}" class="btn btn-sm btn-outline-secondary">
                     <i class="fas fa-arrow-right"></i>
                 </a>
-                <h1 class="h3 fw-bold text-dark mb-0">
+                <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">
                     دفعة عميل: <span class="font-monospace text-warning">{{ $payment->payment_number }}</span>
                 </h1>
                 @switch($payment->status)
@@ -29,7 +29,7 @@
                         @break
                 @endswitch
             </div>
-            <p class="text-muted mb-0 small">تاريخ الاستلام: {{ $payment->payment_date->format('Y-m-d') }} | العميل: {{ $payment->customer->name ?? '-' }}</p>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">تاريخ الاستلام: {{ $payment->payment_date->format('Y-m-d') }} | العميل: {{ $payment->customer->name ?? '-' }}</p>
         </div>
 
         <div class="d-flex gap-2">

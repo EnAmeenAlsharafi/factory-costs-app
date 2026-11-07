@@ -2,11 +2,14 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\ValidatesProductionDepartmentScope;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
 class QualityIncidentFormRequest extends FormRequest
 {
+    use ValidatesProductionDepartmentScope;
+
     public function authorize(): bool
     {
         return $this->user()?->can('production.report_quality') ?? false;
@@ -32,6 +35,8 @@ class QualityIncidentFormRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator) {
+            $this->validateProductionDepartmentScope($validator);
+
             if ($this->filled('disposition') && ! $this->user()?->can('production.manage_quality')) {
                 $validator->errors()->add('disposition', 'لا تملك صلاحية اتخاذ قرار معالجة الجودة عند إنشاء البلاغ. سجّل البلاغ أولاً ثم اطلب من مسؤول الجودة اتخاذ القرار.');
             }

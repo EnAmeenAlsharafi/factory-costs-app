@@ -15,12 +15,15 @@
                     @if ($role->is_system)
                         <span class="badge bg-secondary bg-opacity-10 text-secondary border">دور نظام قياسي</span>
                     @endif
+                    @if ($role->department)
+                        <span class="badge bg-secondary bg-opacity-10 text-secondary border"><i class="fas fa-building me-1"></i>قسم {{ $role->department->name_ar }}</span>
+                    @endif
                 </div>
                 <h4 class="fw-bold text-dark mb-1">{{ $role->display_name }}</h4>
                 <p class="text-muted mb-0 fs-7">{{ $role->description }}</p>
             </div>
             <div class="d-flex gap-2">
-                <a href="{{ route('roles.index') }}" class="btn btn-outline-secondary rounded-3 px-3 fs-7">
+                <a href="{{ route('roles.index', $role->department_id ? ['department' => $role->department_id] : []) }}" class="btn btn-outline-secondary rounded-3 px-3 fs-7">
                     <i class="fas fa-arrow-right me-1"></i> العودة للأدوار
                 </a>
                 @can('roles.manage')
@@ -35,14 +38,7 @@
     </div>
 
     @php
-        $moduleLabels = [
-            'users' => 'المستخدمون', 'roles' => 'الأدوار والصلاحيات', 'customers' => 'العملاء',
-            'quotations' => 'عروض الأسعار', 'orders' => 'طلبات العملاء', 'production' => 'الإنتاج',
-            'inventory' => 'المخزون', 'materials' => 'المواد الخام', 'products' => 'المنتجات',
-            'suppliers' => 'الموردون', 'costing' => 'التكاليف', 'delivery' => 'التوصيل',
-            'reports' => 'التقارير', 'sales_channels' => 'قنوات البيع',
-            'customer_types' => 'أنواع العملاء', 'units' => 'وحدات القياس', 'departments' => 'أقسام المصنع',
-        ];
+        $moduleLabels = \App\Models\Permission::MODULE_LABELS;
     @endphp
 
     <!-- Permissions Breakdown Grouped by Module -->

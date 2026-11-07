@@ -20,7 +20,7 @@ class ProductionReworkController extends Controller
     {
         abort_if(! $request->user()->can('production.view'), 403);
 
-        $query = ProductionReworkAction::with([
+        $query = ProductionReworkAction::visibleTo($request->user())->with([
             'qualityIncident',
             'productionOrder',
             'assignedDepartment',

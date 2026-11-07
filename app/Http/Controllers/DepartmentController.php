@@ -4,12 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\DepartmentRequest;
 use App\Models\Department;
+use App\Services\DepartmentRoleService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class DepartmentController extends Controller
 {
+    public function __construct(protected DepartmentRoleService $departmentRoles) {}
+
     public function index(Request $request): View
     {
         abort_if(! $request->user()->can('departments.view'), 403, 'غير مصرح لك بعرض أقسام المصنع.');
@@ -31,7 +34,7 @@ class DepartmentController extends Controller
 
     public function store(DepartmentRequest $request): RedirectResponse
     {
-        Department::create([
+        $department = Department::create([
             'code' => strtoupper($request->validated('code')),
             'name_ar' => $request->validated('name_ar'),
             'name_en' => $request->validated('name_en'),
@@ -40,6 +43,8 @@ class DepartmentController extends Controller
             'is_production_department' => $request->boolean('is_production_department'),
             'is_active' => $request->boolean('is_active', true),
         ]);
+
+        $this->departmentRoles->ensureDefaultRoles($department);
 
         return redirect()->route('departments.index')->with('success', 'تم إنشاء القسم بنجاح.');
     }
@@ -62,6 +67,8 @@ class DepartmentController extends Controller
             'is_production_department' => $request->boolean('is_production_department'),
             'is_active' => $request->boolean('is_active'),
         ]);
+
+        $this->departmentRoles->ensureDefaultRoles($department);
 
         return redirect()->route('departments.index')->with('success', 'تم تحديث بيانات القسم بنجاح.');
     }

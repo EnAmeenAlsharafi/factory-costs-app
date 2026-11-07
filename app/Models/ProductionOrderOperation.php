@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -158,5 +159,17 @@ class ProductionOrderOperation extends Model
             'SKIPPED' => 'ملغي',
             default => $this->status,
         };
+    }
+
+    /**
+     * Scope to operations in a department-restricted user's department; unrestricted users see everything.
+     */
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        if (! $user->isDepartmentRestricted()) {
+            return $query;
+        }
+
+        return $query->whereHas('workCenter', fn (Builder $wc) => $wc->where('department_id', $user->productionDepartmentId()));
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -67,5 +68,19 @@ class ProductionMaterialRequest extends Model
     public function materialReturns()
     {
         return $this->hasMany(MaterialReturn::class, 'production_material_request_id');
+    }
+
+    /**
+     * Scope to material requests addressed to, or for orders visible to, a department-restricted user.
+     */
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        if (! $user->isDepartmentRestricted()) {
+            return $query;
+        }
+
+        return $query->where(fn (Builder $q) => $q
+            ->where('requested_from_department_id', $user->productionDepartmentId())
+            ->orWhereHas('productionOrder', fn (Builder $po) => $po->visibleTo($user)));
     }
 }

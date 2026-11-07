@@ -4,10 +4,10 @@
 
 @section('content')
 <div class="container-fluid px-4 py-3">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-header-card d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="fw-bold mb-1"><i class="fas fa-hand-holding-box text-success me-2"></i>تسليم منتجات جاهزة من الورشة للمستودع</h4>
-            <p class="text-muted mb-0">إيداع الكميات المكتملة تصنيعياً في مستودع المنتجات الجاهزة لتصبح متاح للتوصيل</p>
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2"><i class="fas fa-hand-holding-box text-warning fs-5" aria-hidden="true"></i>تسليم منتجات جاهزة من الورشة للمستودع</h1>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">إيداع الكميات المكتملة تصنيعياً في مستودع المنتجات الجاهزة لتصبح متاح للتوصيل</p>
         </div>
         <a href="{{ route('finished-goods.index') }}" class="btn btn-outline-secondary">
             <i class="fas fa-arrow-right me-1"></i> العودة للكتالوج

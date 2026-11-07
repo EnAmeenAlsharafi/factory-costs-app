@@ -16,13 +16,13 @@
     <!-- Form Card -->
     <div class="card bg-white border-0 shadow-sm rounded-4 p-4 p-md-5">
         <div class="border-bottom pb-3 mb-4">
-            <h5 class="fw-bold text-dark mb-1">
+            <h1 id="page-heading" class="h5 fw-bold text-dark mb-1">
                 <i class="fas fa-user-plus text-warning me-2"></i> بيانات المستخدم الجديد
-            </h5>
+            </h1>
             <p class="text-muted fs-7 mb-0">قم بإدخال بيانات منسوب المصنع وتعيين دوره الوظيفي لتحديد صلاحياته في النظام.</p>
         </div>
 
-        <form action="{{ route('users.store') }}" method="POST">
+        <form action="{{ route('users.store') }}" method="POST" x-data="{ departmentId: '{{ old('department_id') }}' }">
             @csrf
 
             <div class="row g-3">
@@ -76,13 +76,9 @@
                 <!-- Role Selection -->
                 <div class="col-md-6">
                     <label for="role_id" class="form-label">الدور الوظيفي والصلاحيات <span class="text-danger">*</span></label>
-                    <select name="role_id" id="role_id" class="form-select @error('role_id') is-invalid @enderror" required>
+                    <select name="role_id" id="role_id" class="form-select @error('role_id') is-invalid @enderror" required x-ref="roleSelect">
                         <option value="">-- اختر الدور الوظيفي للمستخدم --</option>
-                        @foreach ($roles as $role)
-                            <option value="{{ $role->id }}" {{ old('role_id') == $role->id ? 'selected' : '' }}>
-                                {{ $role->display_name }} - {{ $role->description }}
-                            </option>
-                        @endforeach
+                        @include('users.partials.role-options', ['selectedRoleId' => old('role_id')])
                     </select>
                     @error('role_id')
                         <div class="invalid-feedback">{{ $message }}</div>
@@ -92,7 +88,7 @@
                 <!-- Department Selection -->
                 <div class="col-md-6">
                     <label for="department_id" class="form-label">القسم التشغيلي / الورشة <span class="text-muted fs-8">(اختياري)</span></label>
-                    <select name="department_id" id="department_id" class="form-select @error('department_id') is-invalid @enderror">
+                    <select name="department_id" id="department_id" class="form-select @error('department_id') is-invalid @enderror" x-model="departmentId" @change="$nextTick(() => { const option = $refs.roleSelect.selectedOptions[0]; if (option && option.parentElement.disabled) { $refs.roleSelect.value = ''; } })">
                         <option value="">-- بدون قسم محدد --</option>
                         @foreach ($departments as $dept)
                             <option value="{{ $dept->id }}" {{ old('department_id') == $dept->id ? 'selected' : '' }}>

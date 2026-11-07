@@ -26,7 +26,7 @@ class ProductionWasteController extends Controller
     {
         abort_if(! $request->user()->can('production.view'), 403);
 
-        $query = ProductionWasteRecord::with([
+        $query = ProductionWasteRecord::visibleTo($request->user())->with([
             'productionOrder',
             'operation',
             'qualityIncident',
@@ -60,7 +60,9 @@ class ProductionWasteController extends Controller
 
         $wasteRecords = $query->latest('occurred_at')->paginate(15)->withQueryString();
         $reasons = ProductionWasteReason::where('is_active', true)->get();
-        $departments = Department::all();
+        $departments = Department::query()
+            ->when($request->user()->isDepartmentRestricted(), fn ($q) => $q->whereKey($request->user()->productionDepartmentId()))
+            ->get();
 
         return view('production.waste.index', compact('wasteRecords', 'reasons', 'departments'));
     }
@@ -72,7 +74,7 @@ class ProductionWasteController extends Controller
         $orderId = $request->query('production_order_id');
         $incidentId = $request->query('quality_incident_id');
 
-        $productionOrder = ProductionOrder::with('operations.workCenter.department')->findOrFail($orderId);
+        $productionOrder = ProductionOrder::visibleTo($request->user())->with('operations.workCenter.department')->findOrFail($orderId);
         $qualityIncident = $incidentId ? QualityIncident::find($incidentId) : null;
 
         $materials = Material::with('baseUnit')->where('is_active', true)->get();

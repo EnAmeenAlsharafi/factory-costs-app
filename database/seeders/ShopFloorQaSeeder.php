@@ -177,7 +177,7 @@ class ShopFloorQaSeeder extends Seeder
      */
     private function departmentWorkers(): array
     {
-        $workerRole = Role::where('name', 'production_worker')->first();
+        $legacyWorkerRole = Role::where('name', 'production_worker')->first();
         $workers = [];
 
         foreach (self::DEPARTMENT_WORKER_USERNAMES as $deptCode => $username) {
@@ -190,6 +190,7 @@ class ShopFloorQaSeeder extends Seeder
             // An account reused from DevelopmentSeeder (e.g. worker.carpenter) keeps its own
             // existing credentials untouched — only a genuinely new QA account gets created here.
             $existing = User::where('username', $username)->first();
+            $workerRole = Role::forDepartment($department->id)->where('name', strtolower($deptCode).'.worker')->first() ?? $legacyWorkerRole;
 
             $workers[$deptCode] = $existing ?? User::create([
                 'username' => $username,

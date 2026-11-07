@@ -6,17 +6,17 @@
 <div class="container-fluid px-4 py-3">
 
     <!-- Header & Breadcrumbs -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div class="page-header-card d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
         <div>
             <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-1">
+                <ol class="breadcrumb mb-2 fs-8">
                     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}" class="text-decoration-none">الرئيسية</a></li>
                     <li class="breadcrumb-item"><a href="{{ route('products.models.index') }}" class="text-decoration-none">موديلات المصنع</a></li>
                     <li class="breadcrumb-item"><a href="{{ route('products.models.show', $model) }}" class="text-decoration-none">{{ $model->model_code }}</a></li>
                     <li class="breadcrumb-item active" aria-current="page">تعديل الموديل</li>
                 </ol>
             </nav>
-            <h1 class="h3 fw-bold mb-0 text-dark">تعديل بيانات الموديل: <span class="text-primary fw-mono">{{ $model->model_code }}</span></h1>
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">تعديل بيانات الموديل: <span class="text-primary fw-mono">{{ $model->model_code }}</span></h1>
         </div>
         <div>
             <a href="{{ route('products.models.show', $model) }}" class="btn btn-outline-secondary">

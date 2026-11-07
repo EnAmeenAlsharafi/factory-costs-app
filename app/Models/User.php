@@ -100,6 +100,43 @@ class User extends Authenticatable
     }
 
     /**
+     * Determine whether the user oversees every production department.
+     */
+    public function hasProductionDepartmentOverride(): bool
+    {
+        return $this->isAdministrator() || $this->hasRole('production_manager');
+    }
+
+    /**
+     * The production department the user's work is confined to (a department role wins over the user's own field).
+     */
+    public function productionDepartmentId(): ?int
+    {
+        return $this->role?->department_id ?? $this->department_id;
+    }
+
+    /**
+     * Determine whether the user only sees and acts on their own department's operations.
+     */
+    public function isDepartmentRestricted(): bool
+    {
+        return ! $this->hasProductionDepartmentOverride()
+            && ($this->role?->isDepartmentRole() || $this->department_id !== null);
+    }
+
+    /**
+     * Determine whether the user may see or act on work belonging to the given department.
+     */
+    public function canAccessDepartment(?int $departmentId): bool
+    {
+        if (! $this->isDepartmentRestricted() || $departmentId === null) {
+            return true;
+        }
+
+        return $this->productionDepartmentId() === $departmentId;
+    }
+
+    /**
      * Check if user has a specific role or any role from a list.
      */
     public function hasRole(string|array $roles): bool

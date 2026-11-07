@@ -5,20 +5,20 @@
 @section('content')
 <div class="container-fluid px-4 py-3">
 
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div class="page-header-card d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
         <div>
             <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-1">
+                <ol class="breadcrumb mb-2 fs-8">
                     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}" class="text-decoration-none">الرئيسية</a></li>
                     <li class="breadcrumb-item active" aria-current="page">المنتجات الجاهزة للبيع</li>
                 </ol>
             </nav>
-            <h1 class="h3 fw-bold mb-0 text-dark">المنتجات الجاهزة للبيع</h1>
-            <p class="text-muted mb-0 fs-7">إدارة المنتجات الجاهزة ومطابقتها مع طلبات سلة ومتابعة توفرها في المستودع.</p>
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">المنتجات الجاهزة للبيع</h1>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">إدارة المنتجات الجاهزة ومطابقتها مع طلبات سلة ومتابعة توفرها في المستودع.</p>
         </div>
         @can('materials.manage')
             <div class="d-flex flex-wrap gap-2">
-                <a class="btn btn-primary" href="{{ route('sales.ready-stock-products.create') }}"><i class="fas fa-plus me-1"></i> إضافة منتج يدويًا</a>
+                <a class="btn btn-factory-warning" href="{{ route('sales.ready-stock-products.create') }}"><i class="fas fa-plus me-1"></i> إضافة منتج يدويًا</a>
                 <a class="btn btn-outline-primary" href="{{ route('sales.ready-stock-products.import') }}"><i class="fas fa-file-excel me-1"></i> استيراد من سلة</a>
             </div>
         @endcan

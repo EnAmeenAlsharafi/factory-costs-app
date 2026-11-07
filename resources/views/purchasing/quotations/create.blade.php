@@ -4,12 +4,12 @@
 
 @section('content')
 <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-header-card d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="h3 mb-0 text-gray-800">
-                <i class="fas fa-plus-circle me-2 text-primary"></i>تسجيل عرض سعر مورد (Supplier Quotation)
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                <i class="fas fa-plus-circle text-warning fs-5" aria-hidden="true"></i>تسجيل عرض سعر مورد
             </h1>
-            <p class="text-muted small mb-0">إدخال أسعار وحدات الشراء ومعاملات التحويل ومواعيد التوريد المقدمة من المورد</p>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">إدخال أسعار وحدات الشراء ومعاملات التحويل ومواعيد التوريد المقدمة من المورد</p>
         </div>
         <a href="{{ route('purchasing.quotations.index') }}" class="btn btn-outline-secondary rounded-pill px-4">إلغاء والعودة</a>
     </div>
@@ -115,7 +115,7 @@
                                     <span class="fw-bold text-dark" x-text="(line.quoted_quantity * line.unit_price).toFixed(2)"></span> SAR
                                 </td>
                                 <td class="text-center">
-                                    <button type="button" @click="removeLine(index)" class="btn btn-sm btn-outline-danger border-0">
+                                    <button type="button" @click="removeLine(index)" class="btn btn-sm btn-outline-danger border-0" aria-label="حذف البند">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </td>

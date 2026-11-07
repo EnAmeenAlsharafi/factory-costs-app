@@ -14,7 +14,7 @@ class CustomerPortalReviewController extends Controller
     public function index(Request $request): View
     {
         abort_unless($request->user()->can('orders.update'), 403);
-        $query = CustomerPortalRequest::with('customer')->where('status', '!=', 'DRAFT');
+        $query = CustomerPortalRequest::with(['customer', 'order'])->where('status', '!=', 'DRAFT');
         if ($request->filled('status') && array_key_exists($request->string('status')->toString(), CustomerPortalRequest::STATUSES)) {
             $query->where('status', $request->input('status'));
         }

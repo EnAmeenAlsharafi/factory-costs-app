@@ -6,16 +6,16 @@
 <div class="container-fluid px-4 py-3">
 
     <!-- Header & Breadcrumbs -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div class="page-header-card d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
         <div>
             <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-1">
+                <ol class="breadcrumb mb-2 fs-8">
                     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}" class="text-decoration-none">الرئيسية</a></li>
                     <li class="breadcrumb-item"><a href="{{ route('inventory.balances.index') }}" class="text-decoration-none">أرصدة المخزون والدفعات</a></li>
                     <li class="breadcrumb-item active" aria-current="page">{{ $lot->lot_code }}</li>
                 </ol>
             </nav>
-            <h1 class="h3 fw-bold mb-0 text-dark">دفعة مخزنية: <span class="text-primary fw-mono">{{ $lot->lot_code }}</span></h1>
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">دفعة مخزنية: <span class="text-primary fw-mono">{{ $lot->lot_code }}</span></h1>
         </div>
 
         <div>

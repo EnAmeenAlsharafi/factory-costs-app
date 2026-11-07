@@ -2,8 +2,10 @@
 @section('title', $material->exists ? 'تعديل منتج جاهز' : 'إضافة منتج جاهز')
 @section('content')
 <div class="container-fluid px-4 py-4">
-    <a href="{{ route('sales.ready-stock-products.index') }}" class="text-decoration-none d-inline-block mb-3">العودة للمنتجات الجاهزة</a>
-    <h1 class="h3 fw-bold mb-4">{{ $material->exists ? 'تعديل منتج جاهز' : 'إضافة منتج جاهز يدويًا' }}</h1>
+    <div class="page-header-card mb-4">
+        <a href="{{ route('sales.ready-stock-products.index') }}" class="text-decoration-none text-secondary fs-7 d-inline-block mb-2"><i class="fas fa-arrow-right me-1" aria-hidden="true"></i> العودة للمنتجات الجاهزة</a>
+        <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2"><i class="fas fa-box-open text-warning fs-5" aria-hidden="true"></i>{{ $material->exists ? 'تعديل منتج جاهز' : 'إضافة منتج جاهز يدويًا' }}</h1>
+    </div>
     @if($errors->any())
         <div class="alert alert-danger" role="alert"><ul class="mb-0">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
     @endif

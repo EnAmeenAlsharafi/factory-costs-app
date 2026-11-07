@@ -39,6 +39,14 @@ class Department extends Model
     }
 
     /**
+     * Roles defined specifically for this department.
+     */
+    public function roles(): HasMany
+    {
+        return $this->hasMany(Role::class);
+    }
+
+    /**
      * Scope to active departments.
      */
     public function scopeActive(Builder $query): Builder

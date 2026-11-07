@@ -5,10 +5,10 @@
 @section('content')
 <div class="container-fluid px-4 py-3">
     <!-- Header -->
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div class="page-header-card d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <div>
             <div class="d-flex align-items-center gap-2">
-                <h4 class="fw-bold mb-0 text-dark">بلاغ جودة: {{ $qualityIncident->incident_number }}</h4>
+                <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">بلاغ جودة: {{ $qualityIncident->incident_number }}</h1>
                 @php
                     $sevBadge = match($qualityIncident->severity) {
                         'LOW' => 'bg-info text-dark',
@@ -20,9 +20,9 @@
                 @endphp
                 <span class="badge {{ $sevBadge }} fs-6">{{ $qualityIncident->severity }}</span>
             </div>
-            <p class="text-muted mb-0 mt-1">
+            <p class="page-header-subtitle text-muted mb-0 fs-7">
                 أمر الإنتاج: <a href="{{ route('production.orders.show', $qualityIncident->productionOrder) }}" class="fw-bold font-monospace text-primary text-decoration-none">{{ $qualityIncident->productionOrder->production_order_number }}</a>
-                &bull; العميل: <strong>{{ $qualityIncident->productionOrder->customerOrder?->customer?->name_ar }}</strong>
+                &bull; العميل: <strong>{{ $qualityIncident->productionOrder->customerOrder?->customer?->name }}</strong>
             </p>
         </div>
         <div class="d-flex gap-2">

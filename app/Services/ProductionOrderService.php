@@ -189,7 +189,7 @@ class ProductionOrderService
 
         // Check department authorization
         if (! $user->isAdministrator() && ! $user->hasRole('production_manager')) {
-            if ($user->department_id && $user->department_id !== $op->workCenter->department_id) {
+            if (! $user->canAccessDepartment($op->workCenter?->department_id)) {
                 throw ValidationException::withMessages([
                     'authorization' => 'غير مصرح لك بتحديث إنجاز عمليات خارج قسمك التشغيلي.',
                 ]);
@@ -329,6 +329,12 @@ class ProductionOrderService
     public function correctProgress(ProductionOrderOperation $op, int $newTotalQty, string $notes, User $user): ProductionOrderOperation
     {
         $po = $op->productionOrder;
+
+        if (! $user->canAccessDepartment($op->workCenter?->department_id)) {
+            throw ValidationException::withMessages([
+                'authorization' => 'غير مصرح لك بتصحيح إنجاز عمليات خارج قسمك التشغيلي.',
+            ]);
+        }
 
         if ($newTotalQty < 0 || $newTotalQty > $op->required_quantity) {
             throw ValidationException::withMessages([

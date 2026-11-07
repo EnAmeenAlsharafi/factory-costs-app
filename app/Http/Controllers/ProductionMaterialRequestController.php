@@ -28,7 +28,7 @@ class ProductionMaterialRequestController extends Controller
     {
         abort_if(! $request->user()->can('production.view'), 403);
 
-        $query = ProductionMaterialRequest::with([
+        $query = ProductionMaterialRequest::visibleTo($request->user())->with([
             'productionOrder',
             'requestedByUser',
             'requestedFromDepartment',
@@ -106,6 +106,7 @@ class ProductionMaterialRequestController extends Controller
     public function show(Request $request, ProductionMaterialRequest $materialRequest): View
     {
         abort_if(! $request->user()->can('production.view'), 403);
+        abort_unless(ProductionMaterialRequest::visibleTo($request->user())->whereKey($materialRequest->id)->exists(), 404);
 
         $materialRequest->load([
             'productionOrder.productModel',

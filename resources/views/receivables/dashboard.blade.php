@@ -5,16 +5,16 @@
 @section('content')
 <div class="container-fluid px-4 py-3">
     {{-- Header --}}
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
+    <div class="page-header-card d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
         <div>
-            <h1 class="h3 fw-bold text-dark mb-1">
-                <i class="fas fa-chart-line text-warning me-2"></i> لوحة تحكم التحصيل والأرصدة التشغيلية
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                <i class="fas fa-chart-line text-warning fs-5" aria-hidden="true"></i> لوحة تحكم التحصيل والأرصدة التشغيلية
             </h1>
-            <p class="text-muted mb-0 small">متابعة المستحقات التجاريّة، الدفعات المعلقة، وتجاوزات الائتمان لعملاء المصنع.</p>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">متابعة المستحقات التجاريّة، الدفعات المعلقة، وتجاوزات الائتمان لعملاء المصنع.</p>
         </div>
         <div class="d-flex gap-2">
             @can('receivables.payment.create')
-                <a href="{{ route('receivables.payments.create') }}" class="btn btn-warning fw-bold px-3">
+                <a href="{{ route('receivables.payments.create') }}" class="btn btn-factory-warning fw-bold px-3">
                     <i class="fas fa-plus-circle me-1"></i> تسجيل دفعة عميل
                 </a>
             @endcan
@@ -29,7 +29,7 @@
     {{-- KPI Cards --}}
     <div class="row g-3 mb-4">
         <div class="col-12 col-sm-6 col-xl-3">
-            <div class="card border-0 shadow-sm rounded-3 h-100 bg-gradient" style="background: linear-gradient(135deg, #1e293b, #0f172a); color: #fff;">
+            <div class="card border-0 shadow-sm rounded-3 h-100 text-white" style="background: linear-gradient(135deg, #1e293b, #0f172a) !important;">
                 <div class="card-body p-3">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <span class="text-white-50 small fw-bold">إجمالي المستحقات القائمة</span>

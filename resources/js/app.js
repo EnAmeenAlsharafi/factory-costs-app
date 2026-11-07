@@ -1,6 +1,8 @@
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import Alpine from 'alpinejs';
 import { registerReportFilters } from './report-ui';
+import { isNamed, watchFormLabels } from './form-labels';
+import { stackTables } from './table-stack';
 
 window.Alpine = Alpine;
 registerReportFilters(Alpine);
@@ -14,6 +16,19 @@ function readStoredJson(key, fallback) {
     } catch (e) {
         return fallback;
     }
+}
+
+/**
+ * Centre a sidebar link inside the menu by scrolling the menu only. scrollIntoView would also scroll
+ * the page — on phones the closed drawer sits off-screen, so the whole page slid sideways.
+ */
+function centerInMenu(menu, link) {
+    if (!menu || !link) {
+        return;
+    }
+    const menuRect = menu.getBoundingClientRect();
+    const linkRect = link.getBoundingClientRect();
+    menu.scrollTop += (linkRect.top - menuRect.top) - (menu.clientHeight - linkRect.height) / 2;
 }
 
 function writeStored(key, value) {
@@ -103,7 +118,7 @@ Alpine.data('appShell', () => ({
                 const activeRect = active.getBoundingClientRect();
                 const isVisible = (activeRect.top >= menuRect.top + 20 && activeRect.bottom <= menuRect.bottom - 20);
                 if (!isVisible) {
-                    active.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'auto' });
+                    centerInMenu(currentMenu, active);
                     try {
                         window.sessionStorage.setItem('sadir-sidebar-scroll', String(currentMenu.scrollTop));
                     } catch (err) {}
@@ -141,7 +156,7 @@ Alpine.data('appShell', () => ({
         this.mobileSidebarOpen = true;
         this.$nextTick(() => {
             const active = document.querySelector('#app-sidebar .sidebar-nav-link.active');
-            active?.scrollIntoView({ block: 'center' });
+            centerInMenu(document.getElementById('sidebar-menu') || document.querySelector('#app-sidebar .sidebar-menu'), active);
             document.querySelector('#app-sidebar button, #app-sidebar a')?.focus();
         });
     },
@@ -695,6 +710,8 @@ function refreshScrollHints() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Link visible labels to their fields first, so the fallbacks below only touch truly unlabeled fields.
+    watchFormLabels();
     initFormSafety();
     initNetworkBanner();
     initKeyboardAwareness();
@@ -706,6 +723,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }));
     }).observe(document.body, { childList: true, subtree: true });
+
+    // Phones: list tables become cards (before scroll hints are measured, so stacked tables show none).
+    stackTables();
 
     document.querySelectorAll('.table-responsive').forEach((wrapper, index) => {
         wrapper.setAttribute('tabindex', '0');
@@ -723,12 +743,16 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('resize', refreshScrollHints);
 
     document.querySelectorAll('td .d-inline-flex').forEach((actions) => actions.classList.add('table-actions'));
-    document.querySelectorAll('input[placeholder]:not([aria-label])').forEach((input) => input.setAttribute('aria-label', input.placeholder));
+    // Last-resort names for fields that still have no label: never override a real <label>.
+    document.querySelectorAll('input[placeholder]:not([aria-label])').forEach((input) => {
+        if (!isNamed(input)) {
+            input.setAttribute('aria-label', input.placeholder);
+        }
+    });
     document.querySelectorAll('select:not([aria-label])').forEach((select) => {
-        const label = document.querySelector(`label[for="${select.id}"]`)?.textContent.trim()
-            || select.options[0]?.textContent.trim()
-            || 'اختيار قيمة';
-        select.setAttribute('aria-label', label);
+        if (!isNamed(select)) {
+            select.setAttribute('aria-label', select.options[0]?.textContent.trim() || 'اختيار قيمة');
+        }
     });
     document.querySelectorAll('[title]:not([aria-label])').forEach((element) => element.setAttribute('aria-label', element.title));
 });

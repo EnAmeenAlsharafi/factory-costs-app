@@ -2,7 +2,7 @@
 <header class="top-header">
     
     <!-- Right Area: Mobile Toggle & Page Title/Breadcrumbs -->
-    <div class="d-flex align-items-center gap-3">
+    <div class="d-flex align-items-center gap-3 min-w-0">
         <button id="mobile-menu-toggle"
                 type="button"
                 @click="openMobileSidebar()"
@@ -13,8 +13,14 @@
             <i class="fas fa-bars fs-5"></i>
         </button>
 
-        <div class="d-flex align-items-center gap-2">
-            <span class="header-page-title fw-bold text-dark fs-6">@yield('page-title', 'نظام إدارة إنتاج المصنع')</span>
+        <div class="d-flex align-items-center gap-2 min-w-0">
+            @php
+                // Pages without an explicit page-title fall back to their document title (without the brand suffix).
+                $headerHeading = trim($__env->yieldContent('page-title'))
+                    ?: trim(\Illuminate\Support\Str::before($__env->yieldContent('title'), ' - مصنع'))
+                    ?: 'نظام إدارة إنتاج المصنع';
+            @endphp
+            <span class="header-page-title fw-bold text-dark fs-6">{!! $headerHeading !!}</span>
         </div>
     </div>
 

@@ -8,7 +8,7 @@
 
     <!-- Page Header -->
     @include('partials.page-header', [
-        'title' => 'تصنيفات المواد الخام (Material Categories)',
+        'title' => 'تصنيفات المواد الخام',
         'subtitle' => 'التصنيفات الرئيسية والفرعية للمواد والخامات المستخدمة في التصنيع.',
         'icon' => 'fas fa-boxes-stacked',
         'breadcrumbs' => [

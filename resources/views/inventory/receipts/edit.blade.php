@@ -5,17 +5,17 @@
 @section('content')
 <div class="container-fluid py-4" x-data="materialReceiptEditForm()">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-header-card d-flex justify-content-between align-items-center mb-4">
         <div>
             <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-1">
+                <ol class="breadcrumb mb-2 fs-8">
                     <li class="breadcrumb-item"><a href="{{ route('inventory.receipts.index') }}" class="text-decoration-none">إيصالات استلام المواد</a></li>
                     <li class="breadcrumb-item"><a href="{{ route('inventory.receipts.show', $receipt) }}" class="text-decoration-none">{{ $receipt->receipt_number }}</a></li>
                     <li class="breadcrumb-item active" aria-current="page">تعديل المسودة</li>
                 </ol>
             </nav>
-            <h1 class="h3 fw-bold text-dark mb-0">
-                <i class="fas fa-edit text-primary me-2"></i>تعديل إيصال استلام خامات (مسودة)
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                <i class="fas fa-edit text-warning fs-5" aria-hidden="true"></i>تعديل إيصال استلام خامات (مسودة)
             </h1>
             <span class="badge bg-warning text-dark mt-1 font-monospace">{{ $receipt->receipt_number }}</span>
         </div>
@@ -178,7 +178,7 @@
                                         <span x-text="formatNumber(line.quantity * line.unit_cost)"></span> ر.س
                                     </td>
                                     <td class="text-center stack-hide-sm">
-                                        <button type="button" @click="removeLine(index)" class="btn btn-sm btn-outline-danger border-0" :disabled="lines.length === 1">
+                                        <button type="button" @click="removeLine(index)" class="btn btn-sm btn-outline-danger border-0" :disabled="lines.length === 1" aria-label="حذف البند">
                                             <i class="fas fa-trash-alt"></i>
                                         </button>
                                     </td>

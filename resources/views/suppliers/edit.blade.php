@@ -20,9 +20,9 @@
     <div class="card bg-white border-0 shadow-sm rounded-4 p-4 p-md-5">
         <div class="border-bottom pb-3 mb-4 d-flex justify-content-between align-items-center">
             <div>
-                <h5 class="fw-bold text-dark mb-1">
+                <h1 id="page-heading" class="h5 fw-bold text-dark mb-1">
                     <i class="fas fa-truck text-warning me-2"></i> تعديل بيانات المورد
-                </h5>
+                </h1>
                 <p class="text-muted fs-7 mb-0">تحديث بيانات الاتصال والمسؤول أو البيانات الضريبية والتجارية.</p>
             </div>
             <code class="bg-light px-3 py-1.5 rounded-3 text-primary fs-6 fw-bold">{{ $supplier->supplier_code }}</code>

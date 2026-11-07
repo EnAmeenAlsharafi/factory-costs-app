@@ -6,12 +6,12 @@
 <div class="container-fluid px-4 py-4" x-data="recipeForm()">
 
     {{-- Header --}}
-    <div class="mb-4">
+    <div class="page-header-card mb-4">
         <a href="{{ route('recipes.index') }}" class="text-decoration-none text-muted fs-7 mb-2 d-inline-block">
             <i class="fas fa-arrow-right me-1"></i> العودة لقائمة الوصفات
         </a>
-        <h1 class="h3 mb-1 text-dark fw-bold">إنشاء وصفة تصنيع جديدة (Bill of Materials)</h1>
-        <p class="text-muted mb-0 fs-7">تعريف قائمة خامات التصنيع والمكونات الهيكلية للإصدار الأول المسودة (V1 Draft)</p>
+        <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">إنشاء وصفة تصنيع جديدة</h1>
+        <p class="page-header-subtitle text-muted mb-0 fs-7">تعريف قائمة خامات التصنيع والمكونات الهيكلية للإصدار الأول المسودة (V1 Draft)</p>
     </div>
 
     {{-- Error Flash --}}

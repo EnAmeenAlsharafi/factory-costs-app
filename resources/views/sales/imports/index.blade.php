@@ -5,19 +5,19 @@
 @section('content')
 <div class="container-fluid px-4 py-3">
 
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div class="page-header-card d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
         <div>
             <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-1">
+                <ol class="breadcrumb mb-2 fs-8">
                     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}" class="text-decoration-none">الرئيسية</a></li>
                     <li class="breadcrumb-item active" aria-current="page">استيراد طلبات سلة</li>
                 </ol>
             </nav>
-            <h1 class="h3 fw-bold mb-0 text-dark">سجل استيراد طلبات سلة (Salla Excel Import)</h1>
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">سجل استيراد طلبات سلة</h1>
         </div>
 
         @can('sales_imports.manage')
-            <a href="{{ route('sales.imports.create') }}" class="btn btn-primary shadow-sm">
+            <a href="{{ route('sales.imports.create') }}" class="btn btn-factory-warning shadow-sm">
                 <i class="fas fa-upload me-1"></i> رفع ملف جديد
             </a>
         @endcan

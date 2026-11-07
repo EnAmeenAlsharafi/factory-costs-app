@@ -133,7 +133,8 @@ Route::middleware('auth')->group(function () {
     Route::resource('users', UserController::class)->except(['destroy', 'show']);
 
     // Roles and Permissions Management
-    Route::resource('roles', RoleController::class)->only(['index', 'show', 'edit', 'update']);
+    Route::post('/roles/{role}/duplicate', [RoleController::class, 'duplicate'])->name('roles.duplicate');
+    Route::resource('roles', RoleController::class);
 
     // Master Data: Customers
     Route::post('/customers/{customer}/toggle-status', [CustomerController::class, 'toggleStatus'])->name('customers.toggle-status');
@@ -414,6 +415,9 @@ Route::middleware('auth')->group(function () {
     // Stage 11: Finished Goods, Delivery & Installation, and Customer Returns
     Route::prefix('finished-goods')->name('finished-goods.')->group(function () {
         Route::get('/', [FinishedGoodsController::class, 'index'])->name('index');
+        Route::get('/quarantine', [FinishedGoodsController::class, 'quarantine'])->name('quarantine');
+        Route::post('/quarantine/{productionOrder}/release', [FinishedGoodsController::class, 'releaseQuarantine'])->name('quarantine.release');
+        Route::post('/quarantine/{productionOrder}/scrap', [FinishedGoodsController::class, 'scrapQuarantine'])->name('quarantine.scrap');
         Route::get('/receipts/create', [FinishedGoodsController::class, 'createReceipt'])->name('receipts.create');
         Route::post('/receipts', [FinishedGoodsController::class, 'storeReceipt'])->name('receipts.store');
         Route::get('/receipts/{receipt}', [FinishedGoodsController::class, 'showReceipt'])->name('receipts.show');
@@ -432,6 +436,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/orders/{delivery}/complete', [DeliveryOrderController::class, 'complete'])->name('orders.complete');
         Route::post('/orders/{delivery}/install', [DeliveryOrderController::class, 'install'])->name('orders.install');
         Route::post('/orders/{delivery}/fail-or-reschedule', [DeliveryOrderController::class, 'failOrReschedule'])->name('orders.fail-or-reschedule');
+        Route::post('/orders/{delivery}/confirm-goods-returned', [DeliveryOrderController::class, 'confirmGoodsReturned'])->name('orders.confirm-goods-returned');
+        Route::post('/orders/{delivery}/reschedule-as-new', [DeliveryOrderController::class, 'rescheduleAsNew'])->name('orders.reschedule-as-new');
+        Route::post('/orders/{delivery}/cancel-after-failure', [DeliveryOrderController::class, 'cancelAfterFailure'])->name('orders.cancel-after-failure');
     });
 
     Route::prefix('customer-returns')->name('customer-returns.')->group(function () {
@@ -441,6 +448,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/{customerReturn}', [CustomerReturnController::class, 'show'])->name('show');
         Route::post('/{customerReturn}/receive', [CustomerReturnController::class, 'receive'])->name('receive');
         Route::post('/{customerReturn}/link-quality', [CustomerReturnController::class, 'linkQuality'])->name('link-quality');
+        Route::post('/{customerReturn}/approve', [CustomerReturnController::class, 'approve'])->name('approve');
+        Route::post('/{customerReturn}/reject', [CustomerReturnController::class, 'reject'])->name('reject');
+        Route::post('/{customerReturn}/inspect', [CustomerReturnController::class, 'inspect'])->name('inspect');
+        Route::post('/{customerReturn}/complete-repair', [CustomerReturnController::class, 'completeRepair'])->name('complete-repair');
+        Route::post('/{customerReturn}/resolve', [CustomerReturnController::class, 'resolve'])->name('resolve');
     });
 
     // Stage 12: Purchasing & Procurement Workflow
@@ -518,7 +530,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::get('/settings', function () {
-        return view('placeholders.module', ['title' => 'إعدادات النظام والقياسات (System Settings)']);
+        return view('placeholders.module', ['title' => 'إعدادات النظام والقياسات']);
     })->name('settings.index');
 
     // Stage 13: Customer Payments, Receivables, Credit & Overrides

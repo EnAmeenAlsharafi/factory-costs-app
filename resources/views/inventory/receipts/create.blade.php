@@ -6,16 +6,16 @@
 <div class="container-fluid px-4 py-3" x-data="materialReceiptForm()">
 
     <!-- Header & Breadcrumbs -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div class="page-header-card d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
         <div>
             <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-1">
+                <ol class="breadcrumb mb-2 fs-8">
                     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}" class="text-decoration-none">الرئيسية</a></li>
                     <li class="breadcrumb-item"><a href="{{ route('inventory.receipts.index') }}" class="text-decoration-none">سندات الاستلام</a></li>
                     <li class="breadcrumb-item active" aria-current="page">سند جديد</li>
                 </ol>
             </nav>
-            <h1 class="h3 fw-bold mb-0 text-dark">إنشاء سند استلام مواد خام (Material Receipt)</h1>
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">إنشاء سند استلام مواد خام</h1>
         </div>
         <div>
             <a href="{{ route('inventory.receipts.index') }}" class="btn btn-outline-secondary">

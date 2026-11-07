@@ -21,12 +21,98 @@ class FinishedGoodsService
 
         if ($warehouse) {
             $query->where('warehouse_id', $warehouse->id);
+        } else {
+            // Goods waiting for inspection are on hand but not sellable.
+            $query->where('warehouse_id', '!=', $this->quarantineWarehouse()->id);
         }
 
         $inQty = (float) (clone $query)->where('direction', 'IN')->sum('quantity');
         $outQty = (float) (clone $query)->where('direction', 'OUT')->sum('quantity');
 
         return max(0.0, round($inQty - $outQty, 4));
+    }
+
+    /**
+     * Internal inspection area for refused or returned goods. Kept inactive so it never appears
+     * in the material warehouse pickers; created on first use so existing databases need no seeding.
+     */
+    public function quarantineWarehouse(): Warehouse
+    {
+        return Warehouse::firstOrCreate(
+            ['code' => 'FG_QUARANTINE'],
+            [
+                'name_ar' => 'منطقة فحص المرتجعات (حجر)',
+                'name_en' => 'Returns Inspection Area',
+                'description' => 'منتجات مرفوضة أو مرتجعة بانتظار قرار الفحص؛ لا تُحسب ضمن المتاح للتوصيل.',
+                'is_active' => false,
+            ]
+        );
+    }
+
+    public function finishedGoodsWarehouse(): Warehouse
+    {
+        return Warehouse::active()->where('code', 'FINISHED_GOODS')->first()
+            ?? Warehouse::active()->firstOrFail();
+    }
+
+    /**
+     * Quantity of a production order sitting in the inspection area.
+     */
+    public function getQuarantinedQuantity(ProductionOrder $productionOrder): float
+    {
+        return $this->getAvailableQuantity($productionOrder, $this->quarantineWarehouse());
+    }
+
+    /**
+     * Inspection passed: move goods from the inspection area back to sellable finished goods.
+     */
+    public function releaseFromQuarantine(ProductionOrder $productionOrder, float $quantity, User $user, string $note): void
+    {
+        DB::transaction(function () use ($productionOrder, $quantity, $user, $note) {
+            ProductionOrder::query()->whereKey($productionOrder->id)->lockForUpdate()->firstOrFail();
+            $this->assertQuarantined($productionOrder, $quantity);
+
+            $this->createMovement($productionOrder, $this->quarantineWarehouse(), 'QUARANTINE_RELEASE', 'OUT', $quantity, $user, $note);
+            $this->createMovement($productionOrder, $this->finishedGoodsWarehouse(), 'QUARANTINE_RELEASE', 'IN', $quantity, $user, $note);
+        });
+    }
+
+    /**
+     * Inspection failed beyond repair: write the goods off from the inspection area.
+     */
+    public function scrapFromQuarantine(ProductionOrder $productionOrder, float $quantity, User $user, string $note): void
+    {
+        DB::transaction(function () use ($productionOrder, $quantity, $user, $note) {
+            ProductionOrder::query()->whereKey($productionOrder->id)->lockForUpdate()->firstOrFail();
+            $this->assertQuarantined($productionOrder, $quantity);
+
+            $this->createMovement($productionOrder, $this->quarantineWarehouse(), 'SCRAP', 'OUT', $quantity, $user, $note);
+        });
+    }
+
+    private function assertQuarantined(ProductionOrder $productionOrder, float $quantity): void
+    {
+        $inQuarantine = $this->getQuarantinedQuantity($productionOrder);
+
+        if ($quantity <= 0 || $quantity > $inQuarantine + 0.00001) {
+            throw new Exception("الكمية المطلوبة ({$quantity}) تتجاوز الكمية الموجودة في منطقة الفحص ({$inQuarantine}).");
+        }
+    }
+
+    private function createMovement(ProductionOrder $productionOrder, Warehouse $warehouse, string $type, string $direction, float $quantity, User $user, string $note): FinishedGoodsMovement
+    {
+        return FinishedGoodsMovement::create([
+            'movement_number' => DocumentNumberService::generateFinishedGoodsMovementNumber(),
+            'production_order_id' => $productionOrder->id,
+            'customer_order_id' => $productionOrder->customer_order_id,
+            'warehouse_id' => $warehouse->id,
+            'movement_type' => $type,
+            'direction' => $direction,
+            'quantity' => $quantity,
+            'occurred_at' => now(),
+            'performed_by_user_id' => $user->id,
+            'notes' => $note,
+        ]);
     }
 
     /**

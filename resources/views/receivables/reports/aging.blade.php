@@ -4,12 +4,12 @@
 
 @section('content')
 <div class="container-fluid px-4 py-3">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
+    <div class="page-header-card d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
         <div>
-            <h1 class="h3 fw-bold text-dark mb-1">
-                <i class="fas fa-history text-warning me-2"></i> تقرير أعمار الديون والمتأخرات التشغيلية (Aging Report)
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                <i class="fas fa-history text-warning fs-5" aria-hidden="true"></i> تقرير أعمار الديون والمتأخرات التشغيلية
             </h1>
-            <p class="text-muted mb-0 small">تحليل الذمم التجارية القائمة حسب فترات استحقاق السداد.</p>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">تحليل الذمم التجارية القائمة حسب فترات استحقاق السداد.</p>
         </div>
         <button onclick="window.print()" class="btn btn-outline-dark fw-bold px-3">
             <i class="fas fa-print me-1"></i> طباعة التقرير
@@ -79,7 +79,7 @@
                                         <td class="text-end text-success fw-bold">{{ number_format($ord->confirmed_paid_amount, 2) }} ر.س</td>
                                         <td class="text-end text-danger fw-bold fs-6">{{ number_format($ord->outstanding_balance, 2) }} ر.س</td>
                                         <td class="text-end pe-3">
-                                            <a href="{{ route('sales.orders.show', $ord) }}" class="btn btn-sm btn-outline-dark">
+                                            <a href="{{ route('sales.orders.show', $ord) }}" class="btn btn-sm btn-outline-dark" title="عرض الطلب {{ $ord->order_number }}" aria-label="عرض الطلب {{ $ord->order_number }}">
                                                 <i class="fas fa-eye"></i>
                                             </a>
                                         </td>

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -211,5 +212,17 @@ class ProductionOrder extends Model
             'CANCELLED' => 'ملغى',
             default => $this->status,
         };
+    }
+
+    /**
+     * Scope to production orders with at least one operation in a department-restricted user's department.
+     */
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        if (! $user->isDepartmentRestricted()) {
+            return $query;
+        }
+
+        return $query->whereHas('operations', fn (Builder $op) => $op->visibleTo($user));
     }
 }

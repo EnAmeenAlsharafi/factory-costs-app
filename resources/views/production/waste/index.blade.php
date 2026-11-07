@@ -5,10 +5,10 @@
 @section('content')
 <div class="container-fluid px-4 py-3">
     <!-- Header -->
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div class="page-header-card d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <div>
-            <h4 class="fw-bold mb-0 text-dark">سجلات الهدر والتلف التحليلي (Production Waste Log)</h4>
-            <p class="text-muted mb-0 mt-1">تتبع التكلفة التحليلية للكميات التالفة والمعدومة أثناء العمليات الإنتاجية بدون ازدواجية محاسبية</p>
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">سجلات الهدر والتلف التحليلي</h1>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">تتبع التكلفة التحليلية للكميات التالفة والمعدومة أثناء العمليات الإنتاجية بدون ازدواجية محاسبية</p>
         </div>
         <div class="d-flex gap-2">
             @can('production.record_waste')

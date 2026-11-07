@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\FinishedGoodsReceiptFormRequest;
+use App\Models\CustomerReturn;
+use App\Models\FinishedGoodsMovement;
 use App\Models\FinishedGoodsReceipt;
 use App\Models\ProductionOrder;
 use App\Models\Warehouse;
@@ -33,13 +35,21 @@ class FinishedGoodsController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('production_order_number', 'like', "%{$search}%")
                     ->orWhereHas('customerOrder', fn ($co) => $co->where('order_number', 'like', "%{$search}%")
-                        ->orWhereHas('customer', fn ($c) => $c->where('name_ar', 'like', "%{$search}%")));
+                        ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', "%{$search}%")));
             });
         }
 
         $productionOrders = $query->latest()->paginate(15)->withQueryString();
 
-        return view('finished_goods.index', compact('productionOrders'));
+        $quarantineId = $this->fgService->quarantineWarehouse()->id;
+        $quarantineCount = FinishedGoodsMovement::where('warehouse_id', $quarantineId)
+            ->selectRaw("production_order_id, SUM(CASE WHEN direction = 'IN' THEN quantity ELSE -quantity END) as balance")
+            ->groupBy('production_order_id')
+            ->havingRaw("SUM(CASE WHEN direction = 'IN' THEN quantity ELSE -quantity END) > 0")
+            ->get()
+            ->count();
+
+        return view('finished_goods.index', compact('productionOrders', 'quarantineCount'));
     }
 
     public function createReceipt(Request $request): View
@@ -97,6 +107,63 @@ class FinishedGoodsController extends Controller
 
             return redirect()->route('finished-goods.receipts.show', $receipt)
                 ->with('success', "تم ترحيل سند تسليم المنتجات الجاهزة رقم {$receipt->receipt_number} وإيداعها في المخزون بنجاح.");
+        } catch (Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Inspection area: goods refused at the door or returned, waiting for a decision.
+     */
+    public function quarantine(Request $request): View
+    {
+        abort_if(! $request->user()->can('finished_goods.view'), 403);
+
+        $quarantineId = $this->fgService->quarantineWarehouse()->id;
+        $balances = FinishedGoodsMovement::query()
+            ->where('warehouse_id', $quarantineId)
+            ->selectRaw("production_order_id, SUM(CASE WHEN direction = 'IN' THEN quantity ELSE -quantity END) as quantity")
+            ->groupBy('production_order_id')
+            ->havingRaw("SUM(CASE WHEN direction = 'IN' THEN quantity ELSE -quantity END) > 0")
+            ->pluck('quantity', 'production_order_id');
+
+        $productionOrders = ProductionOrder::with(['customerOrder.customer', 'productModel'])
+            ->whereIn('id', $balances->keys())
+            ->get();
+        $openReturns = CustomerReturn::whereIn('production_order_id', $balances->keys())
+            ->whereIn('status', ['RECEIVED', 'LINKED_TO_QUALITY', 'UNDER_REPAIR'])
+            ->get()
+            ->groupBy('production_order_id');
+
+        return view('finished_goods.quarantine', compact('productionOrders', 'balances', 'openReturns'));
+    }
+
+    public function releaseQuarantine(ProductionOrder $productionOrder, Request $request): RedirectResponse
+    {
+        return $this->quarantineDecision($productionOrder, $request, 'release');
+    }
+
+    public function scrapQuarantine(ProductionOrder $productionOrder, Request $request): RedirectResponse
+    {
+        return $this->quarantineDecision($productionOrder, $request, 'scrap');
+    }
+
+    private function quarantineDecision(ProductionOrder $productionOrder, Request $request, string $decision): RedirectResponse
+    {
+        abort_if(! $request->user()->can('finished_goods.receive'), 403);
+
+        $data = $request->validate([
+            'quantity' => ['required', 'numeric', 'gt:0'],
+            'notes' => ['required', 'string', 'max:500'],
+        ], ['notes.required' => 'اكتب نتيجة الفحص.']);
+
+        try {
+            $note = ($decision === 'release' ? 'نتيجة الفحص: سليم — ' : 'نتيجة الفحص: إتلاف — ').$data['notes'];
+            $decision === 'release'
+                ? $this->fgService->releaseFromQuarantine($productionOrder, (float) $data['quantity'], $request->user(), $note)
+                : $this->fgService->scrapFromQuarantine($productionOrder, (float) $data['quantity'], $request->user(), $note);
+
+            return back()->with('success', $decision === 'release' ? 'أعيدت الكمية للمخزون المتاح.' : 'تم تسجيل إتلاف الكمية.');
         } catch (Exception $e) {
             return back()->with('error', $e->getMessage());
         }

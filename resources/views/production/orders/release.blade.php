@@ -4,10 +4,10 @@
 
 @section('content')
 <div class="container-fluid px-4 py-3">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-header-card d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="fw-bold mb-1"><i class="fas fa-play-circle text-success me-2"></i>إطلاق أمر الإنتاج للورشة</h4>
-            <p class="text-muted mb-0">أمر إنتاج رقم: <span class="font-monospace text-primary fw-bold">{{ $order->production_order_number }}</span></p>
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2"><i class="fas fa-play-circle text-warning fs-5" aria-hidden="true"></i>إطلاق أمر الإنتاج للورشة</h1>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">أمر إنتاج رقم: <span class="font-monospace text-primary fw-bold">{{ $order->production_order_number }}</span></p>
         </div>
         <a href="{{ route('production.orders.show', $order) }}" class="btn btn-outline-secondary">
             <i class="fas fa-arrow-right me-1"></i> عودة لأمر الإنتاج
@@ -63,7 +63,7 @@
                         </tr>
                         <tr>
                             <td class="text-muted">العميل:</td>
-                            <td class="fw-bold">{{ $order->customerOrder?->customer?->name_ar }}</td>
+                            <td class="fw-bold">{{ $order->customerOrder?->customer?->name }}</td>
                         </tr>
                         <tr>
                             <td class="text-muted">المنتج:</td>

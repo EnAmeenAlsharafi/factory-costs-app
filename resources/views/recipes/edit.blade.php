@@ -6,12 +6,12 @@
 <div class="container-fluid px-4 py-4" x-data="recipeEditForm()">
 
     {{-- Header --}}
-    <div class="mb-4">
+    <div class="page-header-card mb-4">
         <a href="{{ route('recipes.show', $recipe) }}" class="text-decoration-none text-muted fs-7 mb-2 d-inline-block">
             <i class="fas fa-arrow-right me-1"></i> العودة لصفحة الوصفة {{ $recipe->recipe_code }}
         </a>
-        <h1 class="h3 mb-1 text-dark fw-bold">تعديل مسودة الوصفة - الإصدار (V{{ $version->version_number }})</h1>
-        <p class="text-muted mb-0 fs-7">الوصفة: {{ $recipe->name }} ({{ $recipe->recipe_code }})</p>
+        <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">تعديل مسودة الوصفة - الإصدار (V{{ $version->version_number }})</h1>
+        <p class="page-header-subtitle text-muted mb-0 fs-7">الوصفة: {{ $recipe->name }} ({{ $recipe->recipe_code }})</p>
     </div>
 
     {{-- Flash Errors --}}

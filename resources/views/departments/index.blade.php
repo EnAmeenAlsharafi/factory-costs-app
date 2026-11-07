@@ -8,7 +8,7 @@
 
     <!-- Page Header Component -->
     @include('partials.page-header', [
-        'title' => 'أقسام المصنع التشغيلية (Departments)',
+        'title' => 'أقسام المصنع التشغيلية',
         'subtitle' => 'مراحل وورش خط الإنتاج والمستودعات (النجارة، القص والإسفنج، التنجيد، تفصيل البوكسات، التجميع، التغليف، المستودع، التسليم).',
         'icon' => 'fas fa-building',
         'breadcrumbs' => [

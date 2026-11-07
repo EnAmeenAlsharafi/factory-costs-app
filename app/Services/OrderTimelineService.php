@@ -7,6 +7,8 @@ use App\Models\DeliveryEvent;
 use App\Models\FinishedGoodsReceipt;
 use App\Models\ProductionOperationEvent;
 use App\Models\ProductionOrder;
+use App\Models\ProductionOrderOperation;
+use App\Models\User;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -99,9 +101,13 @@ class OrderTimelineService
      *
      * @return list<array{occurred_at: Carbon, category: string, type: string, label: string, actor: ?string, note: ?string, icon: string}>
      */
-    public function forProductionOrder(ProductionOrder $productionOrder, int $limit = 50): array
+    public function forProductionOrder(ProductionOrder $productionOrder, int $limit = 50, ?User $viewer = null): array
     {
         $rows = ProductionOperationEvent::where('production_order_id', $productionOrder->id)
+            ->when($viewer?->isDepartmentRestricted(), fn ($q) => $q->whereIn(
+                'production_order_operation_id',
+                ProductionOrderOperation::visibleTo($viewer)->where('production_order_id', $productionOrder->id)->select('id')
+            ))
             ->orderByDesc('occurred_at')->orderByDesc('id')
             ->limit($limit)
             ->get()

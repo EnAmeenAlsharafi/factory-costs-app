@@ -6,7 +6,12 @@ use App\Http\Requests\ProductionOrderRequest;
 use App\Models\CustomerOrder;
 use App\Models\CustomerOrderLine;
 use App\Models\ProductionOrder;
+use App\Models\ProductionOrderOperation;
+use App\Models\ProductionReworkAction;
 use App\Models\ProductionRouting;
+use App\Models\ProductionWasteRecord;
+use App\Models\QualityIncident;
+use App\Models\User;
 use App\Services\OrderTimelineService;
 use App\Services\ProductionCostService;
 use App\Services\ProductionOrderService;
@@ -25,7 +30,7 @@ class ProductionOrderController extends Controller
     {
         abort_if(! $request->user()->can('production.view'), 403);
 
-        $query = ProductionOrder::with([
+        $query = ProductionOrder::visibleTo($request->user())->with([
             'customerOrder.customer',
             'productModel',
             'productConfiguration',
@@ -39,7 +44,7 @@ class ProductionOrderController extends Controller
                 $q->where('production_order_number', 'like', "%{$search}%")
                     ->orWhere('custom_design_name', 'like', "%{$search}%")
                     ->orWhereHas('customerOrder', fn ($co) => $co->where('order_number', 'like', "%{$search}%"))
-                    ->orWhereHas('customerOrder.customer', fn ($c) => $c->where('name_ar', 'like', "%{$search}%"));
+                    ->orWhereHas('customerOrder.customer', fn ($c) => $c->where('name', 'like', "%{$search}%"));
             });
         }
 
@@ -103,7 +108,9 @@ class ProductionOrderController extends Controller
 
     public function show(Request $request, ProductionOrder $order): View
     {
-        abort_if(! $request->user()->can('production.view'), 403);
+        $user = $request->user();
+        abort_if(! $user->can('production.view'), 403);
+        abort_unless(ProductionOrder::visibleTo($user)->whereKey($order->id)->exists(), 404);
 
         $order->load([
             'customerOrder.customer',
@@ -135,12 +142,34 @@ class ProductionOrderController extends Controller
             'wasteRecords.wasteReason',
         ]);
 
+        if ($user->isDepartmentRestricted()) {
+            $this->limitToDepartment($order, $user);
+        }
+
         $costService = app(ProductionCostService::class);
         $costSummary = $costService->calculateOrderMaterialCost($order);
         $canViewCost = $request->user()->can('costing.view');
-        $timeline = $this->timelineService->forProductionOrder($order);
+        $timeline = $this->timelineService->forProductionOrder($order, viewer: $user);
 
         return view('production.orders.show', compact('order', 'costSummary', 'canViewCost', 'timeline'));
+    }
+
+    /**
+     * Keep only the operations, quality incidents, rework and waste of the user's own department on the order page.
+     */
+    private function limitToDepartment(ProductionOrder $order, User $user): void
+    {
+        $visible = [
+            'operations' => ProductionOrderOperation::class,
+            'qualityIncidents' => QualityIncident::class,
+            'reworkActions' => ProductionReworkAction::class,
+            'wasteRecords' => ProductionWasteRecord::class,
+        ];
+
+        foreach ($visible as $relation => $model) {
+            $visibleIds = $model::visibleTo($user)->where('production_order_id', $order->id)->pluck('id');
+            $order->setRelation($relation, $order->{$relation}->whereIn('id', $visibleIds)->values());
+        }
     }
 
     public function releaseForm(Request $request, ProductionOrder $order): View

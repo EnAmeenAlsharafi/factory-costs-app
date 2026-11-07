@@ -5,12 +5,12 @@
 @section('content')
 <div class="container-fluid py-3">
     <!-- Header -->
-    <div class="d-flex align-items-center justify-content-between mb-4">
+    <div class="page-header-card d-flex align-items-center justify-content-between mb-4">
         <div>
-            <h1 class="h3 font-weight-bold text-gray-800 mb-1">
-                <i class="fas fa-truck-loading text-primary me-2"></i>إنشاء أمر توصيل جديد
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                <i class="fas fa-truck-loading text-warning fs-5" aria-hidden="true"></i>إنشاء أمر توصيل جديد
             </h1>
-            <p class="text-muted small mb-0">لطلب المبيعات: <strong class="text-dark">{{ $customerOrder->order_number }}</strong> (العميل: {{ $customerOrder->customer->name_ar ?? 'غير محدد' }})</p>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">لطلب المبيعات: <strong class="text-dark">{{ $customerOrder->order_number }}</strong> (العميل: {{ $customerOrder->customer->name ?? 'غير محدد' }})</p>
         </div>
         <a href="{{ route('sales.orders.show', $customerOrder) }}" class="btn btn-outline-secondary">
             <i class="fas fa-arrow-right me-1"></i>العودة لطلب المبيعات

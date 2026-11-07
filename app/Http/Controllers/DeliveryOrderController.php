@@ -16,6 +16,7 @@ use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class DeliveryOrderController extends Controller
@@ -48,7 +49,9 @@ class DeliveryOrderController extends Controller
             });
         }
 
-        if ($request->filled('status')) {
+        if ($request->input('status') === 'AWAITING_DECISION') {
+            $query->whereIn('status', ['FAILED', 'RESCHEDULED'])->whereNull('successor_delivery_order_id');
+        } elseif ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
@@ -204,6 +207,7 @@ class DeliveryOrderController extends Controller
             'lines.material',
             'events.user',
             'returns',
+            'successor',
         ]);
 
         $drivers = collect();
@@ -281,7 +285,11 @@ class DeliveryOrderController extends Controller
         abort_if(! $request->user()->can('delivery.complete'), 403);
 
         try {
-            $this->deliveryService->markDelivered($delivery, $request->user(), $request->input('notes'));
+            $request->validate([
+                'recipient_name' => ['nullable', 'string', 'max:120'],
+                'notes' => ['nullable', 'string', 'max:1000'],
+            ]);
+            $this->deliveryService->markDelivered($delivery, $request->user(), $request->input('notes'), $request->input('recipient_name'));
 
             return back()->with('success', 'تم تأكيد استلام العميل للشحنة بنجاح.');
         } catch (Exception $e) {
@@ -308,7 +316,8 @@ class DeliveryOrderController extends Controller
 
         $request->validate([
             'new_status' => ['required', 'in:FAILED,RESCHEDULED,CANCELLED'],
-            'reason' => ['required', 'string', 'max:1000'],
+            'reason_code' => ['nullable', Rule::in(array_keys(DeliveryOrder::FAILURE_REASONS))],
+            'reason' => ['required_without:reason_code', 'required_if:reason_code,OTHER', 'nullable', 'string', 'max:1000'],
             'scheduled_delivery_date' => ['nullable', 'date'],
             'returned_to_factory' => ['nullable', 'boolean'],
         ]);
@@ -320,10 +329,69 @@ class DeliveryOrderController extends Controller
                 $request->new_status,
                 $request->reason,
                 $request->scheduled_delivery_date,
-                $request->boolean('returned_to_factory', true)
+                $request->boolean('returned_to_factory', true),
+                $request->input('reason_code')
             );
 
             return back()->with('success', 'تم تحديث حالة التوصيل وحفظ السجل الفني والزمني بنجاح.');
+        } catch (Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * The goods that stayed with the driver after a failed delivery are back at the factory.
+     */
+    public function confirmGoodsReturned(DeliveryOrder $delivery, Request $request): RedirectResponse
+    {
+        abort_if(! $request->user()->can('delivery.assign'), 403);
+
+        try {
+            $this->deliveryService->confirmGoodsReturned($delivery, $request->user());
+
+            return back()->with('success', 'تم تسجيل عودة البضاعة للمصنع.');
+        } catch (Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Management decision after a failure: deliver again with a new delivery order.
+     */
+    public function rescheduleAsNew(DeliveryOrder $delivery, Request $request): RedirectResponse
+    {
+        abort_if(! $request->user()->can('delivery.assign'), 403);
+
+        $data = $request->validate([
+            'scheduled_delivery_date' => ['required', 'date', 'after_or_equal:today'],
+            'notes' => ['nullable', 'string', 'max:500'],
+        ], [
+            'scheduled_delivery_date.required' => 'حدد موعد التوصيل الجديد.',
+            'scheduled_delivery_date.after_or_equal' => 'موعد التوصيل الجديد لا يمكن أن يكون في الماضي.',
+        ]);
+
+        try {
+            $successor = $this->deliveryService->rescheduleAsNew($delivery, $request->user(), $data['scheduled_delivery_date'], $data['notes'] ?? null);
+
+            return redirect()->route('delivery.orders.show', $successor)->with('success', "تم إنشاء أمر التوصيل {$successor->delivery_number} وهو جاهز للإسناد.");
+        } catch (Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Management decision after a failure: the delivery will not happen.
+     */
+    public function cancelAfterFailure(DeliveryOrder $delivery, Request $request): RedirectResponse
+    {
+        abort_if(! $request->user()->can('delivery.assign'), 403);
+
+        $data = $request->validate(['reason' => ['required', 'string', 'max:500']], ['reason.required' => 'اذكر سبب الإلغاء.']);
+
+        try {
+            $this->deliveryService->cancelAfterFailure($delivery, $request->user(), $data['reason']);
+
+            return back()->with('success', 'تم إلغاء أمر التوصيل.');
         } catch (Exception $e) {
             return back()->with('error', $e->getMessage());
         }

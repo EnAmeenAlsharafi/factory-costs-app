@@ -113,7 +113,7 @@
                     @csrf
                     <div class="modal-header bg-warning text-dark">
                         <h5 class="modal-title fw-bold"><i class="fas fa-magic me-1"></i> إنشاء وصفة جديدة من القالب</h5>
-                        <button type="button" class="btn-close" @click="showRecipeModal = false"></button>
+                        <button type="button" class="btn-close" @click="showRecipeModal = false" aria-label="إغلاق"></button>
                     </div>
                     <div class="modal-body" x-data="{ targetType: 'PRODUCT_CONFIGURATION', selectedModelId: '' }">
                         {{-- Template Summary --}}

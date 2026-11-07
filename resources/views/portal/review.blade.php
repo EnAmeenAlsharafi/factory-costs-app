@@ -1,8 +1,11 @@
 @extends('layouts.app')
 @section('title', 'مراجعة طلب بوابة العملاء')
 @section('content')
-<a href="{{ route('sales.portal-requests.index') }}">العودة للطلبات الواردة</a>
-<h1 class="h3 mt-3">مراجعة <bdi>PR-{{ $submission->id }}</bdi> — {{ $submission->customer->name }}</h1><p>{{ $submission->status_label }} — النسخة {{ $submission->revision }}</p>
+<div class="page-header-card mb-4">
+    <a href="{{ route('sales.portal-requests.index') }}" class="text-decoration-none text-secondary fs-7 d-inline-block mb-2"><i class="fas fa-arrow-right me-1" aria-hidden="true"></i> العودة للطلبات الواردة</a>
+    <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2"><i class="fas fa-clipboard-check text-warning fs-5" aria-hidden="true"></i>مراجعة <bdi>PR-{{ $submission->id }}</bdi> — {{ $submission->customer->name }}</h1>
+    <p class="page-header-subtitle text-muted mb-0 fs-7">{{ $submission->status_label }} — النسخة {{ $submission->revision }}@if($submission->order) — طلب البيع <a href="{{ route('sales.orders.show', $submission->order) }}" class="ltr-isolate">{{ $submission->order->order_number }}</a>@endif</p>
+</div>
 @if($submission->change_note)<div class="alert alert-warning">طلب تعديل من العميل: {{ $submission->change_note }}</div>@endif
 @if($submission->customer_order_id)<a class="btn btn-outline-primary mb-3" href="{{ route('sales.orders.show', $submission->customer_order_id) }}">فتح طلب البيع المعتمد</a>@endif
 <form method="POST" enctype="multipart/form-data" action="{{ route('sales.portal-requests.offer', $submission) }}">

@@ -8,7 +8,7 @@
 
 <div class="mb-3">
     <a class="link-secondary fs-7 text-decoration-none" href="{{ route('portal.requests.index') }}"><i class="fas fa-arrow-right ms-1" aria-hidden="true"></i> طلباتي وعروضي</a>
-    <h1 class="h4 fw-bold mt-1 mb-2">طلب <span class="ltr-isolate">PR-{{ $submission->id }}</span></h1>
+    <h1 class="h4 fw-bold mt-1 mb-2">طلب <span class="ltr-isolate">PR-{{ $submission->id }}</span>@if($submission->order) <small class="fs-6 text-muted fw-normal">— رقم الطلب <span class="ltr-isolate">{{ $submission->order->order_number }}</span></small>@endif</h1>
     <div class="d-flex flex-wrap align-items-center gap-2">
         <x-status-badge domain="portal_request" :status="$submission->status" size="lg" />
         <span class="text-muted fs-7">نسخة {{ $submission->revision }}</span>

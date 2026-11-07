@@ -43,7 +43,7 @@
                     <li class="nav-item">
                         <a href="{{ route('dashboard') }}" class="sidebar-nav-link {{ request()->routeIs('dashboard') || request()->routeIs('home') ? 'active' : '' }}" title="لوحة التحكم">
                             <span class="sidebar-icon"><i class="fas fa-chart-line"></i></span>
-                            <span class="sidebar-text">لوحة التحكم (Dashboard)</span>
+                            <span class="sidebar-text">لوحة التحكم</span>
                         </a>
                     </li>
                 </ul>
@@ -461,7 +461,7 @@
                             <li class="nav-item">
                                 <a href="{{ route('finished-goods.index') }}" class="sidebar-nav-link {{ request()->routeIs('finished-goods.*') ? 'active' : '' }}" title="المنتجات الجاهزة">
                                     <span class="sidebar-icon"><i class="fas fa-boxes"></i></span>
-                                    <span class="sidebar-text">المنتجات الجاهزة (Finished Goods)</span>
+                                    <span class="sidebar-text">المنتجات الجاهزة</span>
                                 </a>
                             </li>
                         @endcan
@@ -655,7 +655,7 @@
                             <li class="nav-item">
                                 <a href="{{ route('inventory.receipts.index') }}" class="sidebar-nav-link {{ request()->routeIs('inventory.receipts.*') ? 'active' : '' }}" title="استلام المواد">
                                     <span class="sidebar-icon"><i class="fas fa-truck-loading"></i></span>
-                                    <span class="sidebar-text">استلام المواد (Receipts)</span>
+                                    <span class="sidebar-text">استلام المواد</span>
                                 </a>
                             </li>
                         @endcan
@@ -664,7 +664,7 @@
                             <li class="nav-item">
                                 <a href="{{ route('inventory.issues.index') }}" class="sidebar-nav-link {{ request()->routeIs('inventory.issues.*') ? 'active' : '' }}" title="صرف للإنتاج">
                                     <span class="sidebar-icon"><i class="fas fa-dolly"></i></span>
-                                    <span class="sidebar-text">صرف للإنتاج (Issues)</span>
+                                    <span class="sidebar-text">صرف للإنتاج</span>
                                 </a>
                             </li>
                         @endcan
@@ -673,7 +673,7 @@
                             <li class="nav-item">
                                 <a href="{{ route('inventory.returns.index') }}" class="sidebar-nav-link {{ request()->routeIs('inventory.returns.*') ? 'active' : '' }}" title="إرجاع المواد">
                                     <span class="sidebar-icon"><i class="fas fa-undo-alt"></i></span>
-                                    <span class="sidebar-text">إرجاع للمخزن (Returns)</span>
+                                    <span class="sidebar-text">إرجاع للمخزن</span>
                                 </a>
                             </li>
                         @endcan

@@ -6,17 +6,17 @@
 <div class="container-fluid px-4 py-3">
 
     <!-- Header & Breadcrumbs -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div class="page-header-card d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
         <div>
             <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-1">
+                <ol class="breadcrumb mb-2 fs-8">
                     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}" class="text-decoration-none">الرئيسية</a></li>
                     <li class="breadcrumb-item"><a href="{{ route('inventory.returns.index') }}" class="text-decoration-none">سندات الإرجاع</a></li>
                     <li class="breadcrumb-item active" aria-current="page">{{ $return->return_number }}</li>
                 </ol>
             </nav>
             <div class="d-flex align-items-center gap-3">
-                <h1 class="h3 fw-bold mb-0 text-dark">سند إرجاع: <span class="text-primary fw-mono">{{ $return->return_number }}</span></h1>
+                <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">سند إرجاع: <span class="text-primary fw-mono">{{ $return->return_number }}</span></h1>
                 @if($return->status === 'POSTED')
                     <span class="badge bg-success bg-opacity-10 text-success fw-bold px-3 py-2 fs-7">
                         <i class="fas fa-check-circle me-1"></i> مُرحل ومسترد للمخزون (Posted)

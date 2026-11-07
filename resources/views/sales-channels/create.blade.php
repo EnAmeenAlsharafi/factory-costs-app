@@ -16,9 +16,9 @@
     <!-- Form Card -->
     <div class="card bg-white border-0 shadow-sm rounded-4 p-4 p-md-5">
         <div class="border-bottom pb-3 mb-4">
-            <h5 class="fw-bold text-dark mb-1">
+            <h1 id="page-heading" class="h5 fw-bold text-dark mb-1">
                 <i class="fas fa-store text-warning me-2"></i> بيانات قناة البيع
-            </h5>
+            </h1>
             <p class="text-muted fs-7 mb-0">قم بإدخال رمز القناة والاسم وترتيب العرض في القوائم المنسدلة.</p>
         </div>
 

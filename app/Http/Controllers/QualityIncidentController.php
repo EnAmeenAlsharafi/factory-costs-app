@@ -22,7 +22,7 @@ class QualityIncidentController extends Controller
     {
         abort_if(! $request->user()->can('production.view'), 403);
 
-        $query = QualityIncident::with([
+        $query = QualityIncident::visibleTo($request->user())->with([
             'productionOrder',
             'operation',
             'detectedDepartment',
@@ -58,7 +58,7 @@ class QualityIncidentController extends Controller
         abort_if(! $request->user()->can('production.report_quality'), 403);
 
         $orderId = $request->query('production_order_id');
-        $productionOrder = ProductionOrder::with('operations.workCenter.department')->findOrFail($orderId);
+        $productionOrder = ProductionOrder::visibleTo($request->user())->with('operations.workCenter.department')->findOrFail($orderId);
         $departments = Department::all();
 
         return view('production.quality_incidents.create', compact('productionOrder', 'departments'));
@@ -81,6 +81,7 @@ class QualityIncidentController extends Controller
     public function show(Request $request, QualityIncident $qualityIncident): View
     {
         abort_if(! $request->user()->can('production.view'), 403);
+        abort_unless(QualityIncident::visibleTo($request->user())->whereKey($qualityIncident->id)->exists(), 404);
 
         $qualityIncident->load([
             'productionOrder.productModel',

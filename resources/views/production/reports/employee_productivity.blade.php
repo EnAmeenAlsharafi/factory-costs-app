@@ -5,10 +5,10 @@
 @section('content')
 <div class="container-fluid px-4 py-3">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-header-card d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="fw-bold mb-0 text-dark">تقرير إنتاجية الموظفين (Employee Productivity Report)</h4>
-            <p class="text-muted mb-0 mt-1">المهام المُسندة والمنجزة لكل موظف في الأقسام التشغيلية</p>
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">تقرير إنتاجية الموظفين</h1>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">المهام المُسندة والمنجزة لكل موظف في الأقسام التشغيلية</p>
         </div>
         <a href="{{ route('production.reports.index') }}" class="btn btn-outline-secondary">
             <i class="fas fa-arrow-right me-1"></i> عودة للتقارير

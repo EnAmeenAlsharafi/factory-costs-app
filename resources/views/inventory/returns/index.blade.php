@@ -6,20 +6,20 @@
 <div class="container-fluid px-4 py-3">
 
     <!-- Header & Breadcrumbs -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div class="page-header-card d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
         <div>
             <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-1">
+                <ol class="breadcrumb mb-2 fs-8">
                     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}" class="text-decoration-none">الرئيسية</a></li>
                     <li class="breadcrumb-item active" aria-current="page">سندات إرجاع المواد</li>
                 </ol>
             </nav>
-            <h1 class="h3 fw-bold mb-0 text-dark">سندات إرجاع المواد للمخزن (Material Returns)</h1>
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">سندات إرجاع المواد للمخزن</h1>
         </div>
 
         @can('inventory.return')
             <div>
-                <a href="{{ route('inventory.returns.create') }}" class="btn btn-primary">
+                <a href="{{ route('inventory.returns.create') }}" class="btn btn-factory-warning">
                     <i class="fas fa-plus me-1"></i> إنشاء سند إرجاع جديد
                 </a>
             </div>
@@ -57,7 +57,7 @@
                 <div class="col-12 col-md-2 d-flex gap-2">
                     <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter me-1"></i> تصفية</button>
                     @if(request()->anyFilled(['search', 'status', 'department_id']))
-                        <a href="{{ route('inventory.returns.index') }}" class="btn btn-outline-secondary" title="إعادة ضبط"><i class="fas fa-undo"></i></a>
+                        <a href="{{ route('inventory.returns.index') }}" class="btn btn-outline-secondary" title="إعادة ضبط الفلاتر" aria-label="إعادة ضبط الفلاتر"><i class="fas fa-undo" aria-hidden="true"></i></a>
                     @endif
                 </div>
             </form>

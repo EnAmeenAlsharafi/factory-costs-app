@@ -6,14 +6,14 @@
 <div class="container-fluid px-4 py-4" x-data="{ showCreateModal: false, showEditModal: false, editComponent: {} }">
 
     {{-- Page Header --}}
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div class="page-header-card d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
         <div>
-            <h1 class="h3 mb-1 text-dark fw-bold">المكونات نصف المصنعة (Semi-Finished Components)</h1>
-            <p class="text-muted mb-0 fs-7">تعريف أجزاء الإنتاج التجميعية المعاد استخدامها (مثل بوكسات الأسرّة العادية والمزودة بتخزين)</p>
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">المكونات نصف المصنعة</h1>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">تعريف أجزاء الإنتاج التجميعية المعاد استخدامها (مثل بوكسات الأسرّة العادية والمزودة بتخزين)</p>
         </div>
         <div>
             @can('semi_finished_components.manage')
-                <button type="button" @click="showCreateModal = true" class="btn btn-warning px-3 fw-semibold">
+                <button type="button" @click="showCreateModal = true" class="btn btn-factory-warning px-3 fw-semibold">
                     <i class="fas fa-plus me-1"></i> إضافة مكون نصف مصنع
                 </button>
             @endcan
@@ -43,7 +43,7 @@
                 </div>
                 <div class="col-md-2 d-flex gap-2">
                     <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter me-1"></i> تصفية</button>
-                    <a href="{{ route('recipes.components.index') }}" class="btn btn-outline-secondary"><i class="fas fa-redo"></i></a>
+                    <a href="{{ route('recipes.components.index') }}" class="btn btn-outline-secondary" title="إعادة ضبط الفلاتر" aria-label="إعادة ضبط الفلاتر"><i class="fas fa-redo" aria-hidden="true"></i></a>
                 </div>
             </form>
         </div>
@@ -145,7 +145,7 @@
                     @csrf
                     <div class="modal-header bg-warning text-dark">
                         <h5 class="modal-title fw-bold"><i class="fas fa-plus me-1"></i> إضافة مكون نصف مصنع جديد</h5>
-                        <button type="button" class="btn-close" @click="showCreateModal = false"></button>
+                        <button type="button" class="btn-close" @click="showCreateModal = false" aria-label="إغلاق"></button>
                     </div>
                     <div class="modal-body">
                         <div class="mb-3">
@@ -193,7 +193,7 @@
                     @method('PUT')
                     <div class="modal-header bg-dark text-white">
                         <h5 class="modal-title fw-bold"><i class="fas fa-edit me-1"></i> تعديل بيانات المكون نصف المصنع</h5>
-                        <button type="button" class="btn-close btn-close-white" @click="showEditModal = false"></button>
+                        <button type="button" class="btn-close btn-close-white" @click="showEditModal = false" aria-label="إغلاق"></button>
                     </div>
                     <div class="modal-body">
                         <div class="mb-3">

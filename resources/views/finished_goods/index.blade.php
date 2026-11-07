@@ -4,11 +4,17 @@
 
 @section('content')
 <div class="container-fluid px-4 py-3">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div class="page-header-card d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <div>
-            <h4 class="fw-bold mb-1"><i class="fas fa-boxes text-primary me-2"></i>مخزون المنتجات الجاهزة (Finished Goods)</h4>
-            <p class="text-muted mb-0">تتبع استلامات الإنتاج المكتمل، الجاهزية للتوصيل، وصافي أرصدة المنتجات التامة بالمستودع</p>
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2"><i class="fas fa-boxes text-warning fs-5" aria-hidden="true"></i>مخزون المنتجات الجاهزة</h1>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">تتبع استلامات الإنتاج المكتمل، الجاهزية للتوصيل، وصافي أرصدة المنتجات التامة بالمستودع</p>
         </div>
+        <a href="{{ route('finished-goods.quarantine') }}" class="btn btn-outline-warning">
+            <i class="fas fa-shield-halved" aria-hidden="true"></i> منطقة فحص المرتجعات
+            @if ($quarantineCount > 0)
+                <span class="badge bg-warning text-dark ms-1">{{ $quarantineCount }}</span>
+            @endif
+        </a>
     </div>
 
     <!-- Filter Bar -->
@@ -23,7 +29,7 @@
                 </div>
                 <div class="col-md-3 d-flex gap-2">
                     <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter me-1"></i> تصفية</button>
-                    <a href="{{ route('finished-goods.index') }}" class="btn btn-outline-secondary"><i class="fas fa-undo"></i></a>
+                    <a href="{{ route('finished-goods.index') }}" class="btn btn-outline-secondary" title="إعادة ضبط الفلاتر" aria-label="إعادة ضبط الفلاتر"><i class="fas fa-undo" aria-hidden="true"></i></a>
                 </div>
             </form>
         </div>

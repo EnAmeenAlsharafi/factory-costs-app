@@ -171,6 +171,8 @@ class ProductionExecutionService
             ]);
         }
 
+        $this->assertWithinDepartment($actor, $operation);
+
         return DB::transaction(function () use ($operation, $resolutionNote, $actor) {
             $locked = ProductionOrderOperation::where('id', $operation->id)->lockForUpdate()->firstOrFail();
 

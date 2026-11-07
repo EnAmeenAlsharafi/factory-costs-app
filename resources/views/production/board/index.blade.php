@@ -4,10 +4,10 @@
 
 @section('content')
 <div class="container-fluid px-4 py-3">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-header-card d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="fw-bold mb-1"><i class="fas fa-chart-kanban text-primary me-2"></i>لوحة متابعة الإنتاج والورش (Production Board)</h4>
-            <p class="text-muted mb-0">متابعة شاملة لتقدم العمليات التشغيلية بالأقسام وتحليل اختناقات الورش</p>
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2"><i class="fas fa-chart-kanban text-warning fs-5" aria-hidden="true"></i>لوحة متابعة الإنتاج والورش</h1>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">متابعة شاملة لتقدم العمليات التشغيلية بالأقسام وتحليل اختناقات الورش</p>
         </div>
         <div class="d-flex gap-2">
             <a href="{{ route('production.orders.index') }}" class="btn btn-outline-primary">
@@ -51,7 +51,7 @@
             <div class="card border-0 shadow-sm border-start border-dark border-4">
                 <div class="card-body p-3 d-flex align-items-center justify-content-between">
                     <div>
-                        <small class="text-muted d-block">أوامر الإنتاج المعلقة (On Hold)</small>
+                        <small class="text-muted d-block">أوامر الإنتاج المعلقة</small>
                         <span class="fs-3 fw-bold text-dark">{{ $heldOrdersCount }}</span>
                     </div>
                     <div class="bg-dark text-white rounded-circle p-3 fs-5">
@@ -92,7 +92,7 @@
         <div class="col-6 col-lg-2 col-md-4">
             <div class="card border-0 shadow-sm h-100 {{ $attention['delayed'] > 0 ? 'border-start border-warning border-4' : '' }}">
                 <div class="card-body p-3">
-                    <small class="text-muted d-block">متأخر عن SLA</small>
+                    <small class="text-muted d-block">متأخر عن الموعد المخطط</small>
                     <span class="fs-4 fw-bold text-warning">{{ $attention['delayed'] }}</span>
                 </div>
             </div>
@@ -162,7 +162,7 @@
                             <tr>
                                 <td class="ps-3">
                                     <a href="{{ route('production.orders.show', $mPo) }}" class="fw-bold text-decoration-none d-block">{{ $mPo->production_order_number }}</a>
-                                    <small class="text-muted">{{ $mPo->customerOrder?->customer?->name_ar }}</small>
+                                    <small class="text-muted">{{ $mPo->customerOrder?->customer?->name }}</small>
                                 </td>
                                 @foreach ($departments as $dept)
                                     @php
@@ -220,7 +220,7 @@
                                         {{ $lPo->production_order_number }}
                                     </a>
                                 </td>
-                                <td class="fw-semibold">{{ $lPo->customerOrder?->customer?->name_ar }}</td>
+                                <td class="fw-semibold">{{ $lPo->customerOrder?->customer?->name }}</td>
                                 <td>{{ $lPo->is_custom_design ? $lPo->custom_design_name : $lPo->productModel?->name_ar }} ({{ (int)$lPo->requested_width_cm }}×{{ (int)$lPo->requested_length_cm }})</td>
                                 <td class="text-center fw-bold">
                                     <span class="text-success fs-6">{{ $lPo->completed_quantity }}</span> / {{ $lPo->released_quantity }}

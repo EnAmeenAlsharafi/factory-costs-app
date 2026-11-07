@@ -5,12 +5,12 @@
 @section('content')
 <div class="container-fluid px-4 py-4">
 
-    <div class="mb-4">
+    <div class="page-header-card mb-4">
         <a href="{{ route('sales.imports.index') }}" class="text-decoration-none text-muted fs-7 mb-2 d-inline-block">
             <i class="fas fa-arrow-right me-1"></i> العودة لسجل الاستيراد
         </a>
-        <h1 class="h3 mb-1 text-dark fw-bold">معاينة ملف: {{ $batch->file_name }}</h1>
-        <p class="text-muted mb-0 fs-7">هذه معاينة فقط، لم يتم إنشاء أي طلب أو عميل حتى الآن. يُعاد حساب المطابقة والمخزون حياً عند كل فتح لهذه الصفحة.</p>
+        <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">معاينة ملف: {{ $batch->file_name }}</h1>
+        <p class="page-header-subtitle text-muted mb-0 fs-7">هذه معاينة فقط، لم يتم إنشاء أي طلب أو عميل حتى الآن. يُعاد حساب المطابقة والمخزون حياً عند كل فتح لهذه الصفحة.</p>
     </div>
 
     @php

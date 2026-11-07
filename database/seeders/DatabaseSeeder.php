@@ -25,6 +25,7 @@ class DatabaseSeeder extends Seeder
             InventoryAdjustmentReasonSeeder::class,
             StandardBedSizeSeeder::class,
             WorkCenterSeeder::class,
+            DepartmentRoleSeeder::class,
             DefaultBedRoutingSeeder::class,
             StorageBedRoutingSeeder::class,
             ProductionWasteReasonSeeder::class,

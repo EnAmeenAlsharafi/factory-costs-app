@@ -5,9 +5,9 @@
 @section('content')
 <div class="container-fluid px-4 py-3">
     <!-- Header -->
-    <div class="mb-4">
-        <h4 class="fw-bold mb-0 text-dark">تقارير التكلفة، الاستهلاك، والهدر والجودة (Production Reports)</h4>
-        <p class="text-muted mb-0 mt-1">منظومة تقارير الاستهلاك الفعلي للمواد، الانحراف عن BOM، وتحليل الهدر وحالات الجودة</p>
+    <div class="page-header-card mb-4">
+        <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">تقارير التكلفة، الاستهلاك، والهدر والجودة</h1>
+        <p class="page-header-subtitle text-muted mb-0 fs-7">منظومة تقارير الاستهلاك الفعلي للمواد، الانحراف عن BOM، وتحليل الهدر وحالات الجودة</p>
     </div>
 
     <div class="row g-4">

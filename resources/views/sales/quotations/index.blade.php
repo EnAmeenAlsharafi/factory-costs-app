@@ -6,14 +6,14 @@
 <div class="container-fluid px-4 py-4">
 
     {{-- Page Header --}}
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div class="page-header-card d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
         <div>
-            <h1 class="h3 mb-1 text-dark fw-bold">عروض الأسعار (Quotations)</h1>
-            <p class="text-muted mb-0 fs-7">إدارة عروض الأسعار التجارية وتتبع حالتها وتحويل المعتمد منها إلى طلبات عملاء</p>
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">عروض الأسعار</h1>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">إدارة عروض الأسعار التجارية وتتبع حالتها وتحويل المعتمد منها إلى طلبات عملاء</p>
         </div>
         <div>
             @can('quotations.create')
-                <a href="{{ route('sales.quotations.create') }}" class="btn btn-warning px-3 fw-semibold">
+                <a href="{{ route('sales.quotations.create') }}" class="btn btn-factory-warning px-3 fw-semibold">
                     <i class="fas fa-plus me-1"></i> عرض سعر جديد
                 </a>
             @endcan
@@ -68,7 +68,7 @@
                 </div>
                 <div class="col-md-2 d-flex gap-2">
                     <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter me-1"></i> تصفية</button>
-                    <a href="{{ route('sales.quotations.index') }}" class="btn btn-outline-secondary" title="إعادة ضبط"><i class="fas fa-redo"></i></a>
+                    <a href="{{ route('sales.quotations.index') }}" class="btn btn-outline-secondary" title="إعادة ضبط الفلاتر" aria-label="إعادة ضبط الفلاتر"><i class="fas fa-redo" aria-hidden="true"></i></a>
                 </div>
             </form>
         </div>

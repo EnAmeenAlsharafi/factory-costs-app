@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\CustomerOrder;
 use App\Models\DeliveryEvent;
 use App\Models\DeliveryOrder;
+use App\Models\Department;
 use App\Models\FinishedGoodsMovement;
 use App\Models\Material;
 use App\Models\ProductionOrder;
@@ -27,11 +28,15 @@ class DeliveryOrderService
         'ASSIGNED' => ['OUT_FOR_DELIVERY', 'CANCELLED'],
         'OUT_FOR_DELIVERY' => ['DELIVERED', 'FAILED', 'RESCHEDULED'],
         'DELIVERED' => ['INSTALLATION_COMPLETED'],
+        // A failed/postponed delivery is closed either by a successor order (reschedule) or by cancelling it.
+        'FAILED' => ['CANCELLED'],
+        'RESCHEDULED' => ['CANCELLED'],
     ];
 
     public function __construct(
         protected FinishedGoodsService $finishedGoodsService,
-        protected InventoryService $inventoryService
+        protected InventoryService $inventoryService,
+        protected QualityIncidentService $qualityIncidentService
     ) {}
 
     /**
@@ -262,9 +267,9 @@ class DeliveryOrderService
     /**
      * Complete delivery: mark status DELIVERED.
      */
-    public function markDelivered(DeliveryOrder $delivery, User $user, ?string $notes = null): DeliveryOrder
+    public function markDelivered(DeliveryOrder $delivery, User $user, ?string $notes = null, ?string $recipientName = null): DeliveryOrder
     {
-        return DB::transaction(function () use ($delivery, $user, $notes) {
+        return DB::transaction(function () use ($delivery, $user, $notes, $recipientName) {
             $delivery = DeliveryOrder::query()->whereKey($delivery->getKey())->lockForUpdate()->firstOrFail();
             $this->assertTransition($delivery->status, 'DELIVERED');
 
@@ -272,10 +277,15 @@ class DeliveryOrderService
             $delivery->update([
                 'status' => 'DELIVERED',
                 'delivered_at' => now(),
+                'recipient_name' => $recipientName ?: null,
                 'delivery_notes' => $notes ?? $delivery->delivery_notes,
             ]);
 
-            $this->recordEvent($delivery, 'DELIVERED', $oldStatus, 'DELIVERED', $user, $notes ?? 'تم تسليم المنتجات للعميل بنجاح');
+            $summary = $notes ?? 'تم تسليم المنتجات للعميل بنجاح';
+            if ($recipientName) {
+                $summary .= " — المستلم: {$recipientName}";
+            }
+            $this->recordEvent($delivery, 'DELIVERED', $oldStatus, 'DELIVERED', $user, $summary);
 
             return $delivery;
         });
@@ -308,52 +318,41 @@ class DeliveryOrderService
     }
 
     /**
-     * Mark delivery FAILED or RESCHEDULED. If items physically return to factory, create DELIVERY_RETURN IN movement.
+     * The driver could not complete the delivery (FAILED) or the customer asked for another day (RESCHEDULED).
+     *
+     * Returned goods go back to sellable stock, or to the inspection area when the reason points at the
+     * product itself (refused for a defect / wrong spec, transport damage). Quality reasons also open a
+     * quality incident on each production order. Goods not returned stay recorded as "with the driver".
      */
-    public function failOrReschedule(DeliveryOrder $delivery, User $user, string $newStatus, ?string $reason = null, ?string $newDate = null, bool $returnedToFactory = true): DeliveryOrder
+    public function failOrReschedule(DeliveryOrder $delivery, User $user, string $newStatus, ?string $reason = null, ?string $newDate = null, bool $returnedToFactory = true, ?string $reasonCode = null): DeliveryOrder
     {
         if (! in_array($newStatus, ['FAILED', 'RESCHEDULED', 'CANCELLED'], true)) {
             throw new Exception('حالة غير صالحة للتعثر أو الإلغاء.');
         }
 
-        $fgWarehouse = Warehouse::active()->where('code', 'FINISHED_GOODS')->first()
-            ?? Warehouse::active()->first();
+        $reasonCode = array_key_exists((string) $reasonCode, DeliveryOrder::FAILURE_REASONS) ? $reasonCode : 'OTHER';
 
-        return DB::transaction(function () use ($delivery, $user, $newStatus, $reason, $newDate, $returnedToFactory, $fgWarehouse) {
+        return DB::transaction(function () use ($delivery, $user, $newStatus, $reason, $newDate, $returnedToFactory, $reasonCode) {
             $delivery = DeliveryOrder::query()->whereKey($delivery->getKey())->lockForUpdate()->firstOrFail();
             $this->assertTransition($delivery->status, $newStatus);
             $oldStatus = $delivery->status;
+            $reasonText = $reason ?: DeliveryOrder::FAILURE_REASONS[$reasonCode];
 
-            if ($delivery->isDispatched() && $returnedToFactory) {
-                foreach ($delivery->lines()->lockForUpdate()->get() as $line) {
-                    if ($line->line_type === 'READY_STOCK') {
-                        $this->inventoryService->returnReadyStockForDelivery($line, $user, $reason);
-
-                        continue;
-                    }
-
-                    FinishedGoodsMovement::create([
-                        'movement_number' => DocumentNumberService::generateFinishedGoodsMovementNumber(),
-                        'production_order_id' => $line->production_order_id,
-                        'customer_order_id' => $delivery->customer_order_id,
-                        'warehouse_id' => $fgWarehouse->id,
-                        'delivery_order_id' => $delivery->id,
-                        'delivery_order_line_id' => $line->id,
-                        'movement_type' => 'DELIVERY_RETURN',
-                        'direction' => 'IN',
-                        'quantity' => $line->quantity,
-                        'occurred_at' => now(),
-                        'performed_by_user_id' => $user->id,
-                        'notes' => "إعادة المنتجات للمستودع بسبب تعثر/إعادة جدولة التوصيل: {$reason}",
-                    ]);
+            $goodsLocation = 'FACTORY';
+            if ($delivery->isDispatched()) {
+                if ($returnedToFactory) {
+                    $goodsLocation = $this->returnGoodsToFactory($delivery, $user, $reasonText, $reasonCode, $oldStatus, $newStatus);
+                } else {
+                    $goodsLocation = 'WITH_DRIVER';
                 }
-                $this->recordEvent($delivery, 'RETURNED_TO_FACTORY', $oldStatus, $newStatus, $user, "إعادة البضاعة للمصنع: {$reason}");
             }
 
             $delivery->update([
                 'status' => $newStatus,
+                'failure_reason_code' => $reasonCode,
+                'goods_location' => $goodsLocation,
                 'scheduled_delivery_date' => $newDate ?? $delivery->scheduled_delivery_date,
-                'delivery_notes' => $reason ? "سبب الحدوث: {$reason}" : $delivery->delivery_notes,
+                'delivery_notes' => "سبب الحدوث: {$reasonText}",
             ]);
 
             $eventType = match ($newStatus) {
@@ -361,9 +360,159 @@ class DeliveryOrderService
                 'CANCELLED' => 'CANCELLED',
                 default => 'FAILED',
             };
-            $this->recordEvent($delivery, $eventType, $oldStatus, $newStatus, $user, $reason ?? 'تعثر أمر التوصيل');
+            $this->recordEvent($delivery, $eventType, $oldStatus, $newStatus, $user, $reasonText);
+
+            if (in_array($reasonCode, DeliveryOrder::QUALITY_REASONS, true)) {
+                $this->openQualityIncidents($delivery, $user, $reasonCode, $reasonText);
+            }
 
             return $delivery;
+        });
+    }
+
+    /**
+     * The goods of a failed delivery that stayed with the driver are now back at the factory.
+     */
+    public function confirmGoodsReturned(DeliveryOrder $delivery, User $user): DeliveryOrder
+    {
+        return DB::transaction(function () use ($delivery, $user) {
+            $delivery = DeliveryOrder::query()->whereKey($delivery->getKey())->lockForUpdate()->firstOrFail();
+
+            if (! $delivery->isAwaitingDecision() || $delivery->goods_location !== 'WITH_DRIVER') {
+                throw new Exception('لا توجد بضاعة مسجلة مع فريق التوصيل لهذا الأمر.');
+            }
+
+            $reasonText = $delivery->failureReasonLabel() ?? 'تعذر التوصيل';
+            $location = $this->returnGoodsToFactory($delivery, $user, $reasonText, $delivery->failure_reason_code ?? 'OTHER', $delivery->status, $delivery->status);
+            $delivery->update(['goods_location' => $location]);
+
+            return $delivery;
+        });
+    }
+
+    /**
+     * Management decision: deliver again on a new date. A successor delivery order is created
+     * (a delivery line can only be dispatched once) and this one is closed with a link to it.
+     */
+    public function rescheduleAsNew(DeliveryOrder $delivery, User $user, string $newDate, ?string $notes = null): DeliveryOrder
+    {
+        return DB::transaction(function () use ($delivery, $user, $newDate, $notes) {
+            $delivery = DeliveryOrder::query()->whereKey($delivery->getKey())->lockForUpdate()->firstOrFail();
+            $this->assertDecisionPossible($delivery);
+
+            $successor = $this->createDeliveryOrder($delivery->customerOrder, $user, [
+                'scheduled_delivery_date' => $newDate,
+                'scheduled_time_notes' => $delivery->scheduled_time_notes,
+                'customer_name_snapshot' => $delivery->customer_name_snapshot,
+                'customer_phone_snapshot' => $delivery->customer_phone_snapshot,
+                'city_snapshot' => $delivery->city_snapshot,
+                'district_snapshot' => $delivery->district_snapshot,
+                'delivery_address_snapshot' => $delivery->delivery_address_snapshot,
+                'location_notes' => $delivery->location_notes,
+                'installation_required' => $delivery->installation_required,
+                'delivery_notes' => trim("إعادة جدولة للأمر {$delivery->delivery_number}. ".($notes ?? '')),
+                'lines' => $delivery->lines->map(fn ($line) => [
+                    'line_type' => $line->line_type,
+                    'production_order_id' => $line->production_order_id,
+                    'material_id' => $line->material_id,
+                    'customer_order_line_id' => $line->customer_order_line_id,
+                    'quantity' => $line->quantity,
+                    'notes' => $line->notes,
+                ])->all(),
+            ]);
+            $this->markReady($successor, $user);
+
+            $delivery->update(['successor_delivery_order_id' => $successor->id]);
+            $this->recordEvent($delivery, 'RESCHEDULED', $delivery->status, $delivery->status, $user, "أعيدت الجدولة بأمر التوصيل {$successor->delivery_number} بتاريخ {$newDate}");
+
+            return $successor->fresh();
+        });
+    }
+
+    /**
+     * Management decision: the delivery will not happen; the goods are already back.
+     */
+    public function cancelAfterFailure(DeliveryOrder $delivery, User $user, string $reason): DeliveryOrder
+    {
+        return DB::transaction(function () use ($delivery, $user, $reason) {
+            $delivery = DeliveryOrder::query()->whereKey($delivery->getKey())->lockForUpdate()->firstOrFail();
+            $this->assertDecisionPossible($delivery);
+            $this->assertTransition($delivery->status, 'CANCELLED');
+
+            $oldStatus = $delivery->status;
+            $delivery->update(['status' => 'CANCELLED']);
+            $this->recordEvent($delivery, 'CANCELLED', $oldStatus, 'CANCELLED', $user, "إلغاء التوصيل بعد التعثر: {$reason}");
+
+            return $delivery;
+        });
+    }
+
+    private function assertDecisionPossible(DeliveryOrder $delivery): void
+    {
+        if (! $delivery->isAwaitingDecision()) {
+            throw new Exception('هذا الأمر ليس بانتظار قرار (قد يكون أعيدت جدولته أو أُلغي).');
+        }
+
+        if ($delivery->goods_location === 'WITH_DRIVER') {
+            throw new Exception('البضاعة ما زالت مع فريق التوصيل. أكّد عودتها للمصنع أولاً.');
+        }
+    }
+
+    /**
+     * Book the dispatched goods back in. Returns where they went (FACTORY or QUARANTINE).
+     */
+    private function returnGoodsToFactory(DeliveryOrder $delivery, User $user, string $reasonText, string $reasonCode, string $oldStatus, string $newStatus): string
+    {
+        $toQuarantine = in_array($reasonCode, DeliveryOrder::QUARANTINE_REASONS, true);
+        $warehouse = $toQuarantine ? $this->finishedGoodsService->quarantineWarehouse() : $this->finishedGoodsService->finishedGoodsWarehouse();
+
+        foreach ($delivery->lines()->lockForUpdate()->get() as $line) {
+            if ($line->line_type === 'READY_STOCK') {
+                $this->inventoryService->returnReadyStockForDelivery($line, $user, $reasonText);
+
+                continue;
+            }
+
+            FinishedGoodsMovement::create([
+                'movement_number' => DocumentNumberService::generateFinishedGoodsMovementNumber(),
+                'production_order_id' => $line->production_order_id,
+                'customer_order_id' => $delivery->customer_order_id,
+                'warehouse_id' => $warehouse->id,
+                'delivery_order_id' => $delivery->id,
+                'delivery_order_line_id' => $line->id,
+                'movement_type' => 'DELIVERY_RETURN',
+                'direction' => 'IN',
+                'quantity' => $line->quantity,
+                'occurred_at' => now(),
+                'performed_by_user_id' => $user->id,
+                'notes' => ($toQuarantine ? 'إعادة المنتجات لمنطقة الفحص' : 'إعادة المنتجات للمستودع')." بسبب تعثر التوصيل: {$reasonText}",
+            ]);
+        }
+
+        $where = $toQuarantine ? 'منطقة الفحص' : 'المخزون';
+        $this->recordEvent($delivery, 'RETURNED_TO_FACTORY', $oldStatus, $newStatus, $user, "إعادة البضاعة إلى {$where}: {$reasonText}");
+
+        return $toQuarantine ? 'QUARANTINE' : 'FACTORY';
+    }
+
+    /**
+     * A refusal for a defect or transport damage is a quality problem: open one incident per production order.
+     */
+    private function openQualityIncidents(DeliveryOrder $delivery, User $user, string $reasonCode, string $reasonText): void
+    {
+        $department = Department::where('code', 'DELIVERY_INSTALLATION')->first() ?? Department::first();
+        if (! $department) {
+            return;
+        }
+
+        $delivery->lines->whereNotNull('production_order_id')->groupBy('production_order_id')->each(function ($lines) use ($delivery, $user, $reasonCode, $reasonText, $department) {
+            $this->qualityIncidentService->createIncident($lines->first()->productionOrder, $user, [
+                'affected_quantity' => (int) ceil($lines->sum('quantity')),
+                'detected_department_id' => $department->id,
+                'incident_type' => $reasonCode === 'TRANSPORT_DAMAGE' ? 'LOADING_DAMAGE' : 'WORKMANSHIP_DEFECT',
+                'description' => "رُصد عند التوصيل ({$delivery->delivery_number}): {$reasonText}",
+                'severity' => 'HIGH',
+            ]);
         });
     }
 

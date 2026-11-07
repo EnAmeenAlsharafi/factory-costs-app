@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -72,5 +73,22 @@ class QualityIncident extends Model
     public function wasteRecords()
     {
         return $this->hasMany(ProductionWasteRecord::class, 'quality_incident_id');
+    }
+
+    /**
+     * Scope to incidents a department-restricted user may see: detected in, caused by, or on an operation of their department.
+     */
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        if (! $user->isDepartmentRestricted()) {
+            return $query;
+        }
+
+        $departmentId = $user->productionDepartmentId();
+
+        return $query->where(fn (Builder $q) => $q
+            ->where('detected_department_id', $departmentId)
+            ->orWhere('responsible_department_id', $departmentId)
+            ->orWhereHas('operation', fn (Builder $op) => $op->visibleTo($user)));
     }
 }

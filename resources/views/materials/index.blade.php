@@ -8,7 +8,7 @@
 
     <!-- Page Header -->
     @include('partials.page-header', [
-        'title' => 'كتالوج المواد الخام (Materials Catalog)',
+        'title' => 'كتالوج المواد الخام',
         'subtitle' => 'السجل المركزي للمواد الخام، الأخشاب، الإسفنج، الأقمشة ومستلزمات الإنتاج.',
         'icon' => 'fas fa-layer-group',
         'breadcrumbs' => [

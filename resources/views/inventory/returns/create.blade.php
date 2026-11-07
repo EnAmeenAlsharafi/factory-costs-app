@@ -6,16 +6,16 @@
 <div class="container-fluid px-4 py-3" x-data="materialReturnForm()">
 
     <!-- Header & Breadcrumbs -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div class="page-header-card d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
         <div>
             <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-1">
+                <ol class="breadcrumb mb-2 fs-8">
                     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}" class="text-decoration-none">الرئيسية</a></li>
                     <li class="breadcrumb-item"><a href="{{ route('inventory.returns.index') }}" class="text-decoration-none">سندات الإرجاع</a></li>
                     <li class="breadcrumb-item active" aria-current="page">سند جديد</li>
                 </ol>
             </nav>
-            <h1 class="h3 fw-bold mb-0 text-dark">إنشاء سند إرجاع مواد للمخزن (Material Return)</h1>
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">إنشاء سند إرجاع مواد للمخزن</h1>
         </div>
         <div>
             <a href="{{ route('inventory.returns.index') }}" class="btn btn-outline-secondary">
@@ -147,7 +147,7 @@
                                         <span x-text="formatNumber(line.unit_cost)"></span> ر.س
                                     </td>
                                     <td class="text-center">
-                                        <button type="button" @click="removeLine(index)" class="btn btn-sm btn-outline-danger border-0" :disabled="lines.length === 1">
+                                        <button type="button" @click="removeLine(index)" class="btn btn-sm btn-outline-danger border-0" :disabled="lines.length === 1" aria-label="حذف البند">
                                             <i class="fas fa-trash-alt"></i>
                                         </button>
                                     </td>

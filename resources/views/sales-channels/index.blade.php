@@ -8,7 +8,7 @@
 
     <!-- Page Header Component -->
     @include('partials.page-header', [
-        'title' => 'قنوات البيع (Sales Channels)',
+        'title' => 'قنوات البيع',
         'subtitle' => 'تحديد مسارات البيع (متجر مفروشات سدير، تجار الجملة، البيع المباشر، والمشاريع الخاصة).',
         'icon' => 'fas fa-store',
         'breadcrumbs' => [

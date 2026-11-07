@@ -4,15 +4,15 @@
 
 @section('content')
 <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-header-card d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="h3 mb-0 text-gray-800">
-                <i class="fas fa-paper-plane me-2 text-primary"></i>طلبات عروض الأسعار (Request for Quotations)
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                <i class="fas fa-paper-plane text-warning fs-5" aria-hidden="true"></i>طلبات عروض الأسعار
             </h1>
-            <p class="text-muted small mb-0">إرسال واستدراج عروض أسعار الخامات والمواد من الموردين المعتمدين</p>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">إرسال واستدراج عروض أسعار الخامات والمواد من الموردين المعتمدين</p>
         </div>
         @can('purchasing.manage_rfq')
-        <a href="{{ route('purchasing.rfqs.create') }}" class="btn btn-primary rounded-pill px-4">
+        <a href="{{ route('purchasing.rfqs.create') }}" class="btn btn-factory-warning rounded-pill px-4">
             <i class="fas fa-plus me-1"></i>طلب عرض سعر جديد (RFQ)
         </a>
         @endcan

@@ -41,7 +41,7 @@ class UserController extends Controller
     {
         abort_if(! $request->user()->can('users.create'), 403, 'غير مصرح لك بإضافة مستخدم جديد.');
 
-        $roles = Role::orderBy('display_name')->get();
+        $roles = Role::with('department')->where('name', '!=', 'production_worker')->orderBy('display_name')->get();
         $departments = Department::active()->orderBy('sort_order')->get();
         $customers = Customer::active()->orderBy('name')->get();
 
@@ -74,7 +74,10 @@ class UserController extends Controller
     {
         abort_if(! $request->user()->can('users.update'), 403, 'غير مصرح لك بتعديل بيانات المستخدمين.');
 
-        $roles = Role::orderBy('display_name')->get();
+        $roles = Role::with('department')
+            ->where(fn ($q) => $q->where('name', '!=', 'production_worker')->orWhere('id', $user->role_id))
+            ->orderBy('display_name')
+            ->get();
         $departments = Department::orderBy('sort_order')->get();
         $customers = Customer::active()->orderBy('name')->get();
 

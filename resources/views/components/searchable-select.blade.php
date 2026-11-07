@@ -32,7 +32,7 @@
                @blur="closeDropdown"
                placeholder="{{ $placeholder }}"
                aria-label="{{ $placeholder }}">
-        <button class="btn btn-outline-secondary btn-sm" type="button" x-show="selectedId" @click="clearSelection" tabindex="-1">
+        <button class="btn btn-outline-secondary btn-sm" type="button" x-show="selectedId" @click="clearSelection" tabindex="-1" aria-label="مسح الاختيار">
             <i class="fas fa-times fs-8"></i>
         </button>
     </div>

@@ -4,12 +4,12 @@
 
 @section('content')
 <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-header-card d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="h3 mb-0 text-gray-800">
-                <i class="fas fa-file-signature me-2 text-primary"></i>طلب شراء رقم: {{ $purchaseRequest->request_number }}
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                <i class="fas fa-file-signature text-warning fs-5" aria-hidden="true"></i>طلب شراء رقم: {{ $purchaseRequest->request_number }}
             </h1>
-            <p class="text-muted small mb-0">تاريخ الطلب: {{ $purchaseRequest->request_date->format('Y-m-d') }} | المستودع: {{ $purchaseRequest->warehouse?->name_ar }}</p>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">تاريخ الطلب: {{ $purchaseRequest->request_date->format('Y-m-d') }} | المستودع: {{ $purchaseRequest->warehouse?->name_ar }}</p>
         </div>
         <div class="d-flex align-items-center gap-2">
             <a href="{{ route('purchasing.requests.index') }}" class="btn btn-outline-secondary rounded-pill px-3">العودة للطلبات</a>

@@ -13,23 +13,23 @@
         </div>
     @endif
     <!-- Header -->
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div class="page-header-card d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <div>
             <div class="d-flex align-items-center gap-2">
-                <h4 class="fw-bold mb-0 text-dark">أمر إنتاج: {{ $order->production_order_number }}</h4>
+                <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">أمر إنتاج: {{ $order->production_order_number }}</h1>
                 <span class="badge {{ $order->status_badge_class }} fs-6">{{ $order->status_arabic }}</span>
                 @if($order->has_customer_order_changed)
                     <span class="badge bg-warning text-dark fs-7" title="تم تعديل طلب العميل في قسم المبيعات بعد إطلاق أمر الإنتاج"><i class="fas fa-exclamation-triangle me-1"></i>تم تعديل طلب العميل الأصلي</span>
                 @endif
             </div>
-            <p class="text-muted mb-0 mt-1">
+            <p class="page-header-subtitle text-muted mb-0 fs-7">
                 مرتبط بطلب العميل: <a href="{{ route('sales.orders.show', $order->customerOrder) }}" class="fw-bold text-decoration-none font-monospace">{{ $order->customerOrder?->order_number }}</a>
-                &bull; العميل: <strong>{{ $order->customerOrder?->customer?->name_ar }}</strong>
+                &bull; العميل: <strong>{{ $order->customerOrder?->customer?->name }}</strong>
             </p>
         </div>
         <div class="d-flex flex-wrap gap-2">
             <!-- Stage 10 Actions -->
-            <a href="{{ route('production.material-requests.create', ['production_order_id' => $order->id]) }}" class="btn btn-primary">
+            <a href="{{ route('production.material-requests.create', ['production_order_id' => $order->id]) }}" class="btn btn-factory-warning">
                 <i class="fas fa-clipboard-list me-1"></i> طلب خامات إنتاج
             </a>
             <a href="{{ route('production.quality-incidents.create', ['production_order_id' => $order->id]) }}" class="btn btn-outline-danger">

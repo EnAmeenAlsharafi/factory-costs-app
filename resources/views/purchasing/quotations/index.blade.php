@@ -4,19 +4,19 @@
 
 @section('content')
 <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-header-card d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="h3 mb-0 text-gray-800">
-                <i class="fas fa-scale-balanced me-2 text-primary"></i>عروض أسعار الموردين (Supplier Quotations)
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                <i class="fas fa-scale-balanced text-warning fs-5" aria-hidden="true"></i>عروض أسعار الموردين
             </h1>
-            <p class="text-muted small mb-0">سجل عروض أسعار الموردين وإجراء المقارنات التجارية واختيار المورد المناسب</p>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">سجل عروض أسعار الموردين وإجراء المقارنات التجارية واختيار المورد المناسب</p>
         </div>
         <div class="d-flex align-items-center gap-2">
             <a href="{{ route('purchasing.quotations.compare') }}" class="btn btn-outline-primary rounded-pill px-4">
                 <i class="fas fa-table-columns me-1"></i>مقارنة عروض الموردين
             </a>
             @can('purchasing.manage_quotes')
-            <a href="{{ route('purchasing.quotations.create') }}" class="btn btn-primary rounded-pill px-4">
+            <a href="{{ route('purchasing.quotations.create') }}" class="btn btn-factory-warning rounded-pill px-4">
                 <i class="fas fa-plus me-1"></i>تسجيل عرض سعر مورد
             </a>
             @endcan

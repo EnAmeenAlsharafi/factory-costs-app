@@ -11,7 +11,7 @@
     --factory-bg: #f4f7fb;
     --factory-surface: #fff;
     --factory-text: #172033;
-    --factory-muted: #64748b;
+    --factory-muted: #556274; /* 5.4:1 on the light-grey surfaces (was #64748b at 4.4:1) */
     --factory-border: #dbe3ee;
     --factory-sidebar: #111827;
     --factory-sidebar-end: #1f2937;
@@ -396,8 +396,8 @@ code { max-width: 100%; overflow-wrap: anywhere; }
 :root {
     --mobile-action-bar-height: 76px;
     --tone-primary: #1d4ed8;  --tone-primary-bg: #dbeafe;
-    --tone-info: #0e7490;     --tone-info-bg: #cffafe;
-    --tone-success: #15803d;  --tone-success-bg: #dcfce7;
+    --tone-info: #155e75;     --tone-info-bg: #cffafe;
+    --tone-success: #166534;  --tone-success-bg: #dcfce7;
     --tone-warning: #92400e;  --tone-warning-bg: #fef3c7;
     --tone-danger: #b91c1c;   --tone-danger-bg: #fee2e2;
     --tone-secondary: #475569; --tone-secondary-bg: #e2e8f0;
@@ -580,13 +580,105 @@ a.metric-tile:hover { color: var(--factory-text); border-color: #94a3b8; }
 .metric-tile-value { font-size: 1.6rem; font-weight: 700; line-height: 1.1; }
 .metric-tile-label { display: block; color: #475569; font-size: .85rem; font-weight: 600; }
 .metric-tile.is-attention { border-color: #fcd34d; background: #fffdf5; }
-.metric-tile.is-zero .metric-tile-value { color: #94a3b8; }
+/* Zero is real information: muted, but still readable (4.7:1 on white). */
+.metric-tile.is-zero .metric-tile-value { color: var(--factory-muted); }
 .tone-bg-primary { color: var(--tone-primary); background: var(--tone-primary-bg); }
 .tone-bg-info { color: var(--tone-info); background: var(--tone-info-bg); }
 .tone-bg-success { color: var(--tone-success); background: var(--tone-success-bg); }
 .tone-bg-warning { color: var(--tone-warning); background: var(--tone-warning-bg); }
 .tone-bg-danger { color: var(--tone-danger); background: var(--tone-danger-bg); }
 .tone-bg-secondary { color: var(--tone-secondary); background: var(--tone-secondary-bg); }
+
+/* ---- Accessible semantic colour (WCAG AA 4.5:1) ----
+   Bootstrap's bright semantic text colours (warning 1.6:1, info 2:1, success 4:1 …) fail on the
+   app's light surfaces. Inside the content area every text use is routed through the tone tokens.
+   Decorative icons keep the brand hue (no text), and dark surfaces (solid colour, gradient,
+   text-white) keep Bootstrap's bright colours, which are the readable choice there. */
+.app-content-container .text-primary:not(i):not(.fa):not(.fas):not(.far):not(.fab):not(:is(.bg-dark, .text-bg-dark, .text-white, [style*="gradient"], :is(.bg-primary, .bg-success, .bg-danger, .bg-secondary, .bg-info):not([class*="bg-opacity"])) *) { color: var(--tone-primary) !important; }
+.app-content-container .text-info:not(i):not(.fa):not(.fas):not(.far):not(.fab):not(:is(.bg-dark, .text-bg-dark, .text-white, [style*="gradient"], :is(.bg-primary, .bg-success, .bg-danger, .bg-secondary, .bg-info):not([class*="bg-opacity"])) *) { color: var(--tone-info) !important; }
+.app-content-container .text-success:not(i):not(.fa):not(.fas):not(.far):not(.fab):not(:is(.bg-dark, .text-bg-dark, .text-white, [style*="gradient"], :is(.bg-primary, .bg-success, .bg-danger, .bg-secondary, .bg-info):not([class*="bg-opacity"])) *) { color: var(--tone-success) !important; }
+.app-content-container .text-warning:not(i):not(.fa):not(.fas):not(.far):not(.fab):not(:is(.bg-dark, .text-bg-dark, .text-white, [style*="gradient"], :is(.bg-primary, .bg-success, .bg-danger, .bg-secondary, .bg-info):not([class*="bg-opacity"])) *) { color: var(--tone-warning) !important; }
+.app-content-container .text-danger:not(i):not(.fa):not(.fas):not(.far):not(.fab):not(:is(.bg-dark, .text-bg-dark, .text-white, [style*="gradient"], :is(.bg-primary, .bg-success, .bg-danger, .bg-secondary, .bg-info):not([class*="bg-opacity"])) *) { color: var(--tone-danger) !important; }
+.app-content-container .text-secondary:not(i):not(.fa):not(.fas):not(.far):not(.fab):not(:is(.bg-dark, .text-bg-dark, .text-white, [style*="gradient"], :is(.bg-primary, .bg-success, .bg-danger, .bg-secondary, .bg-info):not([class*="bg-opacity"])) *) { color: var(--tone-secondary) !important; }
+.app-content-container { --bs-link-color-rgb: 29, 78, 216; --bs-link-hover-color-rgb: 30, 64, 175; }
+.app-content-container .badge.bg-info:not([class*="bg-opacity"]) { color: #fff !important; background-color: var(--tone-info) !important; }
+.app-content-container .badge.bg-warning:not([class*="bg-opacity"]) { color: #422006 !important; }
+.app-content-container .btn-outline-secondary { --bs-btn-color: var(--tone-secondary); --bs-btn-border-color: #94a3b8; }
+.app-content-container .btn-outline-primary { --bs-btn-color: var(--tone-primary); --bs-btn-border-color: var(--tone-primary); }
+.app-content-container .btn-outline-success { --bs-btn-color: var(--tone-success); --bs-btn-border-color: var(--tone-success); }
+.app-content-container .btn-outline-danger { --bs-btn-color: var(--tone-danger); --bs-btn-border-color: var(--tone-danger); }
+.app-content-container .btn-outline-warning { --bs-btn-color: var(--tone-warning); --bs-btn-border-color: #d97706; }
+
+/* ---- Unified page header on phones: action groups wrap and buttons fill the row ---- */
+@media (max-width: 767.98px) {
+    .page-header-card .d-flex:not(.page-header-title) { flex-wrap: wrap; }
+    .page-header-card > :not(:first-child) .btn,
+    .page-header-card > .btn { flex: 1 1 auto; justify-content: center; min-height: 44px; }
+}
+
+/* ---- Phone card layout for list tables (resources/js/table-stack.js marks eligible tables) ---- */
+@media (max-width: 767.98px) {
+    .table-factory-wrapper:has(.table-stack) { background: transparent; border: 0 !important; box-shadow: none !important; overflow: visible; }
+    .table-responsive:has(> .table-stack) { overflow: visible; }
+    .table-scroll-hint:has(+ .table-responsive > .table-stack) { display: none !important; }
+    .table-stack { min-width: 0 !important; background: transparent; }
+    /* Each cell carries its column name (data-label, exposed as CSS content), so the header row is
+       removed; a clipped header still widened RTL pages. */
+    .table-stack > thead { display: none; }
+    .table-stack, .table-stack > tbody, .table-stack > tbody > tr, .table-stack > tbody > tr > td { display: block; width: 100%; }
+    .table-stack > tbody > tr {
+        margin-block-end: .75rem;
+        padding: .75rem .9rem;
+        background: var(--factory-surface);
+        border: 1px solid var(--factory-border);
+        border-radius: .85rem;
+        box-shadow: 0 2px 8px rgba(15,23,42,.045);
+    }
+    .table-stack > tbody > tr:hover { background: var(--factory-surface); }
+    /* Each cell is a two-column grid: the column name, then every value stacked beside it. */
+    .table-stack > tbody > tr > td {
+        display: grid;
+        grid-template-columns: minmax(0, 38%) minmax(0, 1fr);
+        column-gap: .75rem;
+        row-gap: .25rem;
+        align-items: baseline;
+        padding: .35rem 0 !important;
+        border: 0 !important;
+        text-align: start !important;
+        white-space: normal !important;
+        overflow-wrap: anywhere;
+    }
+    .table-stack > tbody > tr > td::before {
+        content: attr(data-label);
+        grid-column: 1;
+        color: var(--factory-muted);
+        font-size: .78rem;
+        font-weight: 600;
+    }
+    .table-stack > tbody > tr > td[data-label=""] { grid-template-columns: minmax(0, 1fr); }
+    .table-stack > tbody > tr > td[data-label=""]::before { display: none; }
+    .table-stack > tbody > tr > td > * { grid-column: -2; min-width: 0; max-width: 100%; justify-self: start; }
+    .table-stack > tbody > tr > td .badge,
+    .table-stack > tbody > tr > td .text-nowrap { white-space: normal !important; text-align: start; }
+    .table-stack > tbody > tr > td .text-truncate { overflow: visible; white-space: normal; text-overflow: clip; }
+    .table-stack > tbody > tr > td [style*="max-width"] { max-width: none !important; }
+    /* First column is the card title. */
+    .table-stack > tbody > tr > td:first-child {
+        display: block;
+        margin-block-end: .25rem;
+        padding-block-end: .5rem !important;
+        border-block-end: 1px solid #edf1f6 !important;
+        color: var(--factory-text);
+        font-weight: 700;
+    }
+    .table-stack > tbody > tr > td:first-child::before { display: none; }
+    .table-stack > tbody > tr > td.table-stack-actions { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: .5rem; padding-block-start: .6rem !important; }
+    .table-stack > tbody > tr > td.table-stack-actions::before { display: none; }
+    .table-stack > tbody > tr > td.table-stack-actions .btn,
+    .table-stack > tbody > tr > td.table-stack-actions .table-actions { min-height: 44px; }
+    .table-stack > tbody > tr.table-stack-empty > td { display: block; text-align: center !important; }
+    .table-stack > tbody > tr.table-stack-empty > td::before { display: none; }
+}
 
 /* ---- Contextual action bar (x-mobile-action-bar) ---- */
 .mobile-action-bar-spacer { display: none; }

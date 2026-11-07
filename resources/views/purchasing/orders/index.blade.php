@@ -4,15 +4,15 @@
 
 @section('content')
 <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-header-card d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="h3 mb-0 text-gray-800">
-                <i class="fas fa-file-contract me-2 text-primary"></i>أوامر الشراء التجاري (Purchase Orders)
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                <i class="fas fa-file-contract text-warning fs-5" aria-hidden="true"></i>أوامر الشراء التجاري
             </h1>
-            <p class="text-muted small mb-0">متابعة وإصدار الاتفاقيات التجارية وتتبع عمليات استلام الخامات بالمخازن</p>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">متابعة وإصدار الاتفاقيات التجارية وتتبع عمليات استلام الخامات بالمخازن</p>
         </div>
         @can('purchasing.create_po')
-        <a href="{{ route('purchasing.orders.create') }}" class="btn btn-primary rounded-pill px-4">
+        <a href="{{ route('purchasing.orders.create') }}" class="btn btn-factory-warning rounded-pill px-4">
             <i class="fas fa-plus me-1"></i>أمر شراء جديد (PO)
         </a>
         @endcan

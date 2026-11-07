@@ -8,7 +8,7 @@
 
     <!-- Page Header Component -->
     @include('partials.page-header', [
-        'title' => 'وحدات القياس (Units of Measure)',
+        'title' => 'وحدات القياس',
         'subtitle' => 'تعريف وحدات قياس المواد الخام ومستلزمات الإنتاج (أطوال، أوزان، ألواح، حبات، رولات، كراتين).',
         'icon' => 'fas fa-ruler-combined',
         'breadcrumbs' => [

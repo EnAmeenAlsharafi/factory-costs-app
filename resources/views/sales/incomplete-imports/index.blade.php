@@ -5,16 +5,16 @@
 @section('content')
 <div class="container-fluid px-4 py-3">
 
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div class="page-header-card d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
         <div>
             <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-1">
+                <ol class="breadcrumb mb-2 fs-8">
                     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}" class="text-decoration-none">الرئيسية</a></li>
                     <li class="breadcrumb-item active" aria-current="page">طلبات بانتظار الاستكمال</li>
                 </ol>
             </nav>
-            <h1 class="h3 fw-bold mb-0 text-dark">طلبات مستوردة بانتظار الاستكمال اليدوي</h1>
-            <p class="text-muted mb-0 fs-7">أضف المنتجات ذات الخيارات والأسرّة يدويًا، وراجع الأسعار والدفعات ثم أكد اكتمال الطلب وأرسله للمراجعة.</p>
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">طلبات مستوردة بانتظار الاستكمال اليدوي</h1>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">أضف المنتجات ذات الخيارات والأسرّة يدويًا، وراجع الأسعار والدفعات ثم أكد اكتمال الطلب وأرسله للمراجعة.</p>
         </div>
     </div>
 

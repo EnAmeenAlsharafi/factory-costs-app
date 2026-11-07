@@ -4,10 +4,10 @@
 
 @section('content')
 <div class="container-fluid px-4 py-3">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-header-card d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="fw-bold mb-1"><i class="fas fa-plus-circle text-primary me-2"></i>إنشاء مسار تصنيع جديد</h4>
-            <p class="text-muted mb-0">تعريف تسلسل المراحل التشغيلية والفروع المتوازية والاعتماديات بين الأقسام</p>
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2"><i class="fas fa-plus-circle text-warning fs-5" aria-hidden="true"></i>إنشاء مسار تصنيع جديد</h1>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">تعريف تسلسل المراحل التشغيلية والفروع المتوازية والاعتماديات بين الأقسام</p>
         </div>
         <a href="{{ route('production.routings.index') }}" class="btn btn-outline-secondary">
             <i class="fas fa-arrow-right me-1"></i> عودة للمسارات

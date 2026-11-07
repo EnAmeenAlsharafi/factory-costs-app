@@ -6,10 +6,10 @@
 <div class="container-fluid px-4 py-4">
 
     {{-- Page Header --}}
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div class="page-header-card d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
         <div>
             <div class="d-flex align-items-center gap-2">
-                <h1 class="h3 mb-1 text-dark fw-bold">عرض سعر: {{ $quotation->quotation_number }}</h1>
+                <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">عرض سعر: {{ $quotation->quotation_number }}</h1>
                 @if($quotation->status === 'DRAFT')
                     <span class="badge bg-secondary">مسودة</span>
                 @elseif($quotation->status === 'APPROVED')
@@ -20,7 +20,7 @@
                     <span class="badge bg-info text-dark"><i class="fas fa-shopping-bag me-1"></i> محول لطلب</span>
                 @endif
             </div>
-            <p class="text-muted mb-0 fs-7">تم الإنشاء بتاريخ {{ $quotation->created_at->format('Y-m-d H:i') }} بواسطة {{ $quotation->creator?->name }}</p>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">تم الإنشاء بتاريخ {{ $quotation->created_at->format('Y-m-d H:i') }} بواسطة {{ $quotation->creator?->name }}</p>
         </div>
         <div class="d-flex gap-2">
             <a href="{{ route('sales.quotations.index') }}" class="btn btn-outline-secondary">
@@ -54,7 +54,7 @@
                 @can('quotations.convert')
                     <form action="{{ route('sales.quotations.convert', $quotation) }}" method="POST" class="d-inline">
                         @csrf
-                        <button type="submit" class="btn btn-warning fw-bold text-dark" onclick="return confirm('هل ترغب في تحويل عرض السعر المعتمد هذا إلى طلب عميل كلي جديد؟')">
+                        <button type="submit" class="btn btn-factory-warning fw-bold text-dark" onclick="return confirm('هل ترغب في تحويل عرض السعر المعتمد هذا إلى طلب عميل كلي جديد؟')">
                             <i class="fas fa-shopping-bag me-1"></i> تحويل إلى طلب عميل
                         </button>
                     </form>

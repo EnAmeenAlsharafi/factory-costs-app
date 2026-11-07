@@ -5,15 +5,15 @@
 @section('content')
 <div class="container-fluid px-4 py-4" x-data="templateEditForm()">
 
-    <div class="mb-4">
+    <div class="page-header-card mb-4">
         <a href="{{ route('recipes.templates.index') }}" class="text-decoration-none text-muted fs-7 mb-2 d-inline-block">
             <i class="fas fa-arrow-right me-1"></i> العودة لقائمة القوالب
         </a>
         <div class="d-flex align-items-center gap-2">
-            <h1 class="h3 mb-1 text-dark fw-bold">تعديل قالب التصنيع</h1>
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">تعديل قالب التصنيع</h1>
             <span class="badge bg-dark font-monospace fs-6 px-3 py-1">{{ $template->template_code }}</span>
         </div>
-        <p class="text-muted mb-0 fs-7">تعديل بيانات ونمط بنود القالب المسبق</p>
+        <p class="page-header-subtitle text-muted mb-0 fs-7">تعديل بيانات ونمط بنود القالب المسبق</p>
     </div>
 
     @if($errors->any())

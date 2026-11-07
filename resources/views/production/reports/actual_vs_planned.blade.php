@@ -5,10 +5,10 @@
 @section('content')
 <div class="container-fluid px-4 py-3">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-header-card d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="fw-bold mb-0 text-dark">تقرير التكلفة الفعلية للمواد مقابل المخطط (Actual vs BOM Cost Report)</h4>
-            <p class="text-muted mb-0 mt-1">حساب صافي التكلفة الفعلية = (إجمالي المصروف - إجمالي المرتجع للمخزن)</p>
+            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">تقرير التكلفة الفعلية للمواد مقابل المخطط</h1>
+            <p class="page-header-subtitle text-muted mb-0 fs-7">حساب صافي التكلفة الفعلية = (إجمالي المصروف - إجمالي المرتجع للمخزن)</p>
         </div>
         <a href="{{ route('production.reports.index') }}" class="btn btn-outline-secondary">
             <i class="fas fa-arrow-right me-1"></i> عودة للتقارير
@@ -46,7 +46,7 @@
                                 </td>
                                 <td>
                                     <div class="fw-bold">{{ $order->productModel?->name_ar ?? $order->custom_design_name }}</div>
-                                    <small class="text-muted">{{ $order->customerOrder?->customer?->name_ar }}</small>
+                                    <small class="text-muted">{{ $order->customerOrder?->customer?->name }}</small>
                                 </td>
                                 <td>
                                     @if($canViewCost)
