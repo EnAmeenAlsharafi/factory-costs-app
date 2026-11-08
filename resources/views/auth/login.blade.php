@@ -6,6 +6,8 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>تسجيل الدخول - مصنع مفروشات سدير</title>
+    <meta name="theme-color" content="#0f172a">
+    @include('partials.webapp-head')
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
@@ -172,6 +174,8 @@
                     <div>{{ session('error') }}</div>
                 </div>
             @endif
+
+            @include('partials.install-app')
 
             <form action="{{ route('login') }}" method="POST">
                 @csrf

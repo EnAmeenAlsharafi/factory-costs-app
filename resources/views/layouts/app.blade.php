@@ -9,6 +9,7 @@
 
     <title>@yield('title', 'مصنع مفروشات سدير - نظام إدارة الإنتاج')</title>
 
+    @include('partials.webapp-head')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     @stack('styles')
@@ -40,6 +41,7 @@
             <main id="main-content" class="app-content-container" tabindex="-1">
                 <!-- Flash Messages & Validation Display -->
                 @include('partials.flash')
+                @include('partials.install-app')
 
                 <!-- Page Specific Content -->
                 @yield('content')

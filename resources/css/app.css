@@ -1196,3 +1196,11 @@ a.metric-tile:hover { color: var(--factory-text); border-color: #94a3b8; }
 
 /* ---- Mattress supply ---- */
 .track-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: .25rem 1rem; max-height: 260px; overflow-y: auto; padding: .5rem .75rem; border: 1px solid #e5eaf0; border-radius: 10px; }
+
+/* ---- Installable app (PWA) ---- */
+.install-app { display: flex; align-items: center; gap: .75rem; margin-bottom: 1rem; padding: .75rem .9rem; border: 1px solid #dbe2ea; border-radius: 14px; background: #fff; box-shadow: 0 4px 14px rgba(15, 23, 42, .06); }
+.install-app-icon img { width: 44px; height: 44px; border-radius: 12px; border: 1px solid #e5eaf0; }
+.install-app-body { flex: 1 1 auto; min-width: 0; }
+.install-app-title { margin: 0; font-weight: 700; font-size: .92rem; color: #0f172a; }
+.install-app-text { margin: 0; font-size: .8rem; color: #475569; }
+.install-app-actions { display: flex; flex-direction: column; align-items: stretch; gap: .15rem; }

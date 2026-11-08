@@ -757,4 +757,67 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('[title]:not([aria-label])').forEach((element) => element.setAttribute('aria-label', element.title));
 });
 
+/*
+ * Installable app (PWA). Chrome/Android fire beforeinstallprompt early, so it is captured here and
+ * replayed by the install banner; iOS Safari has no prompt, so the banner shows the share-menu steps.
+ */
+let deferredInstallPrompt = null;
+const INSTALL_DISMISS_KEY = 'install-app-dismissed-at';
+const INSTALL_DISMISS_DAYS = 14;
+const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    window.dispatchEvent(new CustomEvent('install-app-available'));
+});
+
+Alpine.data('installApp', () => ({
+    visible: false,
+    canPrompt: false,
+    ios: /iphone|ipad|ipod/i.test(window.navigator.userAgent) && !/crios|fxios/i.test(window.navigator.userAgent),
+
+    init() {
+        const dismissedAt = Number(readStoredJson(INSTALL_DISMISS_KEY, 0));
+        const recentlyDismissed = dismissedAt && (Date.now() - dismissedAt) < INSTALL_DISMISS_DAYS * 86400000;
+        if (isStandalone() || recentlyDismissed || !isMobileViewport()) {
+            return;
+        }
+        this.canPrompt = deferredInstallPrompt !== null;
+        this.visible = this.canPrompt || this.ios;
+        window.addEventListener('install-app-available', () => { this.canPrompt = true; this.visible = true; });
+        window.addEventListener('appinstalled', () => { this.visible = false; });
+    },
+
+    async install() {
+        if (!deferredInstallPrompt) {
+            return;
+        }
+        deferredInstallPrompt.prompt();
+        const choice = await deferredInstallPrompt.userChoice;
+        deferredInstallPrompt = null;
+        this.canPrompt = false;
+        if (choice.outcome === 'accepted') {
+            this.visible = false;
+        }
+    },
+
+    dismiss() {
+        this.visible = false;
+        writeStored(INSTALL_DISMISS_KEY, String(Date.now()));
+    },
+}));
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {
+            // Not available (e.g. plain http on a LAN address); the site keeps working as a normal web page.
+        });
+    });
+}
+
+if (isStandalone()) {
+    document.documentElement.classList.add('is-standalone-app');
+}
+
 Alpine.start();

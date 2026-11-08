@@ -78,6 +78,7 @@ use App\Http\Controllers\SupplierFabricCatalogController;
 use App\Http\Controllers\SupplierQuotationController;
 use App\Http\Controllers\UnitOfMeasureController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\WebAppController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -97,6 +98,11 @@ Route::middleware('guest')->group(function () {
 });
 
 // Authenticated Application Routes
+// Installable app (PWA): manifest and home-screen icons built from the company settings.
+Route::get('/manifest.webmanifest', [WebAppController::class, 'manifest'])->name('webapp.manifest');
+Route::get('/app-icon/{size}/{purpose?}', [WebAppController::class, 'icon'])->whereNumber('size')->name('webapp.icon');
+Route::view('/offline', 'webapp.offline')->name('webapp.offline');
+
 // Company logo for documents and pages; read straight from storage so it never depends on the public/storage link.
 Route::get('/company/logo', [CompanySettingController::class, 'logo'])->name('company.logo');
 

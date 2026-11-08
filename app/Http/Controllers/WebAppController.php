@@ -1,0 +1,127 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\CompanySetting;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\File;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+
+/**
+ * Makes the internal system installable on phones as an app (PWA): the web app manifest and
+ * the home-screen icons, both built from the company settings so a new logo or colour carries over.
+ */
+class WebAppController extends Controller
+{
+    public const ICON_SIZES = [192, 512];
+
+    public function manifest(): JsonResponse
+    {
+        $company = CompanySetting::current();
+        $version = $company->updated_at?->timestamp;
+        $icon = fn (int $size, string $purpose) => [
+            'src' => route('webapp.icon', ['size' => $size, 'purpose' => $purpose, 'v' => $version]),
+            'sizes' => "{$size}x{$size}",
+            'type' => 'image/png',
+            'purpose' => $purpose,
+        ];
+
+        return response()->json([
+            'id' => '/dashboard',
+            'name' => $company->name_ar,
+            'short_name' => $this->shortName($company->name_ar),
+            'description' => 'نظام إدارة الإنتاج والمبيعات والمشتريات — '.$company->name_ar,
+            'lang' => 'ar',
+            'dir' => 'rtl',
+            'start_url' => '/dashboard?source=app',
+            'scope' => '/',
+            'display' => 'standalone',
+            'orientation' => 'portrait',
+            'background_color' => '#ffffff',
+            'theme_color' => $company->primary_color ?: '#1d4ed8',
+            'icons' => [
+                $icon(192, 'any'),
+                $icon(512, 'any'),
+                $icon(512, 'maskable'),
+            ],
+            'shortcuts' => [
+                ['name' => 'لوحة التحكم', 'url' => '/dashboard?source=app'],
+                ['name' => 'مهامي', 'url' => '/production/my-tasks?source=app'],
+                ['name' => 'مركز تمرير الإنتاج', 'url' => '/production/pipeline?source=app'],
+            ],
+        ], 200, ['Content-Type' => 'application/manifest+json', 'Cache-Control' => 'public, max-age=3600'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+
+    public function icon(int $size, string $purpose = 'any'): BinaryFileResponse
+    {
+        abort_unless(in_array($size, self::ICON_SIZES, true) && in_array($purpose, ['any', 'maskable'], true), 404);
+
+        $company = CompanySetting::current();
+        $logo = $company->logoFilePath();
+        $dir = storage_path('app/app-icons');
+        File::ensureDirectoryExists($dir);
+        $path = $dir.'/'.md5(($logo ?? 'none').'|'.$company->primary_color.'|'.$company->updated_at?->timestamp)."-{$size}-{$purpose}.png";
+
+        if (! is_file($path)) {
+            $this->drawIcon($path, $size, $purpose === 'maskable', $logo, $company->primary_color ?: '#1d4ed8');
+        }
+
+        return response()->file($path, ['Content-Type' => 'image/png', 'Cache-Control' => 'public, max-age=604800']);
+    }
+
+    /**
+     * White square with the logo centred; a maskable icon keeps the logo inside the 80% safe zone.
+     * Without a logo, a brand-coloured square with the factory's initial.
+     */
+    private function drawIcon(string $path, int $size, bool $maskable, ?string $logo, string $primary): void
+    {
+        $canvas = imagecreatetruecolor($size, $size);
+        [$r, $g, $b] = sscanf($primary, '#%02x%02x%02x');
+        $source = $logo ? @imagecreatefromstring((string) file_get_contents($logo)) : false;
+
+        if ($source) {
+            // Logos often arrive with wide light margins: trim them, and paint the canvas in the logo's own background.
+            $background = imagecolorsforindex($source, imagecolorat($source, 0, 0));
+            $trimmed = @imagecropauto($source, IMG_CROP_THRESHOLD, 0.25, imagecolorat($source, 0, 0));
+            if ($trimmed) {
+                imagedestroy($source);
+                $source = $trimmed;
+            }
+            imagefill($canvas, 0, 0, imagecolorallocate($canvas, $background['red'], $background['green'], $background['blue']));
+            $box = (int) round($size * ($maskable ? 0.66 : 0.84));
+            $ratio = min($box / imagesx($source), $box / imagesy($source));
+            $width = (int) round(imagesx($source) * $ratio);
+            $height = (int) round(imagesy($source) * $ratio);
+            imagecopyresampled($canvas, $source, (int) (($size - $width) / 2), (int) (($size - $height) / 2), 0, 0, $width, $height, imagesx($source), imagesy($source));
+            imagedestroy($source);
+        } else {
+            imagefill($canvas, 0, 0, imagecolorallocate($canvas, $r, $g, $b));
+            $font = resource_path('fonts/Cairo-Bold.ttf');
+            $fontSize = $size * ($maskable ? 0.34 : 0.44);
+            $box = imagettfbbox($fontSize, 0, $font, 'س');
+            $x = (int) (($size - ($box[2] - $box[0])) / 2 - $box[0]);
+            $y = (int) (($size - ($box[1] - $box[7])) / 2 - $box[7]);
+            imagettftext($canvas, $fontSize, 0, $x, $y, imagecolorallocate($canvas, 255, 255, 255), $font, 'س');
+        }
+
+        imagepng($canvas, $path);
+        imagedestroy($canvas);
+    }
+
+    /**
+     * Home-screen label: the last words of the name that fit in 12 characters (e.g. «مفروشات سدير»).
+     */
+    private function shortName(string $name): string
+    {
+        $short = '';
+        foreach (array_reverse(preg_split('/\s+/u', trim($name))) as $word) {
+            $candidate = trim($word.' '.$short);
+            if (mb_strlen($candidate) > 12) {
+                break;
+            }
+            $short = $candidate;
+        }
+
+        return $short ?: mb_substr($name, 0, 12);
+    }
+}
