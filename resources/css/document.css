@@ -1,0 +1,38 @@
+/* ---- Printed documents (company header, A4 sheet) — shared by the print pages and the settings preview ---- */
+.doc-head { --doc-primary: #1d4ed8; --doc-secondary: #f5b301; display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding-bottom: .75rem; border-bottom: 3px solid var(--doc-secondary); }
+.doc-head-brand { display: flex; align-items: center; gap: .75rem; min-width: 0; }
+.doc-head-logo { max-height: 64px; max-width: 140px; object-fit: contain; }
+.doc-head-name { font-size: 1.25rem; font-weight: 700; color: var(--doc-primary); line-height: 1.3; }
+.doc-head-name-en { font-size: .8rem; color: #475569; }
+.doc-head-meta { font-size: .78rem; color: #334155; text-align: end; line-height: 1.6; }
+.doc-head-title { margin-top: .9rem; font-size: 1.15rem; font-weight: 700; }
+
+.company-logo-slot { display: grid; place-items: center; width: 96px; height: 72px; border: 1px dashed #cbd5e1; border-radius: 10px; background: #f8fafc; overflow: hidden; }
+.company-logo-slot img { max-width: 100%; max-height: 100%; object-fit: contain; }
+@media (min-width: 992px) { .company-preview-sticky { position: sticky; top: 90px; } }
+
+.doc-page { max-width: 210mm; margin: 0 auto; padding: 14mm 12mm; background: #fff; color: #0f172a; font-family: 'Cairo', sans-serif; }
+.doc-toolbar { max-width: 210mm; margin: 1rem auto; display: flex; flex-wrap: wrap; gap: .5rem; justify-content: space-between; align-items: center; padding: 0 12mm; }
+.doc-info { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem 1.5rem; margin: 1rem 0; font-size: .88rem; }
+.doc-info dt { color: #475569; font-weight: 600; font-size: .78rem; }
+.doc-info dd { margin: 0; font-weight: 700; }
+.doc-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+.doc-table th { background: var(--doc-primary, #1d4ed8); color: #fff; font-weight: 700; padding: .5rem .45rem; text-align: start; }
+.doc-table td { padding: .45rem; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+.doc-table tbody tr:nth-child(even) td { background: #f8fafc; }
+.doc-table .num { text-align: center; white-space: nowrap; }
+.doc-table tfoot td { font-weight: 700; border-top: 2px solid var(--doc-primary, #1d4ed8); background: #f1f5f9; }
+.doc-section-title { margin: 1.25rem 0 .5rem; font-size: .95rem; font-weight: 700; color: var(--doc-primary, #1d4ed8); }
+.doc-signatures { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; margin-top: 2.5rem; font-size: .85rem; text-align: center; }
+.doc-signatures div { padding-top: 2.25rem; border-top: 1px solid #94a3b8; color: #334155; }
+.doc-footer { margin-top: 1.5rem; padding-top: .5rem; border-top: 1px solid #e2e8f0; font-size: .75rem; color: #475569; text-align: center; }
+
+@media print {
+    @page { size: A4; margin: 10mm; }
+    body.doc-body { background: #fff !important; }
+    .doc-toolbar { display: none !important; }
+    .doc-page { padding: 0; max-width: none; }
+    .doc-table th, .doc-table tbody tr:nth-child(even) td, .doc-table tfoot td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .doc-table tr { break-inside: avoid; }
+    .doc-break { break-before: page; }
+}

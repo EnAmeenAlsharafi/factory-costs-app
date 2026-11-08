@@ -13,6 +13,16 @@
         <p class="page-header-subtitle text-muted mb-0 fs-7">ما الذي يحتاج إلى إجراء منك الآن؟ اضغط على أي بطاقة للانتقال مباشرة إلى العمل.</p>
     </div>
 
+    @can('purchasing.view')
+        @php $mattressLowCount = app(\App\Services\ReadyProductSupplyService::class)->lowStockCount(); @endphp
+        @if ($mattressLowCount > 0)
+            <a href="{{ route('purchasing.mattresses.stock') }}" class="card-factory pipeline-result is-partial text-decoration-none text-reset d-flex flex-wrap justify-content-between align-items-center gap-2" role="alert">
+                <span><i class="fas fa-bed text-warning me-1" aria-hidden="true"></i> <strong>{{ $mattressLowCount }} مقاس مراتب</strong> وصل للحد الأدنى. راجع الرصيد واطلب إنتاجاً من المورد.</span>
+                <span class="btn btn-warning btn-sm fw-bold">عرض المراتب</span>
+            </a>
+        @endif
+    @endcan
+
     @forelse ($sections as $section)
         <section aria-labelledby="dash-{{ $section['key'] }}">
             <h2 id="dash-{{ $section['key'] }}" class="h6 fw-bold mb-2 d-flex align-items-center gap-2 text-dark">

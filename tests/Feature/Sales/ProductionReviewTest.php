@@ -87,7 +87,7 @@ class ProductionReviewTest extends TestCase
             'manufacturing_recipe_id' => $recipe->id,
             'version_number' => 1,
             'version_code' => 'V1.0',
-            'is_approved' => true,
+            'status' => 'APPROVED',
             'created_by_user_id' => $this->productionManager->id,
         ]);
 
@@ -117,6 +117,7 @@ class ProductionReviewTest extends TestCase
             'id' => $line->id,
             'reference_width_cm' => 180,
             'reference_length_cm' => 200,
+            'approved_recipe_version_id' => $recipeVersion->id,
         ]);
     }
 }

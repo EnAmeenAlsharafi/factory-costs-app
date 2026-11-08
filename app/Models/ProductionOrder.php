@@ -124,6 +124,11 @@ class ProductionOrder extends Model
         return $this->hasMany(ProductionOrderOperation::class)->orderBy('sequence_number');
     }
 
+    public function fabricOrderAllocations(): HasMany
+    {
+        return $this->hasMany(FabricOrderAllocation::class);
+    }
+
     public function materialRequirements(): HasMany
     {
         return $this->hasMany(ProductionMaterialRequirement::class);

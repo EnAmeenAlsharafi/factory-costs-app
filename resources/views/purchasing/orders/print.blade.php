@@ -23,7 +23,13 @@
     <!-- Header -->
     <div class="print-header d-flex justify-content-between align-items-center">
         <div>
-            <h2 class="fw-bold mb-1">مصنع مفروشات سدير</h2>
+            @php $company = \App\Models\CompanySetting::current(); @endphp
+            <div class="d-flex align-items-center gap-2">
+                @if ($company->logo_url)
+                    <img src="{{ $company->logo_url }}" alt="{{ $company->name_ar }}" style="max-height: 56px; max-width: 120px; object-fit: contain;">
+                @endif
+                <h2 class="fw-bold mb-1" style="color: {{ $company->primary_color }};">{{ $company->name_ar }}</h2>
+            </div>
             <h5 class="text-secondary mb-0">أمر شراء تجاري / Purchase Order</h5>
         </div>
         <div class="text-end">
@@ -45,7 +51,7 @@
         <div class="col-6">
             <div class="border p-3 rounded">
                 <h6 class="fw-bold mb-2">بيانات الشحن والتسليم (Delivery):</h6>
-                <div><strong>المستودع:</strong> {{ $purchaseOrder->warehouse?->name_ar }}</div>
+                <div><strong>جهة الاستلام:</strong> المصنع{{ collect([$company->city, $company->address])->filter()->isNotEmpty() ? ' — '.collect([$company->city, $company->address])->filter()->implode('، ') : '' }}</div>
                 <div><strong>تاريخ التسليم المتوقع:</strong> {{ $purchaseOrder->expected_delivery_date ? $purchaseOrder->expected_delivery_date->format('Y-m-d') : '-' }}</div>
                 <div><strong>شروط الدفع:</strong> {{ $purchaseOrder->payment_terms ?? 'نقداً' }}</div>
             </div>

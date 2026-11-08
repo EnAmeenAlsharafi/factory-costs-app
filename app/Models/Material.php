@@ -64,6 +64,11 @@ class Material extends Model
         return $this->belongsTo(MaterialCategory::class, 'material_category_id');
     }
 
+    public function supplySetting(): HasOne
+    {
+        return $this->hasOne(ReadyProductSupplySetting::class);
+    }
+
     public function readyParent(): BelongsTo
     {
         return $this->belongsTo(self::class, 'ready_parent_id');

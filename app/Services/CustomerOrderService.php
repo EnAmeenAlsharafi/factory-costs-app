@@ -275,9 +275,23 @@ class CustomerOrderService
                         'reference_width_cm' => $dims['reference_width_cm'] ?? $line->reference_width_cm,
                         'reference_length_cm' => $dims['reference_length_cm'] ?? $line->reference_length_cm,
                         'production_notes' => $dims['production_notes'] ?? $line->production_notes,
+                        'approved_recipe_version_id' => array_key_exists('recipe_version_id', $dims)
+                            ? ($dims['recipe_version_id'] ?: null)
+                            : $line->approved_recipe_version_id,
                     ]);
                 }
             }
+
+            // A manufactured line with no recipe chosen inherits its configuration's approved recipe.
+            $order->lines()->whereNull('approved_recipe_version_id')->whereNotNull('product_configuration_id')->get()
+                ->each(function (CustomerOrderLine $line) use ($lineReferenceDimensions) {
+                    if (array_key_exists('recipe_version_id', $lineReferenceDimensions[$line->id] ?? [])) {
+                        return; // The reviewer deliberately left it unlinked.
+                    }
+                    if ($version = $line->recipe_version) {
+                        $line->update(['approved_recipe_version_id' => $version->id]);
+                    }
+                });
 
             $order->update([
                 'status' => 'APPROVED_FOR_PRODUCTION',

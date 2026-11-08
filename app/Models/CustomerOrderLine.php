@@ -114,6 +114,11 @@ class CustomerOrderLine extends Model
         return $this->belongsTo(Material::class);
     }
 
+    public function readyProductAllocations(): HasMany
+    {
+        return $this->hasMany(ReadyProductOrderAllocation::class);
+    }
+
     public function parentLine(): BelongsTo
     {
         return $this->belongsTo(self::class, 'parent_line_id');

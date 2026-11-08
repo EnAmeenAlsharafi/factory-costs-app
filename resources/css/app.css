@@ -5,6 +5,7 @@
 @import 'bootstrap/dist/css/bootstrap.rtl.min.css';
 @import '@fortawesome/fontawesome-free/css/all.min.css';
 @import './reports.css';
+@import './document.css';
 
 :root {
     --factory-font: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
@@ -1178,3 +1179,20 @@ a.metric-tile:hover { color: var(--factory-text); border-color: #94a3b8; }
 
 /* Document numbers and timestamps never break mid-value inside tables. */
 .table td .font-monospace, .table td.font-monospace { white-space: nowrap; }
+.recipe-link-box { margin-top: .75rem; padding: .75rem .9rem; border: 1px dashed #cbd5e1; border-radius: 12px; }
+.recipe-link-box.is-missing { border-style: solid; border-color: var(--tone-warning); background: var(--tone-warning-bg); }
+.recipe-link-box:target, .recipe-link-box:focus { outline: 3px solid var(--tone-primary); outline-offset: 2px; }
+
+/* ---- Fabric ordering ---- */
+.fabric-item { align-items: center; }
+.fabric-item .pipeline-item-main { cursor: pointer; }
+.fabric-item.is-picked { background: var(--tone-primary-bg); }
+.fabric-meters { flex: 0 0 150px; }
+.fabric-summary-supplier + .fabric-summary-supplier { border-top: 1px solid #e5eaf0; padding-top: .6rem; }
+@media (max-width: 767.98px) {
+    .fabric-item { flex-wrap: wrap; }
+    .fabric-meters { flex: 1 1 100%; padding-inline-start: 2.1rem; }
+}
+
+/* ---- Mattress supply ---- */
+.track-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: .25rem 1rem; max-height: 260px; overflow-y: auto; padding: .5rem .75rem; border: 1px solid #e5eaf0; border-radius: 10px; }

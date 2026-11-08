@@ -252,7 +252,7 @@
                                         @elseif ($line->approved_recipe_version_id)
                                             <span class="status-chip status-chip-success"><i class="fas fa-check" aria-hidden="true"></i> وصفة معتمدة</span>
                                         @else
-                                            <span class="status-chip status-chip-danger"><i class="fas fa-ban" aria-hidden="true"></i> بلا وصفة — اربطها من المراجعة الفنية</span>
+                                            <span class="status-chip status-chip-danger"><i class="fas fa-ban" aria-hidden="true"></i> بلا وصفة — أنشئ أمر الإنتاج ثم اربطه بوصفة من صفحته</span>
                                         @endif
                                     </span>
                                 </span>

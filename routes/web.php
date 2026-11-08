@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\SearchApiController;
 use App\Http\Controllers\Auth\CustomerPortalLoginController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\CompanySettingController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerCreditProfileController;
 use App\Http\Controllers\CustomerOrderController;
@@ -18,6 +19,7 @@ use App\Http\Controllers\DeliveryOrderController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\DepartmentQueueController;
 use App\Http\Controllers\FabricColorController;
+use App\Http\Controllers\FabricOrderController;
 use App\Http\Controllers\FinishedGoodsController;
 use App\Http\Controllers\InventoryAdjustmentController;
 use App\Http\Controllers\ManufacturingRecipeController;
@@ -29,6 +31,7 @@ use App\Http\Controllers\MaterialReceiptController;
 use App\Http\Controllers\MaterialReturnController;
 use App\Http\Controllers\MaterialSupplierController;
 use App\Http\Controllers\MaterialUnitConversionController;
+use App\Http\Controllers\MattressSupplyController;
 use App\Http\Controllers\PaymentAllocationController;
 use App\Http\Controllers\PaymentControlOverrideController;
 use App\Http\Controllers\ProcurementPlanningController;
@@ -94,6 +97,9 @@ Route::middleware('guest')->group(function () {
 });
 
 // Authenticated Application Routes
+// Company logo for documents and pages; read straight from storage so it never depends on the public/storage link.
+Route::get('/company/logo', [CompanySettingController::class, 'logo'])->name('company.logo');
+
 Route::middleware('auth')->group(function () {
 
     // Logout
@@ -136,6 +142,8 @@ Route::middleware('auth')->group(function () {
     // Roles and Permissions Management
     Route::post('/roles/{role}/duplicate', [RoleController::class, 'duplicate'])->name('roles.duplicate');
     Route::resource('roles', RoleController::class);
+    Route::get('/settings/company', [CompanySettingController::class, 'edit'])->name('settings.company.edit');
+    Route::put('/settings/company', [CompanySettingController::class, 'update'])->name('settings.company.update');
 
     // Master Data: Customers
     Route::post('/customers/{customer}/toggle-status', [CustomerController::class, 'toggleStatus'])->name('customers.toggle-status');
@@ -236,6 +244,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/orders/{order}', [ProductionOrderController::class, 'show'])->name('orders.show');
         Route::get('/orders/{order}/release', [ProductionOrderController::class, 'releaseForm'])->name('orders.release.form');
         Route::post('/orders/{order}/release', [ProductionOrderController::class, 'release'])->name('orders.release');
+        Route::post('/orders/{order}/recipe', [ProductionOrderController::class, 'linkRecipe'])->name('orders.link-recipe');
         Route::post('/orders/{order}/hold', [ProductionOrderController::class, 'hold'])->name('orders.hold');
         Route::post('/orders/{order}/resume', [ProductionOrderController::class, 'resume'])->name('orders.resume');
         Route::post('/orders/{order}/cancel', [ProductionOrderController::class, 'cancel'])->name('orders.cancel');
@@ -491,6 +500,25 @@ Route::middleware('auth')->group(function () {
         Route::get('/quotations/compare', [SupplierQuotationController::class, 'compare'])->name('quotations.compare');
         Route::get('/quotations/{supplierQuotation}', [SupplierQuotationController::class, 'show'])->name('quotations.show');
         Route::post('/quotations/{supplierQuotation}/select', [SupplierQuotationController::class, 'select'])->name('quotations.select');
+
+        // Fabric orders: summed by catalog and colour, one draft purchase order per supplier
+        Route::get('/fabric-orders', [FabricOrderController::class, 'index'])->name('fabric-orders.index');
+        Route::post('/fabric-orders', [FabricOrderController::class, 'store'])->name('fabric-orders.store');
+        Route::get('/fabric-orders/{purchaseOrder}/print', [FabricOrderController::class, 'print'])->name('fabric-orders.print');
+        Route::get('/fabric-orders/{purchaseOrder}/pdf', [FabricOrderController::class, 'pdf'])->name('fabric-orders.pdf');
+
+        // Mattresses made by suppliers: stock (ours + at supplier), supply orders, production requests
+        Route::get('/mattresses', [MattressSupplyController::class, 'stock'])->name('mattresses.stock');
+        Route::post('/mattresses/track', [MattressSupplyController::class, 'track'])->name('mattresses.track');
+        Route::put('/mattresses/settings/{setting}', [MattressSupplyController::class, 'updateSetting'])->name('mattresses.settings.update');
+        Route::get('/mattresses/orders', [MattressSupplyController::class, 'orders'])->name('mattresses.orders');
+        Route::post('/mattresses/orders', [MattressSupplyController::class, 'storeOrders'])->name('mattresses.orders.store');
+        Route::get('/mattresses/orders/{purchaseOrder}/pdf', [MattressSupplyController::class, 'supplyPdf'])->name('mattresses.orders.pdf');
+        Route::get('/mattresses/production', [MattressSupplyController::class, 'production'])->name('mattresses.production');
+        Route::post('/mattresses/production', [MattressSupplyController::class, 'storeProduction'])->name('mattresses.production.store');
+        Route::post('/mattresses/production/{productionRequest}/confirm', [MattressSupplyController::class, 'confirmProduction'])->name('mattresses.production.confirm');
+        Route::post('/mattresses/production/{productionRequest}/cancel', [MattressSupplyController::class, 'cancelProduction'])->name('mattresses.production.cancel');
+        Route::get('/mattresses/production/{productionRequest}/pdf', [MattressSupplyController::class, 'productionPdf'])->name('mattresses.production.pdf');
 
         // Purchase Orders
         Route::get('/orders', [PurchaseOrderController::class, 'index'])->name('orders.index');

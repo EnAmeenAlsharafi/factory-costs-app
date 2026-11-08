@@ -132,7 +132,7 @@
 
             <!-- Section 2: System Administration -->
             @php
-                $isAdminActive = request()->routeIs('users.*') || request()->routeIs('roles.*');
+                $isAdminActive = request()->routeIs('settings.*') || request()->routeIs('users.*') || request()->routeIs('roles.*');
             @endphp
             @if (auth()->user() && (auth()->user()->can('users.view') || auth()->user()->can('roles.view')))
                 <div class="sidebar-section">
@@ -166,6 +166,15 @@
                                 </a>
                             </li>
                         @endcan
+
+                        @if (auth()->user()->isAdministrator())
+                            <li class="nav-item">
+                                <a href="{{ route('settings.company.edit') }}" class="sidebar-nav-link {{ request()->routeIs('settings.*') ? 'active' : '' }}" title="إعدادات الشركة">
+                                    <span class="sidebar-icon"><i class="fas fa-building"></i></span>
+                                    <span class="sidebar-text">إعدادات الشركة</span>
+                                </a>
+                            </li>
+                        @endif
                     </ul>
                 </div>
             @endif
@@ -746,6 +755,26 @@
                                 <span class="sidebar-text">عروض الموردين ومقارنتها</span>
                             </a>
                         </li>
+                        @can('purchasing.create_po')
+                        <li class="nav-item">
+                            <a href="{{ route('purchasing.fabric-orders.index') }}" class="sidebar-nav-link {{ request()->routeIs('purchasing.fabric-orders.*') ? 'active' : '' }}" title="طلبات القماش">
+                                <span class="sidebar-icon"><i class="fas fa-scroll"></i></span>
+                                <span class="sidebar-text">طلبات القماش</span>
+                            </a>
+                        </li>
+                        @endcan
+                        @can('purchasing.view')
+                        @php $mattressLowCount = app(\App\Services\ReadyProductSupplyService::class)->lowStockCount(); @endphp
+                        <li class="nav-item">
+                            <a href="{{ route('purchasing.mattresses.stock') }}" class="sidebar-nav-link {{ request()->routeIs('purchasing.mattresses.*') ? 'active' : '' }}" title="المراتب من الموردين">
+                                <span class="sidebar-icon"><i class="fas fa-bed"></i></span>
+                                <span class="sidebar-text">المراتب من الموردين</span>
+                                @if ($mattressLowCount > 0)
+                                    <span class="badge rounded-pill bg-danger ms-auto" title="{{ $mattressLowCount }} مقاس عند الحد الأدنى">{{ $mattressLowCount }}</span>
+                                @endif
+                            </a>
+                        </li>
+                        @endcan
                         <li class="nav-item">
                             <a href="{{ route('purchasing.orders.index') }}" class="sidebar-nav-link {{ request()->routeIs('purchasing.orders.*') ? 'active' : '' }}" title="أوامر الشراء">
                                 <span class="sidebar-icon"><i class="fas fa-file-contract"></i></span>

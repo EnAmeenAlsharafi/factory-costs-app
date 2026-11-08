@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ProductionOrderRequest;
 use App\Models\CustomerOrder;
 use App\Models\CustomerOrderLine;
+use App\Models\ManufacturingRecipeVersion;
 use App\Models\ProductionOrder;
 use App\Models\ProductionOrderOperation;
 use App\Models\ProductionReworkAction;
@@ -118,6 +119,7 @@ class ProductionOrderController extends Controller
             'customerOrderLine',
             'productModel',
             'productConfiguration',
+            'recipeVersion.recipe',
             'recipeVersion.items.material.baseUnit',
             'customerProductAlias',
             'fabricMaterial',
@@ -152,11 +154,22 @@ class ProductionOrderController extends Controller
         $canViewCost = $request->user()->can('costing.view');
         $timeline = $this->timelineService->forProductionOrder($order, viewer: $user);
 
+        $recipeChoices = $user->can('production.release') && ! in_array($order->status, ['COMPLETED', 'CANCELLED'], true) && $order->materialIssues->isEmpty()
+            ? ManufacturingRecipeVersion::where('status', 'APPROVED')
+                ->with('recipe')
+                ->get()
+                ->sortBy(fn (ManufacturingRecipeVersion $version) => [
+                    $version->recipe?->product_configuration_id && $version->recipe->product_configuration_id === $order->product_configuration_id ? 0 : 1,
+                    $version->recipe?->name,
+                ])
+                ->values()
+            : null;
+
         $assignableEmployees = $user->can('production.assignment.manage')
             ? $this->employeesForOperations($order, $user)
             : null;
 
-        return view('production.orders.show', compact('order', 'costSummary', 'canViewCost', 'timeline', 'assignableEmployees'));
+        return view('production.orders.show', compact('order', 'costSummary', 'canViewCost', 'timeline', 'assignableEmployees', 'recipeChoices'));
     }
 
     /**
@@ -194,6 +207,21 @@ class ProductionOrderController extends Controller
             $visibleIds = $model::visibleTo($user)->where('production_order_id', $order->id)->pluck('id');
             $order->setRelation($relation, $order->{$relation}->whereIn('id', $visibleIds)->values());
         }
+    }
+
+    public function linkRecipe(Request $request, ProductionOrder $order): RedirectResponse
+    {
+        abort_if(! $request->user()->can('production.release'), 403);
+
+        $data = $request->validate([
+            'manufacturing_recipe_version_id' => ['required', 'exists:manufacturing_recipe_versions,id'],
+        ], ['manufacturing_recipe_version_id.required' => 'اختر الوصفة.']);
+
+        $version = ManufacturingRecipeVersion::with('recipe')->findOrFail($data['manufacturing_recipe_version_id']);
+        $order = $this->productionOrderService->linkRecipe($order, $version);
+
+        return redirect()->route('production.orders.show', $order)
+            ->with('success', "تم ربط الوصفة «{$version->recipe?->name}» بأمر الإنتاج، وحُسبت خاماته ({$order->materialRequirements->count()} خامة).");
     }
 
     public function releaseForm(Request $request, ProductionOrder $order): View

@@ -181,12 +181,12 @@
                                     </td>
                                 </tr>
                                 <tr>
-                                    <td class="text-muted">إصدار الوصفة (BOM):</td>
+                                    <td class="text-muted">وصفة التصنيع:</td>
                                     <td>
                                         @if($order->recipeVersion)
-                                            <span class="badge bg-light text-dark border font-monospace">RCP-V{{ $order->recipeVersion->version_number }}</span>
+                                            <span class="status-chip status-chip-success"><i class="fas fa-scroll" aria-hidden="true"></i> {{ $order->recipeVersion->recipe?->name }} (V{{ $order->recipeVersion->version_number }})</span>
                                         @else
-                                            <span class="text-muted small">بدون وصفة رسمية (تصميم خاص)</span>
+                                            <span class="status-chip status-chip-warning"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i> غير مرتبط بوصفة</span>
                                         @endif
                                     </td>
                                 </tr>
@@ -195,6 +195,35 @@
                                     <td class="text-dark bg-light p-2 rounded small">{{ $order->production_notes ?? 'لا توجد ملاحظات مدونة' }}</td>
                                 </tr>
                             </table>
+                            @if ($recipeChoices !== null)
+                                <div id="recipe" tabindex="-1" class="recipe-link-box {{ $order->recipeVersion ? '' : 'is-missing' }}">
+                                    @if (! $order->recipeVersion)
+                                        <p class="fw-semibold mb-1"><i class="fas fa-link me-1" aria-hidden="true"></i> اربط هذا الطلب بوصفة جاهزة</p>
+                                        <p class="fs-7 text-muted mb-2">إذا كان التصميم الخاص يطابق منتجاً لديه وصفة، اربطه بها لتُحسب الخامات تلقائياً ويُطلب صرفها بضغطة واحدة.</p>
+                                    @endif
+                                    @if ($recipeChoices->isEmpty())
+                                        <p class="fs-7 text-muted mb-0">لا توجد وصفات معتمدة بعد. أنشئ وصفة من «وصفات التصنيع» أولاً.</p>
+                                    @else
+                                        <details @if (! $order->recipeVersion) open @endif>
+                                            <summary class="fs-7 fw-semibold text-primary">{{ $order->recipeVersion ? 'تغيير الوصفة' : 'اختيار الوصفة' }}</summary>
+                                            <form action="{{ route('production.orders.link-recipe', $order) }}" method="POST" class="d-flex flex-wrap gap-2 mt-2"
+                                                  @if ($order->materialRequests->where('status', 'DRAFT')->isNotEmpty()) data-confirm="ستُحذف مسودات طلبات الخامات الحالية وتُحسب الخامات من الوصفة الجديدة. متابعة؟" @endif>
+                                                @csrf
+                                                <label for="recipe-version" class="visually-hidden">الوصفة</label>
+                                                <select id="recipe-version" name="manufacturing_recipe_version_id" class="form-select flex-grow-1" style="min-width: 220px;" required>
+                                                    <option value="">اختر وصفة معتمدة...</option>
+                                                    @foreach ($recipeChoices as $version)
+                                                        <option value="{{ $version->id }}" @selected($order->manufacturing_recipe_version_id === $version->id)>
+                                                            {{ $version->recipe?->name }} (V{{ $version->version_number }}){{ $version->recipe?->product_configuration_id && $version->recipe->product_configuration_id === $order->product_configuration_id ? ' — مطابقة للمنتج' : '' }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                                <button type="submit" class="btn btn-primary text-nowrap"><i class="fas fa-link me-1" aria-hidden="true"></i> {{ $order->recipeVersion ? 'تغيير' : 'ربط الوصفة' }}</button>
+                                            </form>
+                                        </details>
+                                    @endif
+                                </div>
+                            @endif
                         </div>
                     </div>
                 </div>

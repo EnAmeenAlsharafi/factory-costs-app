@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class ProductionReviewRequest extends FormRequest
 {
@@ -18,7 +19,16 @@ class ProductionReviewRequest extends FormRequest
             'lines.*.reference_width_cm' => 'nullable|numeric|gt:0',
             'lines.*.reference_length_cm' => 'nullable|numeric|gt:0',
             'lines.*.production_notes' => 'nullable|string',
+            'lines.*.recipe_version_id' => ['nullable', 'integer', Rule::exists('manufacturing_recipe_versions', 'id')->where('status', 'APPROVED')],
             'production_notes' => 'nullable|string',
         ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return ['lines.*.recipe_version_id.exists' => 'الوصفة المختارة غير معتمدة أو لم تعد موجودة.'];
     }
 }

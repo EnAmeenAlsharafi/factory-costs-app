@@ -253,6 +253,48 @@ class ProductionPipelineTest extends TestCase
         return [$order, $line];
     }
 
+    public function test_released_custom_order_can_be_linked_to_a_ready_recipe(): void
+    {
+        [, $line] = $this->salesOrder('APPROVED_FOR_PRODUCTION', withRecipe: false);
+        $line->update(['custom_design' => true, 'custom_design_name' => 'سرير حواجز']);
+        $service = app(ProductionOrderService::class);
+        $productionOrder = $service->releaseProductionOrder($service->createFromOrderLine($line, ['released_quantity' => 3]), $this->routing, $this->manager);
+
+        $this->actingAs($this->manager)->get(route('production.orders.show', $productionOrder))
+            ->assertSee('اربط هذا الطلب بوصفة جاهزة')
+            ->assertSee(route('production.orders.link-recipe', $productionOrder), false);
+
+        $this->actingAs($this->manager)
+            ->post(route('production.orders.link-recipe', $productionOrder), ['manufacturing_recipe_version_id' => $this->recipeVersion->id])
+            ->assertRedirect(route('production.orders.show', $productionOrder))
+            ->assertSessionHas('success');
+
+        $productionOrder->refresh();
+        $this->assertSame($this->recipeVersion->id, $productionOrder->manufacturing_recipe_version_id);
+        $this->assertEquals(6.0, (float) $productionOrder->materialRequirements()->sole()->total_planned_quantity);
+
+        // Once a request is with the warehouse, the recipe is locked.
+        $this->actingAs($this->manager)->post(route('production.pipeline.materials'), [
+            'production_order_ids' => [$productionOrder->id],
+            'warehouse_id' => Warehouse::active()->firstOrFail()->id,
+        ]);
+        $this->actingAs($this->manager)
+            ->post(route('production.orders.link-recipe', $productionOrder), ['manufacturing_recipe_version_id' => $this->recipeVersion->id])
+            ->assertSessionHasErrors('manufacturing_recipe_version_id');
+    }
+
+    public function test_recipe_chosen_in_technical_review_is_saved_on_the_line(): void
+    {
+        [$order, $line] = $this->salesOrder('PENDING_PRODUCTION_REVIEW', withRecipe: false);
+
+        $this->actingAs($this->manager)->post(route('sales.orders.approve-production', $order), [
+            'lines' => [$line->id => ['recipe_version_id' => $this->recipeVersion->id]],
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame('APPROVED_FOR_PRODUCTION', $order->fresh()->status);
+        $this->assertSame($this->recipeVersion->id, $line->fresh()->approved_recipe_version_id);
+    }
+
     private function releasedProductionOrder(): ProductionOrder
     {
         [, $line] = $this->salesOrder('APPROVED_FOR_PRODUCTION');

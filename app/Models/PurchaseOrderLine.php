@@ -38,6 +38,16 @@ class PurchaseOrderLine extends Model
         'received_base_quantity' => 'decimal:4',
     ];
 
+    public function fabricAllocations(): HasMany
+    {
+        return $this->hasMany(FabricOrderAllocation::class);
+    }
+
+    public function readyProductAllocations(): HasMany
+    {
+        return $this->hasMany(ReadyProductOrderAllocation::class);
+    }
+
     public function purchaseOrder(): BelongsTo
     {
         return $this->belongsTo(PurchaseOrder::class);

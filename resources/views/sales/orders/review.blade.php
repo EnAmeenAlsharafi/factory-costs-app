@@ -120,7 +120,7 @@
                     <select id="recipe-{{ $line->id }}" name="lines[{{ $line->id }}][recipe_version_id]" class="form-select">
                         <option value="">-- بدون ربط وصفة حالياً --</option>
                         @foreach ($recipeVersions as $version)
-                            <option value="{{ $version->id }}" @selected(old('lines.'.$line->id.'.recipe_version_id', $line->recipe_version_id) == $version->id)>
+                            <option value="{{ $version->id }}" @selected(old('lines.'.$line->id.'.recipe_version_id', $line->approved_recipe_version_id ?? $recipeVersion?->id) == $version->id)>
                                 {{ $version->recipe?->name }} (V{{ $version->version_number }}) - {{ $version->version_code }}
                             </option>
                         @endforeach

@@ -180,6 +180,9 @@ class PurchaseReceivingService
                     } elseif ($anyReceived) {
                         $po->update(['status' => 'PARTIALLY_RECEIVED']);
                     }
+
+                    // Supplier-made ready products (mattresses) delivered out of the stock the supplier holds for us.
+                    app(ReadyProductSupplyService::class)->recordDeliveryFromReceipt($postedReceipt, $po, $user);
                 }
             }
 

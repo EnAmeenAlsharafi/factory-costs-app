@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\CustomerOrderLine;
+use App\Models\ManufacturingRecipeVersion;
 use App\Models\ProductionOperationProgress;
 use App\Models\ProductionOrder;
 use App\Models\ProductionOrderOperation;
@@ -93,6 +94,48 @@ class ProductionOrderService
             ]);
 
             return $po;
+        });
+    }
+
+    /**
+     * Link (or change) the approved recipe a production order is built from — typically a
+     * custom design that matches an existing recipe — and recompute its material requirements.
+     *
+     * Allowed until materials are issued against the order, so stock already consumed never
+     * disagrees with the recipe.
+     */
+    public function linkRecipe(ProductionOrder $po, ManufacturingRecipeVersion $version): ProductionOrder
+    {
+        if ($version->status !== 'APPROVED') {
+            throw ValidationException::withMessages(['manufacturing_recipe_version_id' => 'اختر وصفة معتمدة.']);
+        }
+
+        if (in_array($po->status, ['COMPLETED', 'CANCELLED'], true)) {
+            throw ValidationException::withMessages(['manufacturing_recipe_version_id' => 'لا يمكن تغيير وصفة أمر مكتمل أو ملغى.']);
+        }
+
+        if ($po->materialIssues()->exists()) {
+            throw ValidationException::withMessages(['manufacturing_recipe_version_id' => 'صُرفت خامات على هذا الأمر، لذلك لا يمكن تغيير وصفته.']);
+        }
+
+        if ($po->materialRequests()->whereIn('status', ['SUBMITTED', 'PARTIALLY_FULFILLED'])->exists()) {
+            throw ValidationException::withMessages(['manufacturing_recipe_version_id' => 'يوجد طلب خامات مقدّم للمستودع. ألغِه أو انتظر رفضه قبل تغيير الوصفة.']);
+        }
+
+        return DB::transaction(function () use ($po, $version) {
+            $po = ProductionOrder::whereKey($po->id)->lockForUpdate()->firstOrFail();
+            $po->update(['manufacturing_recipe_version_id' => $version->id]);
+
+            // Draft requests were built from the old (or no) recipe; requirements are rebuilt from the new one.
+            $po->materialRequests()->where('status', 'DRAFT')->each(function ($request) {
+                $request->lines()->delete();
+                $request->delete();
+            });
+            $po->materialRequirements()->delete();
+            $po->setRelation('recipeVersion', $version);
+            app(ProductionMaterialRequestService::class)->createMaterialRequirementsFromRecipe($po);
+
+            return $po->fresh(['recipeVersion.recipe', 'materialRequirements']);
         });
     }
 
