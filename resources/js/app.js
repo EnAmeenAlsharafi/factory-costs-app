@@ -867,8 +867,8 @@ Alpine.data('localPicker', (config) => ({
  * replayed by the install banner; iOS Safari has no prompt, so the banner shows the share-menu steps.
  */
 let deferredInstallPrompt = null;
-const INSTALL_DISMISS_KEY = 'install-app-dismissed-at';
-const INSTALL_DISMISS_DAYS = 14;
+const INSTALL_DISMISS_KEY = 'install-app-dismissed-v2';
+const INSTALL_DISMISS_DAYS = 7;
 const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 
 window.addEventListener('beforeinstallprompt', (event) => {
@@ -877,33 +877,77 @@ window.addEventListener('beforeinstallprompt', (event) => {
     window.dispatchEvent(new CustomEvent('install-app-available'));
 });
 
+const userAgent = window.navigator.userAgent;
+const isIos = /iphone|ipad|ipod/i.test(userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+// Browsers built into other apps (WhatsApp, Instagram, Snapchat, Facebook, Android WebView) cannot install apps.
+const isInAppBrowser = /FBAN|FBAV|Instagram|WhatsApp|Snapchat|Line\/|TikTok|; wv\)/i.test(userAgent);
+const isTouchDevice = () => window.matchMedia('(pointer: coarse)').matches || isMobileViewport();
+
+/**
+ * Install banner. Always offered on phones until the app is installed or the banner is dismissed:
+ *  - prompt: the browser can install directly (Chrome/Edge/Samsung on https) — one «تثبيت» button;
+ *  - ios:    Safari has no install prompt — show the Share → «إضافة إلى الشاشة الرئيسية» steps;
+ *  - inapp:  opened inside WhatsApp & co. — ask to open the link in the phone's browser;
+ *  - manual: any other browser — point to the browser menu's «إضافة إلى الشاشة الرئيسية».
+ */
 Alpine.data('installApp', () => ({
     visible: false,
-    canPrompt: false,
-    ios: /iphone|ipad|ipod/i.test(window.navigator.userAgent) && !/crios|fxios/i.test(window.navigator.userAgent),
+    mode: 'manual',
+    copied: false,
+
+    get canPrompt() {
+        return this.mode === 'prompt';
+    },
+
+    get ios() {
+        return this.mode === 'ios';
+    },
 
     init() {
         const dismissedAt = Number(readStoredJson(INSTALL_DISMISS_KEY, 0));
         const recentlyDismissed = dismissedAt && (Date.now() - dismissedAt) < INSTALL_DISMISS_DAYS * 86400000;
-        if (isStandalone() || recentlyDismissed || !isMobileViewport()) {
+        if (isStandalone() || recentlyDismissed || !isTouchDevice()) {
             return;
         }
-        this.canPrompt = deferredInstallPrompt !== null;
-        this.visible = this.canPrompt || this.ios;
-        window.addEventListener('install-app-available', () => { this.canPrompt = true; this.visible = true; });
+
+        if (isInAppBrowser) {
+            this.mode = 'inapp';
+        } else if (deferredInstallPrompt) {
+            this.mode = 'prompt';
+        } else if (isIos) {
+            this.mode = 'ios';
+        }
+        this.visible = true;
+
+        window.addEventListener('install-app-available', () => {
+            if (this.mode !== 'inapp') {
+                this.mode = 'prompt';
+            }
+        });
         window.addEventListener('appinstalled', () => { this.visible = false; });
     },
 
     async install() {
         if (!deferredInstallPrompt) {
+            this.mode = isIos ? 'ios' : 'manual';
             return;
         }
         deferredInstallPrompt.prompt();
         const choice = await deferredInstallPrompt.userChoice;
         deferredInstallPrompt = null;
-        this.canPrompt = false;
         if (choice.outcome === 'accepted') {
             this.visible = false;
+        } else {
+            this.mode = 'manual';
+        }
+    },
+
+    async copyLink() {
+        try {
+            await navigator.clipboard.writeText(window.location.href);
+            this.copied = true;
+        } catch (e) {
+            window.prompt('انسخ الرابط وافتحه في متصفح الجوال:', window.location.href);
         }
     },
 
