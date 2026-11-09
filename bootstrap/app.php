@@ -16,6 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->trustProxies(at: '*');
+
         $middleware->redirectGuestsTo(fn (Request $request): string => route(
             $request->is('portal', 'portal/*') || $request->getHost() === config('app.customer_portal_domain') ? 'portal.login' : 'login'
         ));

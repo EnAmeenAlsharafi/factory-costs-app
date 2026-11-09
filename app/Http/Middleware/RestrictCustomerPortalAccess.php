@@ -46,7 +46,7 @@ class RestrictCustomerPortalAccess
             if ($request->routeIs('home', 'dashboard', 'login')) {
                 return redirect()->route('portal.home');
             }
-            abort_unless($request->routeIs('portal.*'), 403, 'هذا الحساب مخصص لبوابة العملاء.');
+            abort_unless($request->routeIs('portal.*', ...self::PORTAL_DOMAIN_SHARED_ROUTES), 403, 'هذا الحساب مخصص لبوابة العملاء.');
         } elseif (! $portalAuthentication && $user && $request->routeIs('portal.*')) {
             abort_unless($request->isMethod('GET'), 403, 'بوابة العملاء مخصصة لحسابات العملاء المرتبطة.');
 

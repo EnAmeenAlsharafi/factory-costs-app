@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Customer;
 use App\Models\CustomerOrder;
+use App\Models\CustomerOrderLine;
 use App\Models\CustomerPayment;
 use App\Models\CustomerPortalRequest;
 use App\Models\DeliveryOrder;
@@ -630,6 +631,52 @@ class CustomerPortalTest extends TestCase
         $this->assertSame('بيج خاص', $saved['requested_color']);
         $this->assertSame($fabric->id, $saved['fabric_material_id']);
         $this->get(route('sales.portal-requests.show', $submission))->assertSee('القماش كما وصفه العميل')->assertSee('كتالوج العميل');
+    }
+
+    public function test_logged_in_customer_can_access_model_images_without_being_blocked_by_portal_restriction(): void
+    {
+        Storage::fake('public');
+        $model = ProductModel::factory()->create([
+            'reference_image_path' => 'product_models/sample-bed.jpg',
+        ]);
+        Storage::disk('public')->put('product_models/sample-bed.jpg', 'fake-image-content');
+
+        $user = $this->client();
+
+        // When logged in as a portal customer, accessing public model image should be 200 OK, not 403.
+        $this->actingAs($user)
+            ->get($model->image_url)
+            ->assertOk();
+    }
+
+    public function test_customer_can_view_order_line_custom_design_image_and_cannot_view_other_customers_image(): void
+    {
+        Storage::fake('local');
+        $user = $this->client();
+        $otherUser = $this->client();
+
+        Storage::disk('local')->put('customer-order-designs/custom-sample.jpg', 'design-content');
+
+        $order = CustomerOrder::factory()->create([
+            'customer_id' => $user->customer_id,
+        ]);
+
+        $line = CustomerOrderLine::factory()->create([
+            'customer_order_id' => $order->id,
+            'custom_design' => true,
+            'custom_design_name' => 'تصميم خاص للعميل',
+            'custom_design_image_path' => 'customer-order-designs/custom-sample.jpg',
+        ]);
+
+        // Owning customer can view design image
+        $this->actingAs($user)
+            ->get(route('portal.orders.design-image', [$order, $line]))
+            ->assertOk();
+
+        // Another customer is forbidden / 404
+        $this->actingAs($otherUser)
+            ->get(route('portal.orders.design-image', [$order, $line]))
+            ->assertNotFound();
     }
 
     protected function admin(): User

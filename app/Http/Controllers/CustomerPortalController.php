@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\CustomerPortalOrderRequest;
 use App\Models\CustomerOrder;
+use App\Models\CustomerOrderLine;
 use App\Models\CustomerPortalRequest;
 use App\Models\DeliveryOrder;
 use App\Services\CustomerPortalAccountService;
@@ -127,7 +128,7 @@ class CustomerPortalController extends Controller
 
     public function orders(Request $request, CustomerPortalAccountService $accounts, CustomerPortalService $portal): View
     {
-        $query = $request->user()->customer->orders()->with(['lines.productModel', 'lines.material', 'lines.customerProductAlias', 'deliveryOrders.lines', 'productionOrders', 'customerReturns', 'portalRequest']);
+        $query = $request->user()->customer->orders()->with(['lines.productModel', 'lines.material', 'lines.customerProductAlias.productModel', 'deliveryOrders.lines', 'productionOrders', 'customerReturns', 'portalRequest']);
         if ($request->filled('search')) {
             $search = $request->string('search')->toString();
             $query->where(fn ($query) => $query->where('order_number', 'like', "%{$search}%")->orWhere('customer_reference', 'like', "%{$search}%"));
@@ -143,12 +144,25 @@ class CustomerPortalController extends Controller
     public function order(Request $request, CustomerOrder $order, CustomerPortalAccountService $accounts, CustomerPortalService $portal): View
     {
         abort_unless($order->customer_id === $request->user()->customer_id, 404);
-        $order->load(['lines.productModel', 'lines.material', 'lines.customerProductAlias', 'lines.fabricMaterial', 'lines.fabricColor', 'portalRequest']);
+        $order->load(['lines.productModel', 'lines.material', 'lines.customerProductAlias.productModel', 'lines.fabricMaterial', 'lines.fabricColor', 'portalRequest']);
         $progress = $accounts->progress($order);
 
         $lineCards = $portal->orderLineCards([$order])[$order->id];
 
         return view('portal.order', compact('order', 'progress', 'lineCards'));
+    }
+
+    public function orderDesignImage(Request $request, CustomerOrder $order, CustomerOrderLine $line): BinaryFileResponse
+    {
+        abort_unless($order->customer_id === $request->user()->customer_id, 404);
+        abort_unless($line->customer_order_id === $order->id && $line->custom_design && $line->custom_design_image_path, 404);
+        $disk = Storage::disk('local');
+        abort_unless($disk->exists($line->custom_design_image_path), 404);
+
+        return response()->file($disk->path($line->custom_design_image_path), [
+            'Cache-Control' => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
+        ])->setPrivate();
     }
 
     public function receipts(Request $request): View

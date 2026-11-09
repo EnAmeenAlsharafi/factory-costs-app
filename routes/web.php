@@ -129,6 +129,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/requests/{submission}/changes', [CustomerPortalController::class, 'changes'])->name('requests.changes');
         Route::get('/orders', [CustomerPortalController::class, 'orders'])->name('orders.index');
         Route::get('/orders/{order}', [CustomerPortalController::class, 'order'])->name('orders.show');
+        Route::get('/orders/{order}/lines/{line}/design-image', [CustomerPortalController::class, 'orderDesignImage'])->name('orders.design-image');
         Route::get('/receipts', [CustomerPortalController::class, 'receipts'])->name('receipts');
         Route::get('/account', [CustomerPortalController::class, 'account'])->name('account');
         Route::get('/profile', [CustomerPortalController::class, 'profile'])->name('profile');

@@ -129,16 +129,14 @@ class CustomerPortalService
         return $width && $length ? (float) $width.' × '.(float) $length : null;
     }
 
-    /** Customers read a design only through the portal request that carries the same stored file. */
+    /** Serves custom design images directly for order lines. */
     protected function orderDesignImageUrl(CustomerOrder $order, CustomerOrderLine $line): ?string
     {
-        if (! $line->custom_design_image_path || ! $order->portalRequest) {
+        if (! $line->custom_design_image_path) {
             return null;
         }
-        $requestLine = collect($order->portalRequest->lines)->firstWhere('custom_design_image_path', $line->custom_design_image_path);
 
-        return ! empty($requestLine['line_key'])
-            ? route('portal.requests.design-image', [$order->portalRequest, $requestLine['line_key']]) : null;
+        return route('portal.orders.design-image', [$order, $line]);
     }
 
     /** @param array<string, mixed> $data */
