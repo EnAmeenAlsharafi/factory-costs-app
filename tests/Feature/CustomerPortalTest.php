@@ -138,6 +138,45 @@ class CustomerPortalTest extends TestCase
         $this->assertDatabaseCount('customer_orders', 1);
     }
 
+    public function test_offer_keeps_the_customer_data_and_only_takes_factory_fields(): void
+    {
+        $user = $this->client();
+        $submission = $this->draft($user);
+        $submission->update(['delivery_city' => 'الرياض', 'delivery_address' => 'حي العارض']);
+        $this->submit($user, $submission);
+        $submission->refresh();
+        $original = $submission->lines[0];
+        $data = $this->offerData($submission);
+        $data['delivery_city'] = 'جدة';
+        $data['delivery_address'] = 'عنوان من الموظف';
+        $data['customer_notes'] = 'ملاحظة من الموظف';
+        $data['lines'][0]['quantity'] = 9;
+        $data['lines'][0]['notes'] = 'تعديل من الموظف';
+        $data['lines'][] = ['line_type' => 'READY_STOCK', 'material_id' => $original['material_id'], 'quantity' => 5, 'unit_price' => 10];
+
+        $this->actingAs($this->admin())->post(route('sales.portal-requests.offer', $submission), $data)->assertSessionHasNoErrors();
+
+        $submission->refresh();
+        $this->assertSame('OFFERED', $submission->status);
+        $this->assertSame(['الرياض', 'حي العارض', null], [$submission->delivery_city, $submission->delivery_address, $submission->customer_notes]);
+        $this->assertCount(1, $submission->lines);
+        $this->assertSame([2, null], [(int) $submission->lines[0]['quantity'], $submission->lines[0]['notes'] ?? null]);
+        $this->assertSame('500.00', $submission->offer_total);
+        $this->get(route('sales.portal-requests.show', $submission))->assertOk()->assertSee('يعدّلها العميل فقط')->assertDontSee('name="delivery_city"', false);
+    }
+
+    public function test_staff_can_return_a_confirmed_request_to_the_customer_for_changes(): void
+    {
+        $user = $this->client();
+        $submission = $this->offered($user);
+        $this->actingAs($user)->post(route('portal.requests.confirm', $submission), ['revision' => $submission->revision])->assertRedirect();
+        $submission->refresh();
+
+        $this->actingAs($this->admin())->post(route('sales.portal-requests.return', $submission), ['revision' => $submission->revision, 'message' => 'صحح العنوان'])->assertRedirect();
+
+        $this->assertSame('CHANGES_REQUESTED', $submission->fresh()->status);
+    }
+
     public function test_revised_offer_cannot_be_accepted_from_an_old_page(): void
     {
         $user = $this->client();
@@ -590,7 +629,7 @@ class CustomerPortalTest extends TestCase
         $this->assertSame('كتالوج العميل', $saved['requested_fabric']);
         $this->assertSame('بيج خاص', $saved['requested_color']);
         $this->assertSame($fabric->id, $saved['fabric_material_id']);
-        $this->get(route('sales.portal-requests.show', $submission))->assertSee('طلب العميل الأصلي محفوظ');
+        $this->get(route('sales.portal-requests.show', $submission))->assertSee('القماش كما وصفه العميل')->assertSee('كتالوج العميل');
     }
 
     protected function admin(): User

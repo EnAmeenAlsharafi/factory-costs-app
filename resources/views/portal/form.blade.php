@@ -10,7 +10,7 @@
 {{-- enctype is required: a line may carry a custom-design image upload. --}}
 <form method="POST" enctype="multipart/form-data" action="{{ $submission->exists ? route('portal.requests.update', $submission) : route('portal.requests.store') }}">
     @csrf @if($submission->exists) @method('PUT') @endif
-    @include('portal.request-fields', ['isReview' => false])
+    @include('portal.request-fields')
 
     <x-mobile-action-bar>
         <button type="submit" class="btn btn-primary">حفظ المسودة</button>

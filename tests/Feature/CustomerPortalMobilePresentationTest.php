@@ -188,7 +188,7 @@ class CustomerPortalMobilePresentationTest extends TestCase
             ->assertViewHas('models', fn ($models): bool => $models->firstWhere('id', $model->id)['image_url'] === $model->image_url)
             ->assertViewHas('readyProducts', fn ($products): bool => $products->firstWhere('id', $ready->id)['image_url'] === 'https://cdn.example.test/ready.jpg')
             ->assertSee('imageFor(line, previewUrl)', false)
-            ->assertSee("line.line_type === 'MANUFACTURED' && (false || line.custom_design)", false);
+            ->assertSee("line.line_type === 'MANUFACTURED' && line.custom_design\"", false);
     }
 
     /**

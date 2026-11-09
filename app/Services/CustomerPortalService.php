@@ -23,6 +23,15 @@ use Throwable;
 
 class CustomerPortalService
 {
+    /**
+     * What the customer chose for each line; only the customer can change these, through the portal.
+     */
+    public const CUSTOMER_LINE_FIELDS = [
+        'line_key', 'line_type', 'product_model_id', 'product_configuration_id', 'custom_design', 'custom_design_name',
+        'requested_fabric', 'requested_color', 'fabric_source', 'material_id', 'requested_width_cm', 'requested_length_cm',
+        'has_storage', 'fabric_material_id', 'fabric_color_id', 'quantity', 'notes',
+    ];
+
     public function __construct(protected CustomerOrderService $orders) {}
 
     /** @return array<string, mixed> */
@@ -183,7 +192,7 @@ class CustomerPortalService
             if (! $submission->customer->defaultSalesChannel?->is_active) {
                 throw ValidationException::withMessages(['offer' => 'حدد قناة بيع افتراضية نشطة في بيانات العميل قبل إرسال العرض.']);
             }
-            $lines = $this->prepareLines($data['lines'], true, $submission->lines, $storedImages);
+            $lines = $this->prepareLines($this->offerLines($submission, $data['lines']), true, $submission->lines, $storedImages);
             $cents = 0;
             foreach ($lines as $line) {
                 $gross = (int) round((float) $line['unit_price'] * 100) * (int) $line['quantity'];
@@ -196,7 +205,7 @@ class CustomerPortalService
             if ($cents > 999999999999 || (float) ($data['deposit_required_amount'] ?? 0) * 100 > $cents) {
                 throw ValidationException::withMessages(['offer' => 'إجمالي العرض غير صالح أو العربون أكبر من قيمة العرض.']);
             }
-            $submission->fill(Arr::only($data, ['customer_reference', 'requested_delivery_date', 'delivery_city', 'delivery_address', 'customer_notes', 'promised_delivery_date', 'payment_terms_type', 'deposit_required_amount', 'payment_due_date', 'public_response']));
+            $submission->fill(Arr::only($data, ['promised_delivery_date', 'payment_terms_type', 'deposit_required_amount', 'payment_due_date', 'public_response']));
             if ($data['payment_terms_type'] !== 'DEPOSIT_AND_BALANCE') {
                 $submission->deposit_required_amount = null;
             }
@@ -206,6 +215,36 @@ class CustomerPortalService
 
             return $submission;
         });
+    }
+
+    /**
+     * The lines an offer may carry: the customer's own lines exactly as submitted, with only the
+     * factory's fields taken from the review form — price, discount, the reference configuration,
+     * and the stock fabric and colour for a fabric the customer described in words. Lines cannot
+     * be added or removed; anything else the customer must change through the portal.
+     *
+     * @param  array<int|string, mixed>  $input
+     * @return list<array<string, mixed>>
+     */
+    public function offerLines(CustomerPortalRequest $submission, array $input): array
+    {
+        $staffInput = collect($input)->filter(fn ($line): bool => is_array($line) && filled($line['line_key'] ?? null))->keyBy('line_key');
+
+        return collect($submission->lines ?? [])->map(function (array $stored) use ($staffInput): array {
+            $staff = $staffInput->get($stored['line_key'], []);
+            $line = Arr::only($stored, self::CUSTOMER_LINE_FIELDS);
+            $line['unit_price'] = $staff['unit_price'] ?? null;
+            $line['discount_amount'] = $staff['discount_amount'] ?? null;
+            if ($stored['line_type'] === 'MANUFACTURED' && empty($stored['custom_design']) && array_key_exists('product_configuration_id', $staff)) {
+                $line['product_configuration_id'] = $staff['product_configuration_id'];
+            }
+            if (($stored['fabric_source'] ?? null) === 'CUSTOM') {
+                $line['fabric_material_id'] = $staff['fabric_material_id'] ?? null;
+                $line['fabric_color_id'] = $staff['fabric_color_id'] ?? null;
+            }
+
+            return $line;
+        })->values()->all();
     }
 
     public function requestChanges(CustomerPortalRequest $submission, User $user, int $revision, string $message): CustomerPortalRequest
@@ -229,7 +268,8 @@ class CustomerPortalService
         DB::transaction(function () use ($submission, $user, $revision, $message) {
             $submission = $this->locked($submission);
             $this->assertRevision($submission, $revision);
-            $this->assertStatus($submission, ['SUBMITTED', 'OFFERED']);
+            $this->assertStatus($submission, ['SUBMITTED', 'OFFERED', 'CONFIRMED']);
+            $this->assertAmendable($submission);
             $submission->update(['status' => 'CHANGES_REQUESTED', 'public_response' => $message]);
             $this->record($submission, $user, 'CHANGES_REQUESTED', $message);
         });

@@ -6,6 +6,7 @@ use App\Models\FabricColor;
 use App\Models\Material;
 use App\Models\ProductConfiguration;
 use App\Models\ProductModel;
+use App\Services\CustomerPortalService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -16,6 +17,12 @@ class CustomerPortalOrderRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         if ($this->routeIs('sales.portal-requests.offer')) {
+            $lines = $this->input('lines', []);
+            $this->merge(['lines' => app(CustomerPortalService::class)->offerLines($this->route('submission'), is_array($lines) ? $lines : [])]);
+            foreach (['requested_delivery_date', 'delivery_city', 'delivery_address', 'customer_notes', 'customer_reference'] as $customerField) {
+                $this->request->remove($customerField);
+            }
+
             return;
         }
         $lines = $this->input('lines', []);

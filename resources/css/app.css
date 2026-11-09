@@ -488,6 +488,10 @@ code { max-width: 100%; overflow-wrap: anywhere; }
     display: block; width: 100%; max-height: 16rem; object-fit: contain;
     background: #f8fafc; border: 1px solid var(--factory-border); border-radius: .65rem;
 }
+.portal-review-facts dt { font-size: .78rem; font-weight: 600; color: var(--factory-muted); margin-bottom: .15rem; }
+.portal-review-facts dd { margin: 0; color: var(--factory-text); overflow-wrap: anywhere; }
+.portal-review-facts .text-pre-line { white-space: pre-line; }
+.portal-review-staff { background: #f8fafc; border: 1px dashed #cbd5e1; }
 .color-dot { display: inline-block; width: .85rem; height: .85rem; border-radius: 50%; border: 1px solid rgba(15,23,42,.25); vertical-align: middle; }
 
 /* ---- Quantity progress block (target / done / remaining) ---- */
