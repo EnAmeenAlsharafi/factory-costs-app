@@ -103,6 +103,7 @@ Route::get('/manifest.webmanifest', [WebAppController::class, 'manifest'])->name
 Route::get('/portal/manifest.webmanifest', [WebAppController::class, 'portalManifest'])->name('webapp.portal-manifest');
 Route::get('/app-icon/{size}/{purpose?}', [WebAppController::class, 'icon'])->whereNumber('size')->name('webapp.icon');
 Route::view('/offline', 'webapp.offline')->name('webapp.offline');
+Route::get('/sw.js', [WebAppController::class, 'serviceWorker'])->name('webapp.service-worker');
 
 // Company logo for documents and pages; read straight from storage so it never depends on the public/storage link.
 Route::get('/company/logo', [CompanySettingController::class, 'logo'])->name('company.logo');

@@ -9,6 +9,18 @@ use Symfony\Component\HttpFoundation\Response;
 class RestrictCustomerPortalAccess
 {
     /**
+     * Public routes the portal domain still serves: what makes the portal installable as an app
+     * (its manifest, icons, service worker and offline page) and the company logo.
+     */
+    public const PORTAL_DOMAIN_SHARED_ROUTES = [
+        'webapp.portal-manifest',
+        'webapp.icon',
+        'webapp.service-worker',
+        'webapp.offline',
+        'company.logo',
+    ];
+
+    /**
      * Handle an incoming request.
      *
      * @param  Closure(Request): (Response)  $next
@@ -22,7 +34,7 @@ class RestrictCustomerPortalAccess
             if ($request->isMethod('GET') && $request->routeIs('home', 'dashboard', 'login')) {
                 return redirect()->route($user?->isCustomerAccount() ? 'portal.home' : 'portal.login');
             }
-            abort_unless($request->routeIs('portal.*', 'logout'), 404);
+            abort_unless($request->routeIs('portal.*', 'logout', ...self::PORTAL_DOMAIN_SHARED_ROUTES), 404);
         }
         $portalAuthentication = $request->routeIs('portal.login', 'portal.login.store', 'portal.logout');
         if (! $portalAuthentication && $user?->isCustomerAccount()) {

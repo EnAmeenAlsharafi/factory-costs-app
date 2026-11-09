@@ -17,6 +17,20 @@ class WebAppTest extends TestCase
         $this->seed();
     }
 
+    public function test_portal_domain_serves_what_makes_the_portal_installable_but_not_the_staff_app(): void
+    {
+        config(['app.customer_portal_domain' => 'mr.sadirfactory.com']);
+        $portal = 'https://mr.sadirfactory.com';
+
+        $this->get("{$portal}/portal/manifest.webmanifest")->assertOk()->assertJsonPath('id', '/portal');
+        $this->get("{$portal}/app-icon/192")->assertOk()->assertHeader('Content-Type', 'image/png');
+        $this->get("{$portal}/app-icon/512/maskable")->assertOk();
+        $this->get("{$portal}/sw.js")->assertOk()->assertHeader('Service-Worker-Allowed', '/');
+        $this->get("{$portal}/offline")->assertOk();
+        $this->get("{$portal}/manifest.webmanifest")->assertNotFound();
+        $this->get("{$portal}/production/pipeline")->assertNotFound();
+    }
+
     public function test_manifest_describes_an_installable_arabic_app_from_company_settings(): void
     {
         CompanySetting::current()->update(['name_ar' => 'مصنع مفروشات سدير', 'primary_color' => '#0f766e']);

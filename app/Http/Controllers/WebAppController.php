@@ -107,6 +107,19 @@ class WebAppController extends Controller
         return is_file($bundled) ? $bundled : CompanySetting::current()->logoFilePath();
     }
 
+    /**
+     * The service worker, for servers whose document root lacks public/sw.js (the web server
+     * serves the static file first when it is there).
+     */
+    public function serviceWorker(): BinaryFileResponse
+    {
+        return response()->file(public_path('sw.js'), [
+            'Content-Type' => 'application/javascript; charset=utf-8',
+            'Service-Worker-Allowed' => '/',
+            'Cache-Control' => 'no-cache',
+        ]);
+    }
+
     public function icon(int $size, string $purpose = 'any'): BinaryFileResponse
     {
         abort_unless(in_array($size, self::ICON_SIZES, true) && in_array($purpose, ['any', 'maskable'], true), 404);
