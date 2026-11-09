@@ -66,5 +66,6 @@
     @include('partials.modal')
 
     @stack('scripts')
+    @include('partials.field-tabbar')
 </body>
 </html>

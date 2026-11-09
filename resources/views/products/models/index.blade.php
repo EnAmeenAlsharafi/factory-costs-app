@@ -40,8 +40,8 @@
                 <div class="col-12 col-sm-6 col-md-3">
                     <select name="status" class="form-select bg-light">
                         <option value="">كل الحالات</option>
-                        <option value="1" {{ request('status') === '1' ? 'selected' : '' }}>نشط (Active)</option>
-                        <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>معطل (Inactive)</option>
+                        <option value="1" {{ request('status') === '1' ? 'selected' : '' }}>نشط</option>
+                        <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>معطل</option>
                     </select>
                 </div>
 
@@ -66,7 +66,7 @@
                             <th>كود الموديل</th>
                             <th>اسم الموديل المصنعي</th>
                             <th class="text-center">تكوينات التصنيع</th>
-                            <th class="text-center">مسميات العملاء (Aliases)</th>
+                            <th class="text-center">مسميات العملاء</th>
                             <th class="text-center">الحالة</th>
                             <th class="text-center pe-3">الإجراءات</th>
                         </tr>

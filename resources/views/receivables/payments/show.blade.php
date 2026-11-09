@@ -16,16 +16,16 @@
                 </h1>
                 @switch($payment->status)
                     @case('CONFIRMED')
-                        <span class="badge bg-success fs-6 px-3 py-2 ms-2">مؤكدة (CONFIRMED)</span>
+                        <span class="badge bg-success fs-6 px-3 py-2 ms-2">مؤكدة</span>
                         @break
                     @case('PENDING_CONFIRMATION')
-                        <span class="badge bg-warning text-dark fs-6 px-3 py-2 ms-2">تنتظر التأكيد (PENDING)</span>
+                        <span class="badge bg-warning text-dark fs-6 px-3 py-2 ms-2">تنتظر التأكيد</span>
                         @break
                     @case('REVERSED')
-                        <span class="badge bg-danger fs-6 px-3 py-2 ms-2">معكوسة (REVERSED)</span>
+                        <span class="badge bg-danger fs-6 px-3 py-2 ms-2">معكوسة</span>
                         @break
                     @case('CANCELLED')
-                        <span class="badge bg-secondary fs-6 px-3 py-2 ms-2">ملغاة (CANCELLED)</span>
+                        <span class="badge bg-secondary fs-6 px-3 py-2 ms-2">ملغاة</span>
                         @break
                 @endswitch
             </div>
@@ -169,7 +169,7 @@
             <div class="card border-0 shadow-sm rounded-3 h-100">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0 fw-bold text-dark">
-                        <i class="fas fa-link text-warning me-2"></i> تخصيص الدفعة على الطلبات (Payment Allocations)
+                        <i class="fas fa-link text-warning me-2"></i> تخصيص الدفعة على الطلبات
                     </h5>
                 </div>
                 <div class="card-body p-3">
@@ -267,7 +267,7 @@
     <div class="card border-0 shadow-sm rounded-3">
         <div class="card-header bg-white py-3">
             <h5 class="card-title mb-0 fw-bold text-dark">
-                <i class="fas fa-history text-muted me-2"></i> سجل العمليات الميدانية للدفعة (Payment Events Audit Log)
+                <i class="fas fa-history text-muted me-2"></i> سجل العمليات الميدانية للدفعة
             </h5>
         </div>
         <div class="card-body p-0">

@@ -12,13 +12,13 @@
             <div>
                 <div class="d-flex align-items-center gap-2 mb-1">
                     <span class="badge bg-warning text-dark font-monospace">STAGE 1 SHELL</span>
-                    <span class="badge bg-secondary bg-opacity-10 text-secondary">وحدة مستقبلية (Stage 2+)</span>
+                    <span class="badge bg-secondary bg-opacity-10 text-secondary">وحدة مستقبلية</span>
                 </div>
                 <h4 class="fw-bold text-dark mb-1">{{ $title }}</h4>
                 <p class="text-muted mb-0 fs-7">تم تجهيز واجهة هذه الوحدة بالهيكل البصري القياسي والمعايير التصميمية المعتمدة لتكون جاهزة للتطوير في المراحل القادمة.</p>
             </div>
             <div class="d-flex gap-2">
-                <button type="button" class="btn btn-outline-secondary rounded-3 px-3 fs-7" onclick="alert('سيتم تفعيل هذه الخاصية في المرحلة الثانية (Stage 2).')">
+                <button type="button" class="btn btn-outline-secondary rounded-3 px-3 fs-7" onclick="alert('سيتم تفعيل هذه الخاصية في المرحلة الثانية.')">
                     <i class="fas fa-file-export me-1"></i> تصدير البيانات
                 </button>
                 <button type="button" class="btn btn-factory-warning rounded-3 px-4 fs-7" onclick="alert('واجهة إضافة البيانات مجهزة وستكون متاحة في المرحلة التالية.')">
@@ -32,7 +32,7 @@
     <div class="card bg-white border-0 shadow-sm rounded-4 overflow-hidden">
         <div class="card-header bg-white py-3 px-4 d-flex justify-content-between align-items-center border-bottom">
             <h6 class="fw-bold text-dark mb-0">
-                <i class="fas fa-table me-2 text-warning"></i> معاينة جدول البيانات القياسي (Reusable Table Component)
+                <i class="fas fa-table me-2 text-warning"></i> معاينة جدول البيانات القياسي
             </h6>
             <div class="d-flex align-items-center gap-2">
                 <input type="text" class="form-control form-control-sm" placeholder="تصفية البيانات..." style="width: 200px;">
@@ -54,7 +54,7 @@
                     <tr>
                         <td class="fw-bold text-dark">#SAD-1001</td>
                         <td>
-                            <div class="fw-semibold">نموذج سرير مبلان (Milan Bed Model)</div>
+                            <div class="fw-semibold">نموذج سرير مبلان</div>
                             <small class="text-muted">قياس مرجعي 160×200 سم - يتوفر بخيار تخزين</small>
                         </td>
                         <td><span class="badge bg-light text-dark border">موديل داخلي</span></td>
@@ -72,7 +72,7 @@
                     <tr>
                         <td class="fw-bold text-dark">#SAD-1002</td>
                         <td>
-                            <div class="fw-semibold">نموذج سرير أفالون (Avalon Bed Model)</div>
+                            <div class="fw-semibold">نموذج سرير أفالون</div>
                             <small class="text-muted">قياس مرجعي 180×200 سم - بوكس قياسي مشاع</small>
                         </td>
                         <td><span class="badge bg-light text-dark border">موديل داخلي</span></td>
@@ -90,7 +90,7 @@
                     <tr>
                         <td class="fw-bold text-dark">#SAD-1003</td>
                         <td>
-                            <div class="fw-semibold">قماش مخمل رويال (Lot #8821)</div>
+                            <div class="fw-semibold">قماش مخمل رويال</div>
                             <small class="text-muted">مستورد من المورد A - بالمتر الطولي</small>
                         </td>
                         <td><span class="badge bg-light text-dark border">مادة خام</span></td>
@@ -123,7 +123,7 @@
     <!-- Reusable Form Preview Component -->
     <div class="card bg-white border-0 shadow-sm rounded-4 p-4">
         <h6 class="fw-bold text-dark mb-3 border-bottom pb-2">
-            <i class="fas fa-edit me-2 text-warning"></i> معاينة نموذج الإدخال القياسي (Reusable Form Component)
+            <i class="fas fa-edit me-2 text-warning"></i> معاينة نموذج الإدخال القياسي
         </h6>
         <form onsubmit="event.preventDefault(); alert('هذا النموذج نموذج بصري توضيحي للمرحلة الأولى.');">
             <div class="row g-3">
@@ -135,9 +135,9 @@
                     <label class="form-label">القسم المسؤول / الفئة</label>
                     <select class="form-select">
                         <option value="">اختر القسم...</option>
-                        <option value="carpentry">النجارة (Carpentry)</option>
-                        <option value="upholstery">التنجيد (Upholstery)</option>
-                        <option value="warehouse">المستودع والمواد (Warehouse)</option>
+                        <option value="carpentry">النجارة</option>
+                        <option value="upholstery">التنجيد</option>
+                        <option value="warehouse">المستودع والمواد</option>
                     </select>
                 </div>
                 <div class="col-md-12">

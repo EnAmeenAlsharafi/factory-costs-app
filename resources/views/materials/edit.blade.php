@@ -97,7 +97,7 @@
                     </div>
 
                     <div class="col-md-4">
-                        <label for="min_stock_level" class="form-label fw-semibold text-dark">الحد الأدنى للمخزون (Min Stock)</label>
+                        <label for="min_stock_level" class="form-label fw-semibold text-dark">الحد الأدنى للمخزون</label>
                         <input type="number" step="0.001" name="min_stock_level" id="min_stock_level" class="form-control @error('min_stock_level') is-invalid @enderror" value="{{ old('min_stock_level', $material->min_stock_level) }}" min="0">
                         @error('min_stock_level')
                             <div class="invalid-feedback">{{ $message }}</div>
@@ -105,7 +105,7 @@
                     </div>
 
                     <div class="col-md-4">
-                        <label for="reorder_point" class="form-label fw-semibold text-dark">نقطة إعادة الطلب (Reorder Point)</label>
+                        <label for="reorder_point" class="form-label fw-semibold text-dark">نقطة إعادة الطلب</label>
                         <input type="number" step="0.001" name="reorder_point" id="reorder_point" class="form-control @error('reorder_point') is-invalid @enderror" value="{{ old('reorder_point', $material->reorder_point) }}" min="0">
                         @error('reorder_point')
                             <div class="invalid-feedback">{{ $message }}</div>
@@ -180,7 +180,7 @@
                     </div>
 
                     <div class="col-md-6">
-                        <label for="grade" class="form-label fw-semibold text-dark">الدرجة / الجودة (Grade)</label>
+                        <label for="grade" class="form-label fw-semibold text-dark">الدرجة / الجودة</label>
                         <input type="text" name="grade" id="grade" class="form-control @error('grade') is-invalid @enderror" value="{{ old('grade', $material->woodSpec?->grade) }}">
                         @error('grade')
                             <div class="invalid-feedback">{{ $message }}</div>

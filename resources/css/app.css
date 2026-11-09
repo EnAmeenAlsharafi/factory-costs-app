@@ -1204,3 +1204,32 @@ a.metric-tile:hover { color: var(--factory-text); border-color: #94a3b8; }
 .install-app-title { margin: 0; font-weight: 700; font-size: .92rem; color: #0f172a; }
 .install-app-text { margin: 0; font-size: .8rem; color: #475569; }
 .install-app-actions { display: flex; flex-direction: column; align-items: stretch; gap: .15rem; }
+
+/* ---- Portal model picker (searches the preloaded list) ---- */
+.typeahead-dropdown.portal-model-list { position: absolute; top: 100%; inset-inline: 0; max-height: 320px; }
+.portal-model-list .typeahead-item { display: flex; align-items: center; gap: .65rem; min-height: 48px; }
+.portal-model-list .typeahead-item[aria-selected="true"] { font-weight: 700; }
+.portal-model-thumb { flex: 0 0 auto; display: grid; place-items: center; width: 40px; height: 32px; border-radius: 6px; background: #f1f5f9; color: #94a3b8; overflow: hidden; }
+.portal-model-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+/* ---- Field apps (workers, drivers) ---- */
+.task-card-actions-split { display: flex; gap: .5rem; }
+.task-card-actions-split .btn { min-height: 48px; }
+.field-tabbar-icon { position: relative; display: inline-grid; place-items: center; }
+.field-tabbar-badge { position: absolute; top: -7px; inset-inline-start: 12px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #dc2626; color: #fff; font-size: .65rem; font-weight: 700; line-height: 18px; text-align: center; }
+@media (max-width: 767.98px) {
+    /* Room for the bottom tabs, and sticky action bars ride above them. */
+    body:has(.field-tabbar) .app-content-container { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+    body:has(.field-tabbar) .mobile-action-bar { bottom: calc(62px + env(safe-area-inset-bottom, 0px)); }
+    body:has(.field-tabbar) .pipeline-bar { bottom: calc(62px + env(safe-area-inset-bottom, 0px)); }
+    body.keyboard-open .field-tabbar { display: none; }
+}
+.driver-contact { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: .5rem; }
+.driver-contact-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .2rem; min-height: 56px; border-radius: 12px; border: 1px solid #dbe2ea; background: #fff; color: #1e293b; font-size: .8rem; font-weight: 700; text-decoration: none; }
+.driver-contact-btn i { font-size: 1.15rem; }
+.driver-contact-btn.is-call { color: #166534; border-color: #bbf7d0; background: #f0fdf4; }
+.driver-contact-btn.is-whatsapp { color: #ffffff; border-color: #0b6b37; background: #0b6b37; }
+.driver-contact-btn.is-map { color: #1d4ed8; border-color: #bfdbfe; background: #eff6ff; }
+.driver-contact-btn.is-disabled { color: #64748b; background: #f8fafc; }
+.driver-contact-btn:focus-visible { outline: 3px solid var(--tone-primary); outline-offset: 2px; }
+.driver-details-link { display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: .25rem .1rem; color: var(--tone-primary); font-size: .85rem; font-weight: 600; text-decoration: none; border-top: 1px solid #eef2f7; }

@@ -6,6 +6,8 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="robots" content="noindex, nofollow">
     <title>دخول العملاء والمعارض — مصنع مفروشات سدير</title>
+    <meta name="theme-color" content="#142d43">
+    @include('partials.webapp-head', ['webAppVariant' => 'portal'])
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
         .portal-signin { min-height: 100svh; display: grid; place-items: center; padding: 24px 12px; }
@@ -47,6 +49,7 @@
                         <div class="alert alert-info">يوجد حساب موظف مسجل على هذا المتصفح. سجّل الخروج منه أولًا للدخول بحساب العميل.</div>
                         <form method="POST" action="{{ route('portal.logout') }}">@csrf<button type="submit" class="btn btn-outline-primary w-100">تسجيل الخروج من الحساب الحالي</button></form>
                     @else
+                        @include('partials.install-app', ['webAppVariant' => 'portal'])
                         <form method="POST" action="{{ route('portal.login.store') }}">
                             @csrf
                             <div class="mb-3"><label for="username" class="form-label">اسم المستخدم</label><input type="text" name="username" id="username" class="form-control @error('username') is-invalid @enderror" value="{{ old('username') }}" autocomplete="username" maxlength="100" dir="ltr" required autofocus></div>

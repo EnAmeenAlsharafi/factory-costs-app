@@ -77,7 +77,7 @@
                                     </a>
                                 </td>
                                 <td>{{ $sq->supplier?->name }}</td>
-                                <td class="fw-bold">{{ number_format($sq->total_amount, 2) }} SAR</td>
+                                <td class="fw-bold">{{ number_format($sq->total_amount, 2) }} ر.س</td>
                                 <td>{{ $sq->lead_time_days }} أيام</td>
                                 <td>
                                     @if($sq->status === 'SELECTED')

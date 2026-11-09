@@ -25,7 +25,7 @@
 
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label for="code" class="form-label fw-semibold text-dark">رمز التصنيف (Code) <span class="text-danger">*</span></label>
+                        <label for="code" class="form-label fw-semibold text-dark">رمز التصنيف <span class="text-danger">*</span></label>
                         <input type="text" name="code" id="code" class="form-control @error('code') is-invalid @enderror" value="{{ old('code') }}" placeholder="مثال: WOOD, FOAM, FABRIC" required dir="ltr">
                         @error('code')
                             <div class="invalid-feedback">{{ $message }}</div>

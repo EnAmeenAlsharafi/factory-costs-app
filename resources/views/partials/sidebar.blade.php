@@ -351,7 +351,7 @@
                         <li class="nav-item">
                             <a href="{{ route('production.queue.index') }}" class="sidebar-nav-link {{ request()->routeIs('production.queue.*') ? 'active' : '' }}" title="أعمال الأقسام">
                                 <span class="sidebar-icon"><i class="fas fa-tasks"></i></span>
-                                <span class="sidebar-text">أعمال الأقسام (WIP)</span>
+                                <span class="sidebar-text">أعمال الأقسام</span>
                             </a>
                         </li>
                         @if (auth()->user()->can('production.operation.start') || auth()->user()->can('production.operation.claim'))
@@ -434,7 +434,7 @@
                             <li class="nav-item">
                                 <a href="{{ route('recipes.index') }}" class="sidebar-nav-link {{ request()->routeIs('recipes.index') || request()->routeIs('recipes.create') || request()->routeIs('recipes.show') || request()->routeIs('recipes.versions.*') ? 'active' : '' }}" title="وصفات التصنيع">
                                     <span class="sidebar-icon"><i class="fas fa-scroll"></i></span>
-                                    <span class="sidebar-text">وصفات التصنيع (BOM)</span>
+                                    <span class="sidebar-text">وصفات التصنيع</span>
                                 </a>
                             </li>
                         @endcan
@@ -740,13 +740,13 @@
                         <li class="nav-item">
                             <a href="{{ route('purchasing.requests.index') }}" class="sidebar-nav-link {{ request()->routeIs('purchasing.requests.*') ? 'active' : '' }}" title="طلبات الشراء">
                                 <span class="sidebar-icon"><i class="fas fa-file-signature"></i></span>
-                                <span class="sidebar-text">طلبات الشراء (PR)</span>
+                                <span class="sidebar-text">طلبات الشراء</span>
                             </a>
                         </li>
                         <li class="nav-item">
                             <a href="{{ route('purchasing.rfqs.index') }}" class="sidebar-nav-link {{ request()->routeIs('purchasing.rfqs.*') ? 'active' : '' }}" title="طلبات عروض الأسعار">
                                 <span class="sidebar-icon"><i class="fas fa-paper-plane"></i></span>
-                                <span class="sidebar-text">طلبات عروض الأسعار (RFQ)</span>
+                                <span class="sidebar-text">طلبات عروض الأسعار</span>
                             </a>
                         </li>
                         <li class="nav-item">
@@ -778,7 +778,7 @@
                         <li class="nav-item">
                             <a href="{{ route('purchasing.orders.index') }}" class="sidebar-nav-link {{ request()->routeIs('purchasing.orders.*') ? 'active' : '' }}" title="أوامر الشراء">
                                 <span class="sidebar-icon"><i class="fas fa-file-contract"></i></span>
-                                <span class="sidebar-text">أوامر الشراء (PO)</span>
+                                <span class="sidebar-text">أوامر الشراء</span>
                             </a>
                         </li>
                     </ul>

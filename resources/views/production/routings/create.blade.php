@@ -38,7 +38,7 @@
 
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                <h6 class="fw-bold mb-0 text-primary"><i class="fas fa-tasks me-1"></i> عمليات المسار التشغيلية (Routing Operations)</h6>
+                <h6 class="fw-bold mb-0 text-primary"><i class="fas fa-tasks me-1"></i> عمليات المسار التشغيلية</h6>
                 <button type="button" class="btn btn-sm btn-outline-primary" id="add-op-btn">
                     <i class="fas fa-plus me-1"></i> إضافة عملية
                 </button>
@@ -52,7 +52,7 @@
                                 <th style="width: 200px;">مركز العمل / القسم</th>
                                 <th style="width: 150px;">كود العملية</th>
                                 <th>اسم العملية</th>
-                                <th style="width: 180px;">الفرع التشغيلي (Branch)</th>
+                                <th style="width: 180px;">الفرع التشغيلي</th>
                                 <th style="width: 70px;" class="text-center">حذف</th>
                             </tr>
                         </thead>
@@ -92,7 +92,7 @@
                                     </td>
                                     <td>
                                         <select name="operations[{{ $idx }}][branch_key]" class="form-select form-select-sm">
-                                            <option value="MAIN" {{ $def['branch'] === 'MAIN' ? 'selected' : '' }}>الفرع الرئيسي (MAIN)</option>
+                                            <option value="MAIN" {{ $def['branch'] === 'MAIN' ? 'selected' : '' }}>الفرع الرئيسي</option>
                                             <option value="BRANCH_A" {{ $def['branch'] === 'BRANCH_A' ? 'selected' : '' }}>فرع أ (الظهر والجانبيات)</option>
                                             <option value="BRANCH_B" {{ $def['branch'] === 'BRANCH_B' ? 'selected' : '' }}>فرع ب (البوكسات)</option>
                                         </select>
@@ -137,7 +137,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <td><input type="text" name="operations[${opIndex}][name_ar]" class="form-control form-control-sm" placeholder="اسم العملية" required></td>
             <td>
                 <select name="operations[${opIndex}][branch_key]" class="form-select form-select-sm">
-                    <option value="MAIN">الفرع الرئيسي (MAIN)</option>
+                    <option value="MAIN">الفرع الرئيسي</option>
                     <option value="BRANCH_A">فرع أ (الظهر والجانبيات)</option>
                     <option value="BRANCH_B">فرع ب (البوكسات)</option>
                 </select>

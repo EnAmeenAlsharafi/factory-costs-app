@@ -40,8 +40,8 @@
                 <div class="col-12 col-sm-6 col-md-3">
                     <select name="status" class="form-select bg-light">
                         <option value="">كل الحالات</option>
-                        <option value="DRAFT" {{ request('status') == 'DRAFT' ? 'selected' : '' }}>مسودة (Draft)</option>
-                        <option value="POSTED" {{ request('status') == 'POSTED' ? 'selected' : '' }}>رحل ومرحل (Posted)</option>
+                        <option value="DRAFT" {{ request('status') == 'DRAFT' ? 'selected' : '' }}>مسودة</option>
+                        <option value="POSTED" {{ request('status') == 'POSTED' ? 'selected' : '' }}>رحل ومرحل</option>
                     </select>
                 </div>
 
@@ -95,9 +95,9 @@
                                 <td class="fw-mono text-muted">{{ $receipt->supplier_invoice_number ?? '-' }}</td>
                                 <td class="text-center">
                                     @if($receipt->status === 'POSTED')
-                                        <span class="badge bg-success bg-opacity-10 text-success fw-bold px-3 py-1">مُرحل (Posted)</span>
+                                        <span class="badge bg-success bg-opacity-10 text-success fw-bold px-3 py-1">مُرحل</span>
                                     @else
-                                        <span class="badge bg-warning bg-opacity-10 text-warning fw-bold px-3 py-1">مسودة (Draft)</span>
+                                        <span class="badge bg-warning bg-opacity-10 text-warning fw-bold px-3 py-1">مسودة</span>
                                     @endif
                                 </td>
                                 <td class="text-end fw-mono fw-bold text-dark">{{ number_format($receipt->total_amount, 2) }} ر.س</td>

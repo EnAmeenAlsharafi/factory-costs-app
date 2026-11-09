@@ -18,7 +18,7 @@
                     <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
                         <i class="fas fa-calculator fa-2x"></i>
                     </div>
-                    <h5 class="fw-bold text-dark mb-2">تكلفة الاستهلاك الفعلي مقابل المخطط (Actual vs BOM)</h5>
+                    <h5 class="fw-bold text-dark mb-2">تكلفة الاستهلاك الفعلي مقابل المخطط</h5>
                     <p class="text-muted fs-7 mb-4">مقارنة التكلفة الفعلية الصافية (المصروف - المرتجع) مع تكلفة الوصفة المخططة وحساب انحرافات التكلفة لكل امر إنتاج.</p>
                     <a href="{{ route('production.reports.cost') }}" class="btn btn-primary w-100">
                         <i class="fas fa-chart-line me-1"></i> استعراض تقرير التكلفة
@@ -34,7 +34,7 @@
                     <div class="bg-danger text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
                         <i class="fas fa-dumpster fa-2x"></i>
                     </div>
-                    <h5 class="fw-bold text-dark mb-2">تحليل الهدر والتلف التحليلي (Waste Analysis)</h5>
+                    <h5 class="fw-bold text-dark mb-2">تحليل الهدر والتلف التحليلي</h5>
                     <p class="text-muted fs-7 mb-4">تحليل تفصيلي لكميات وتكاليف الهدر والتلف موزعة حسب الأسباب التحليلية والأقسام المتسببة بدون مزدوجات.</p>
                     <a href="{{ route('production.reports.waste') }}" class="btn btn-danger w-100">
                         <i class="fas fa-chart-pie me-1"></i> استعراض تقرير الهدر
@@ -50,7 +50,7 @@
                     <div class="bg-warning text-dark rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
                         <i class="fas fa-shield-alt fa-2x"></i>
                     </div>
-                    <h5 class="fw-bold text-dark mb-2">ملخص وحالات الجودة (Quality Summary)</h5>
+                    <h5 class="fw-bold text-dark mb-2">ملخص وحالات الجودة</h5>
                     <p class="text-muted fs-7 mb-4">ملخص احصائي لبلاغات حالات الجودة وحجم تأثيرها وقرارات المعالجة والأقسام الأكثر تسبباً بالعيوب.</p>
                     <a href="{{ route('production.reports.quality') }}" class="btn btn-warning text-dark w-100">
                         <i class="fas fa-list-check me-1"></i> استعراض ملخص الجودة
@@ -66,7 +66,7 @@
                     <div class="bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
                         <i class="fas fa-user-check fa-2x"></i>
                     </div>
-                    <h5 class="fw-bold text-dark mb-2">إنتاجية الموظفين (Employee Productivity)</h5>
+                    <h5 class="fw-bold text-dark mb-2">إنتاجية الموظفين</h5>
                     <p class="text-muted fs-7 mb-4">عدد المهام المُسندة والكمية المنجزة لكل موظف، مع حالات قيد التنفيذ والعوائق، قابلة للتصفية حسب القسم والتاريخ.</p>
                     <a href="{{ route('production.reports.employee-productivity') }}" class="btn btn-success w-100">
                         <i class="fas fa-users me-1"></i> استعراض تقرير الإنتاجية

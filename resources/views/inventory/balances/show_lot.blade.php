@@ -122,7 +122,7 @@
     <div class="card border-0 shadow-sm rounded-3">
         <div class="card-header bg-white py-3 border-0">
             <h5 class="card-title fw-bold mb-0 text-dark">
-                <i class="fas fa-history text-secondary me-2"></i>سجل الحركات التفصيلي لهذه الدفعة (Ledger)
+                <i class="fas fa-history text-secondary me-2"></i>سجل الحركات التفصيلي لهذه الدفعة
             </h5>
         </div>
         <div class="card-body p-0">
@@ -130,7 +130,7 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead class="bg-light">
                         <tr>
-                            <th class="ps-3">رقم الحركة (Movement)</th>
+                            <th class="ps-3">رقم الحركة</th>
                             <th>التاريخ والوقت</th>
                             <th>نوع الحركة</th>
                             <th>الاتجاه</th>
@@ -151,9 +151,9 @@
                                 </td>
                                 <td>
                                     @if($movement->direction === 'IN')
-                                        <span class="badge bg-success bg-opacity-10 text-success fw-bold"><i class="fas fa-arrow-down me-1"></i> وارد (IN)</span>
+                                        <span class="badge bg-success bg-opacity-10 text-success fw-bold"><i class="fas fa-arrow-down me-1"></i> وارد</span>
                                     @else
-                                        <span class="badge bg-danger bg-opacity-10 text-danger fw-bold"><i class="fas fa-arrow-up me-1"></i> منصرف (OUT)</span>
+                                        <span class="badge bg-danger bg-opacity-10 text-danger fw-bold"><i class="fas fa-arrow-up me-1"></i> منصرف</span>
                                     @endif
                                 </td>
                                 <td class="text-center fw-mono fw-bold {{ $movement->direction === 'IN' ? 'text-success' : 'text-danger' }}">

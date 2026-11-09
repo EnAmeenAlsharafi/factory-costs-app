@@ -428,6 +428,16 @@ class CustomerPortalTest extends TestCase
         $this->assertSame(2, (int) $progress['ordered_quantity']);
     }
 
+    public function test_order_form_uses_the_automatic_order_number_and_a_searchable_model_picker(): void
+    {
+        $html = $this->actingAs($this->client())->get(route('portal.requests.create'))->assertOk()->getContent();
+
+        $this->assertStringNotContainsString('name="customer_reference"', $html);
+        $this->assertStringNotContainsString('مرجع المعرض', $html);
+        $this->assertStringContainsString('localPicker(', $html);
+        $this->assertStringContainsString('ابحث باسم الموديل', $html);
+    }
+
     public function test_custom_design_image_and_free_fabric_request_are_reviewed_and_transferred_to_the_confirmed_order(): void
     {
         Storage::fake('local');

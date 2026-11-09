@@ -66,9 +66,20 @@
                             <div><small>المنجز</small><strong>{{ $op->completed_quantity }}</strong></div>
                             <div class="is-remaining"><small>المتبقي</small><strong>{{ $remaining }}</strong></div>
                         </div>
-                        <div class="task-card-actions">
-                            <button type="button" class="btn btn-factory-primary" data-bs-toggle="modal" data-bs-target="#task-sheet-{{ $op->id }}">
-                                <i class="fas fa-folder-open" aria-hidden="true"></i> فتح المهمة
+                        {{-- One clear next action per status; details stay one tap away. --}}
+                        <div class="task-card-actions task-card-actions-split">
+                            @if ($op->status === 'ASSIGNED' && $user->can('production.operation.start'))
+                                <form action="{{ route('production.operations.start', $op) }}" method="POST" class="flex-grow-1">
+                                    @csrf
+                                    <button type="submit" class="btn btn-warning text-dark fw-bold w-100"><i class="fas fa-play" aria-hidden="true"></i> بدء العمل</button>
+                                </form>
+                            @elseif (in_array($op->status, ['IN_PROGRESS', 'PARTIALLY_COMPLETED'], true) && $remaining > 0 && $user->can('production.update_progress'))
+                                <button type="button" class="btn btn-success fw-bold flex-grow-1" data-bs-toggle="modal" data-bs-target="#task-sheet-{{ $op->id }}">
+                                    <i class="fas fa-circle-plus" aria-hidden="true"></i> تسجيل الإنجاز
+                                </button>
+                            @endif
+                            <button type="button" class="btn btn-outline-secondary {{ in_array($op->status, ['BLOCKED'], true) ? 'flex-grow-1' : '' }}" data-bs-toggle="modal" data-bs-target="#task-sheet-{{ $op->id }}">
+                                <i class="fas fa-circle-info" aria-hidden="true"></i> التفاصيل
                             </button>
                         </div>
                     </article>

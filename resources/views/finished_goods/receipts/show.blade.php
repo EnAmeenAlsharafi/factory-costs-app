@@ -112,7 +112,7 @@
             @if($receipt->movements->isNotEmpty())
                 <div class="card border-0 shadow-sm rounded-3">
                     <div class="card-header bg-white py-3">
-                        <h6 class="fw-bold mb-0 text-success"><i class="fas fa-exchange-alt me-1"></i> سجل حركة المنتجات الجاهزة بالمستودع (Ledger IN)</h6>
+                        <h6 class="fw-bold mb-0 text-success"><i class="fas fa-exchange-alt me-1"></i> سجل حركة المنتجات الجاهزة بالمستودع</h6>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">

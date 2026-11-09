@@ -87,7 +87,7 @@
             @can('production.manage_quality')
                 <div class="card border-0 shadow-sm mb-4">
                     <div class="card-header bg-white py-3">
-                        <h6 class="fw-bold mb-0 text-primary"><i class="fas fa-gavel me-1"></i> اتخاذ قرار المعالجة (Disposition)</h6>
+                        <h6 class="fw-bold mb-0 text-primary"><i class="fas fa-gavel me-1"></i> اتخاذ قرار المعالجة</h6>
                     </div>
                     <div class="card-body">
                         <form action="{{ route('production.quality-incidents.disposition', $qualityIncident) }}" method="POST">
@@ -95,11 +95,11 @@
                             <div class="mb-3">
                                 <label class="form-label required">اختيار قرار المعالجة المعتمد</label>
                                 <select name="disposition" class="form-select" required>
-                                    <option value="REPAIR" {{ $qualityIncident->disposition === 'REPAIR' ? 'selected' : '' }}>إصلاح بسيط بالورشة (REPAIR)</option>
-                                    <option value="REWORK" {{ $qualityIncident->disposition === 'REWORK' ? 'selected' : '' }}>إعادة تصنيع وتعديل (REWORK)</option>
-                                    <option value="REMANUFACTURE" {{ $qualityIncident->disposition === 'REMANUFACTURE' ? 'selected' : '' }}>إعادة إنتاج قطاع/قطعة بالكامل (REMANUFACTURE)</option>
-                                    <option value="SCRAP" {{ $qualityIncident->disposition === 'SCRAP' ? 'selected' : '' }}>تخريب وإتلاف خامات (SCRAP / WASTE)</option>
-                                    <option value="ACCEPT_AS_IS" {{ $qualityIncident->disposition === 'ACCEPT_AS_IS' ? 'selected' : '' }}>قبول المنتج بحالته دون تعديل (ACCEPT AS IS)</option>
+                                    <option value="REPAIR" {{ $qualityIncident->disposition === 'REPAIR' ? 'selected' : '' }}>إصلاح بسيط بالورشة</option>
+                                    <option value="REWORK" {{ $qualityIncident->disposition === 'REWORK' ? 'selected' : '' }}>إعادة تصنيع وتعديل</option>
+                                    <option value="REMANUFACTURE" {{ $qualityIncident->disposition === 'REMANUFACTURE' ? 'selected' : '' }}>إعادة إنتاج قطاع/قطعة بالكامل</option>
+                                    <option value="SCRAP" {{ $qualityIncident->disposition === 'SCRAP' ? 'selected' : '' }}>تخريب وإتلاف خامات</option>
+                                    <option value="ACCEPT_AS_IS" {{ $qualityIncident->disposition === 'ACCEPT_AS_IS' ? 'selected' : '' }}>قبول المنتج بحالته دون تعديل</option>
                                 </select>
                             </div>
                             <div class="mb-3">
@@ -120,7 +120,7 @@
             <!-- Rework Actions -->
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                    <h6 class="fw-bold mb-0 text-primary"><i class="fas fa-tools me-1"></i> أوامر وإجراءات إعادة التصنيع (Rework Actions)</h6>
+                    <h6 class="fw-bold mb-0 text-primary"><i class="fas fa-tools me-1"></i> أوامر وإجراءات إعادة التصنيع</h6>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -174,7 +174,7 @@
             <!-- Waste Records Associated -->
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                    <h6 class="fw-bold mb-0 text-danger"><i class="fas fa-dumpster me-1"></i> سجلات الهدر والتلف الناتجة عن البلاغ (Analytical Waste)</h6>
+                    <h6 class="fw-bold mb-0 text-danger"><i class="fas fa-dumpster me-1"></i> سجلات الهدر والتلف الناتجة عن البلاغ</h6>
                     <a href="{{ route('production.waste.create', ['production_order_id' => $qualityIncident->production_order_id, 'quality_incident_id' => $qualityIncident->id]) }}" class="btn btn-sm btn-outline-danger">
                         <i class="fas fa-plus me-1"></i> تسجيل كمية هدر
                     </a>

@@ -79,7 +79,7 @@
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-12 mb-2">
-                                <label class="form-label">مسار التصنيع المختار (Routing)</label>
+                                <label class="form-label">مسار التصنيع المختار</label>
                                 <select name="production_routing_id" class="form-select">
                                     <option value="">-- اختيار مسار التصنيع لاحقاً (حفظ كمسودة) --</option>
                                     @foreach($routings as $rtg)
@@ -130,7 +130,7 @@
                         <hr>
                         <div class="alert alert-info py-2 mb-0 small">
                             <i class="fas fa-info-circle me-1"></i>
-                            عند حفظ أمر الإنتاج، يتم تجميد وأخذ لقطة (Snapshot) كاملة للمواصفات الفنية لضمان استقلالية خطوط الإنتاج.
+                            عند حفظ أمر الإنتاج، يتم تجميد وأخذ لقطة كاملة للمواصفات الفنية لضمان استقلالية خطوط الإنتاج.
                         </div>
                     </div>
                 </div>

@@ -112,7 +112,7 @@
                                 <th style="width: 11%;">الكمية <span class="text-danger">*</span></th>
                                 <th style="width: 13%;">وحدة القياس <span class="text-danger">*</span></th>
                                 <th style="width: 12%;">سعر الوحدة (ر.س) <span class="text-danger">*</span></th>
-                                <th style="width: 13%;">رقم الدفعة (Lot)</th>
+                                <th style="width: 13%;">رقم الدفعة</th>
                                 <th style="width: 11%;">الإجمالي</th>
                                 <th style="width: 4%;" class="text-center">حذف</th>
                             </tr>
@@ -171,7 +171,7 @@
                                     <td data-label="سعر الوحدة (ر.س) *" class="stack-half">
                                         <input type="number" step="0.000001" inputmode="decimal" :name="`lines[${index}][unit_cost_purchase]`" x-model.number="line.unit_cost" class="form-control form-control-sm fw-mono text-end" min="0" required>
                                     </td>
-                                    <td data-label="رقم الدفعة (Lot)" class="stack-half">
+                                    <td data-label="رقم الدفعة" class="stack-half">
                                         <input type="text" :name="`lines[${index}][lot_reference]`" x-model="line.lot_reference" class="form-control form-control-sm fw-mono" placeholder="تلقائي إن ترك فارغاً">
                                     </td>
                                     <td data-label="الإجمالي" class="text-end fw-mono fw-bold">
@@ -202,7 +202,7 @@
         <!-- Submission Actions -->
         <x-mobile-action-bar class="mb-4">
             <button type="submit" name="action" value="draft" class="btn btn-outline-primary px-4">
-                <i class="fas fa-save me-1"></i> حفظ التعديلات كـ مسودة (Draft)
+                <i class="fas fa-save me-1"></i> حفظ التعديلات كـ مسودة
             </button>
             <button type="submit" name="action" value="post" class="btn btn-success px-4" data-confirm="ترحيل سند الاستلام الآن؟ ستُضاف الكميات للمخزون ولا يمكن تعديل السند بعد الترحيل.">
                 <i class="fas fa-check-circle me-1"></i> ترحيل سند الاستلام

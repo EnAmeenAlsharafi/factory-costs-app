@@ -58,7 +58,7 @@
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
                             <span class="text-muted fs-7 fw-semibold d-block">عدد الدفعات المتاحة النشطة</span>
-                            <h3 class="fw-bold mb-0 text-dark mt-1">{{ $activeLotsCount }} <small class="fs-6 text-muted">دفعة (Lot)</small></h3>
+                            <h3 class="fw-bold mb-0 text-dark mt-1">{{ $activeLotsCount }} <small class="fs-6 text-muted">دفعة</small></h3>
                         </div>
                         <div class="avatar-circle bg-warning bg-opacity-10 text-warning rounded-3 p-3 d-flex align-items-center justify-content-center">
                             <i class="fas fa-barcode fs-4"></i>
@@ -117,7 +117,7 @@
         </li>
         <li class="nav-item" role="presentation">
             <button class="nav-link fw-semibold" id="lots-tab" data-bs-toggle="tab" data-bs-target="#lots-pane" type="button" role="tab">
-                <i class="fas fa-barcode me-1"></i> تفاصيل الدفعات والتشغيلات (Lots)
+                <i class="fas fa-barcode me-1"></i> تفاصيل الدفعات والتشغيلات
             </button>
         </li>
     </ul>
@@ -136,9 +136,9 @@
                                     <th>اسم المادة الخاملة</th>
                                     <th>التصنيف</th>
                                     <th>الوحدة الأساسية</th>
-                                    <th class="text-center">إجمالي الوارد (IN)</th>
-                                    <th class="text-center">إجمالي المنصرف (OUT)</th>
-                                    <th class="text-center">الرصيد الصافي (Balance)</th>
+                                    <th class="text-center">إجمالي الوارد</th>
+                                    <th class="text-center">إجمالي المنصرف</th>
+                                    <th class="text-center">الرصيد الصافي</th>
                                     <th class="text-end pe-3">إجمالي القيمة المسجلة بالدفعات</th>
                                 </tr>
                             </thead>
@@ -196,12 +196,12 @@
                         <table class="table table-hover align-middle mb-0 table-sticky-first">
                             <thead class="bg-light">
                                 <tr>
-                                    <th class="ps-3">رقم الدفعة (Lot Code)</th>
+                                    <th class="ps-3">رقم الدفعة</th>
                                     <th>المادة الخام</th>
                                     <th>المستودع</th>
                                     <th>تاريخ الورود</th>
                                     <th class="text-center">الكمية الأولية</th>
-                                    <th class="text-center">المتبقي (Remaining)</th>
+                                    <th class="text-center">المتبقي</th>
                                     <th class="text-end">تكلفة الوحدة</th>
                                     <th class="text-end pe-3">إجمالي قيمة المتبقي</th>
                                 </tr>

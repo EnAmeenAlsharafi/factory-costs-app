@@ -95,7 +95,7 @@
                                 <div class="form-check">
                                     <input class="form-check-input" type="radio" name="image_source" id="img_source_url" value="url" x-model="imageSource">
                                     <label class="form-check-label fw-semibold fs-7" for="img_source_url">
-                                        <i class="fas fa-link me-1 text-primary"></i> إضافة رابط صورة (URL)
+                                        <i class="fas fa-link me-1 text-primary"></i> إضافة رابط صورة
                                     </label>
                                 </div>
                             </div>
@@ -115,13 +115,13 @@
 
                         <div class="form-check form-switch mb-3">
                             <input class="form-check-input" type="checkbox" name="is_custom_template" id="is_custom_template" value="1" {{ old('is_custom_template') ? 'checked' : '' }}>
-                            <label class="form-check-input-label fw-semibold ms-2" for="is_custom_template">قالب تصميم خاص (Custom Template)</label>
+                            <label class="form-check-input-label fw-semibold ms-2" for="is_custom_template">قالب تصميم خاص</label>
                             <small class="text-muted d-block mt-1">تحديد إذا كان هذا الموديل مستوحى من طلب تصميم خاص تم ترقيته كموديل مصنعي معتمد.</small>
                         </div>
 
                         <div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" name="is_active" id="is_active" value="1" {{ old('is_active', '1') == '1' ? 'checked' : '' }}>
-                            <label class="form-check-input-label fw-semibold ms-2" for="is_active">حالة الموديل نشط (Active)</label>
+                            <label class="form-check-input-label fw-semibold ms-2" for="is_active">حالة الموديل نشط</label>
                         </div>
                     </div>
                 </div>

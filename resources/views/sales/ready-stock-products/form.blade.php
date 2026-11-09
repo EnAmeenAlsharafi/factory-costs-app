@@ -49,7 +49,7 @@
                     <input id="sales_display_name" name="sales_display_name" class="form-control" value="{{ old('sales_display_name', $material->sales_display_name) }}" maxlength="255">
                 </div>
                 <div class="col-md-6">
-                    <label for="salla_product_id" class="form-label">رقم المنتج في سلة (No.)</label>
+                    <label for="salla_product_id" class="form-label">رقم المنتج في سلة</label>
                     <input id="salla_product_id" name="salla_product_id" class="form-control" dir="ltr" inputmode="numeric" value="{{ old('salla_product_id', $material->salla_product_id) }}" maxlength="100">
                     <small class="text-muted">هوية المنتج في كتالوج سلة، مستقلة عن SKU وعن مرجع بند الطلب.</small>
                 </div>

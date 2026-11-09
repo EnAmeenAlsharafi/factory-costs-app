@@ -30,7 +30,7 @@
             <div class="card border-0 shadow-sm border-start border-primary border-4">
                 <div class="card-body p-3 d-flex align-items-center justify-content-between">
                     <div>
-                        <small class="text-muted d-block">أوامر إنتاج قيد التنفيذ (WIP)</small>
+                        <small class="text-muted d-block">أوامر إنتاج قيد التنفيذ</small>
                         <span class="fs-3 fw-bold text-primary">{{ $activeOrdersCount }}</span>
                     </div>
                     <div class="bg-primary text-white rounded-circle p-3 fs-5">

@@ -1,8 +1,9 @@
-{{-- Offer to install the system as an app on phones. Hidden once installed, when opened as the app, or after «لاحقاً». --}}
+{{-- Offer to install as an app on phones. Hidden once installed, when opened as the app, or after «لاحقاً». $webAppVariant: 'system' or 'portal'. --}}
+@php $installTitle = ($webAppVariant ?? 'system') === 'portal' ? 'ثبّت بوابة العملاء كتطبيق على جوالك' : 'ثبّت النظام كتطبيق على جوالك'; @endphp
 <section class="install-app" x-data="installApp" x-show="visible" x-cloak role="region" aria-label="تثبيت التطبيق">
-    <div class="install-app-icon" aria-hidden="true"><img src="{{ route('webapp.icon', ['size' => 192, 'v' => \App\Models\CompanySetting::current()->updated_at?->timestamp]) }}" alt=""></div>
+    <div class="install-app-icon" aria-hidden="true"><img src="{{ route('webapp.icon', ['size' => 192, 'v' => app(\App\Http\Controllers\WebAppController::class)->iconVersion()]) }}" alt=""></div>
     <div class="install-app-body">
-        <p class="install-app-title">ثبّت النظام كتطبيق على جوالك</p>
+        <p class="install-app-title">{{ $installTitle }}</p>
         <p class="install-app-text" x-show="!ios">يفتح بملء الشاشة من أيقونة على الشاشة الرئيسية، دون شريط المتصفح.</p>
         <p class="install-app-text" x-show="ios">
             اضغط زر المشاركة <i class="fas fa-arrow-up-from-bracket" aria-hidden="true"></i><span class="visually-hidden">(المشاركة)</span>

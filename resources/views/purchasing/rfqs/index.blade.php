@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'طلبات عروض الأسعار (RFQ)')
+@section('title', 'طلبات عروض الأسعار')
 
 @section('content')
 <div class="container-fluid">
@@ -13,7 +13,7 @@
         </div>
         @can('purchasing.manage_rfq')
         <a href="{{ route('purchasing.rfqs.create') }}" class="btn btn-factory-warning rounded-pill px-4">
-            <i class="fas fa-plus me-1"></i>طلب عرض سعر جديد (RFQ)
+            <i class="fas fa-plus me-1"></i>طلب عرض سعر جديد
         </a>
         @endcan
     </div>

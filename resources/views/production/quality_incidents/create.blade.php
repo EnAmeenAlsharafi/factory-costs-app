@@ -40,24 +40,24 @@
                             <div class="col-md-6">
                                 <label class="form-label required">نوع العيب / المشكلة</label>
                                 <select name="incident_type" class="form-select" required>
-                                    <option value="WRONG_DIMENSION">خطأ في المقاسات / الأبعاد (WRONG DIMENSION)</option>
-                                    <option value="WRONG_FABRIC">خطأ في نوع القماش (WRONG FABRIC)</option>
-                                    <option value="WRONG_COLOR">خطأ في اللون / الطلاء (WRONG COLOR)</option>
-                                    <option value="MATERIAL_DAMAGE">تلف أو عيب خامة (MATERIAL DAMAGE)</option>
-                                    <option value="WORKMANSHIP_DEFECT">عيب تصنيع / نجارة / تنجيد (WORKMANSHIP)</option>
-                                    <option value="LOADING_DAMAGE">تلف مناولة وتحميل (LOADING DAMAGE)</option>
-                                    <option value="MISSING_COMPONENT">نقص مكون أو قطاع (MISSING COMPONENT)</option>
-                                    <option value="ASSEMBLY_ERROR">خطأ تجميع أو تركيب (ASSEMBLY ERROR)</option>
-                                    <option value="OTHER">أخرى (OTHER)</option>
+                                    <option value="WRONG_DIMENSION">خطأ في المقاسات / الأبعاد</option>
+                                    <option value="WRONG_FABRIC">خطأ في نوع القماش</option>
+                                    <option value="WRONG_COLOR">خطأ في اللون / الطلاء</option>
+                                    <option value="MATERIAL_DAMAGE">تلف أو عيب خامة</option>
+                                    <option value="WORKMANSHIP_DEFECT">عيب تصنيع / نجارة / تنجيد</option>
+                                    <option value="LOADING_DAMAGE">تلف مناولة وتحميل</option>
+                                    <option value="MISSING_COMPONENT">نقص مكون أو قطاع</option>
+                                    <option value="ASSEMBLY_ERROR">خطأ تجميع أو تركيب</option>
+                                    <option value="OTHER">أخرى</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label required">درجة الأهمية / الخاطرة</label>
                                 <select name="severity" class="form-select" required>
-                                    <option value="LOW">منخفضة (LOW)</option>
-                                    <option value="MEDIUM" selected>متوسطة (MEDIUM)</option>
-                                    <option value="HIGH">عالية (HIGH)</option>
-                                    <option value="CRITICAL">حرجة (CRITICAL)</option>
+                                    <option value="LOW">منخفضة</option>
+                                    <option value="MEDIUM" selected>متوسطة</option>
+                                    <option value="HIGH">عالية</option>
+                                    <option value="CRITICAL">حرجة</option>
                                 </select>
                             </div>
                         </div>
@@ -68,7 +68,7 @@
                                 <input type="number" name="affected_quantity" class="form-control" value="1" min="1" max="{{ $productionOrder->released_quantity }}" required>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label required">قسم اكتشاف العيب (Detection Dept)</label>
+                                <label class="form-label required">قسم اكتشاف العيب</label>
                                 <select name="detected_department_id" class="form-select" required>
                                     @foreach($departments as $dept)
                                         <option value="{{ $dept->id }}" {{ auth()->user()->department_id == $dept->id ? 'selected' : '' }}>{{ $dept->name_ar }}</option>
@@ -78,7 +78,7 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">القسم المتسبب / المسؤول (Responsibility Dept)</label>
+                            <label class="form-label">القسم المتسبب / المسؤول</label>
                             <select name="responsible_department_id" class="form-select">
                                 <option value="">تحديد القسم المسؤول إن عُرف...</option>
                                 @foreach($departments as $dept)
@@ -103,14 +103,14 @@
                     </div>
                     <div class="card-body">
                         <div class="mb-3">
-                            <label class="form-label">قرار المعالجة (Disposition)</label>
+                            <label class="form-label">قرار المعالجة</label>
                             <select name="disposition" class="form-select">
                                 <option value="">ترك القرار لمسؤول الجودة / مدير الإنتاج لاحقاً</option>
-                                <option value="REPAIR">إصلاح بسيط بالورشة (REPAIR)</option>
-                                <option value="REWORK">إعادة تصنيع وتعديل (REWORK)</option>
-                                <option value="REMANUFACTURE">إعادة تصنيع القطعة بالكامل (REMANUFACTURE)</option>
-                                <option value="SCRAP">تخريب وإتلاف خامة (SCRAP / WASTE)</option>
-                                <option value="ACCEPT_AS_IS">قبول المنتج بحالته (ACCEPT AS IS)</option>
+                                <option value="REPAIR">إصلاح بسيط بالورشة</option>
+                                <option value="REWORK">إعادة تصنيع وتعديل</option>
+                                <option value="REMANUFACTURE">إعادة تصنيع القطعة بالكامل</option>
+                                <option value="SCRAP">تخريب وإتلاف خامة</option>
+                                <option value="ACCEPT_AS_IS">قبول المنتج بحالته</option>
                             </select>
                         </div>
 

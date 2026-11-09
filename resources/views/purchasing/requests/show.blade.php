@@ -16,12 +16,12 @@
             @if($purchaseRequest->status === 'APPROVED')
                 @can('purchasing.manage_rfq')
                 <a href="{{ route('purchasing.rfqs.create', ['purchase_request_id' => $purchaseRequest->id]) }}" class="btn btn-info rounded-pill px-3 text-white">
-                    <i class="fas fa-paper-plane me-1"></i>إنشاء طلب عروض أسعار (RFQ)
+                    <i class="fas fa-paper-plane me-1"></i>إنشاء طلب عروض أسعار
                 </a>
                 @endcan
                 @can('purchasing.create_po')
                 <a href="{{ route('purchasing.orders.create', ['purchase_request_id' => $purchaseRequest->id]) }}" class="btn btn-success rounded-pill px-3">
-                    <i class="fas fa-plus me-1"></i>إصدار أمر شراء (PO)
+                    <i class="fas fa-plus me-1"></i>إصدار أمر شراء
                 </a>
                 @endcan
             @endif
@@ -86,7 +86,7 @@
                                     </a>
                                 </td>
                                 <td>{{ $po->supplier?->name }}</td>
-                                <td class="fw-bold">{{ number_format($po->total_amount, 2) }} SAR</td>
+                                <td class="fw-bold">{{ number_format($po->total_amount, 2) }} ر.س</td>
                                 <td><span class="badge bg-info">{{ $po->status }}</span></td>
                             </tr>
                             @endforeach

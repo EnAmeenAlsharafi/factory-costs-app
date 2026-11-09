@@ -6,6 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="robots" content="noindex, nofollow">
     <meta name="theme-color" content="#142d43">
+    @include('partials.webapp-head', ['webAppVariant' => 'portal'])
     <title>@yield('title', 'بوابة العملاء') — مصنع مفروشات سدير</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -77,6 +78,7 @@
 
     <main class="portal-main container" id="main-content">
         @include('partials.flash')
+        @include('partials.install-app', ['webAppVariant' => 'portal'])
         @yield('content')
     </main>
 

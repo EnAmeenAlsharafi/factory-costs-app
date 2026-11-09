@@ -163,10 +163,10 @@
         <!-- Submission Actions -->
         <div class="d-flex justify-content-end gap-3 mb-5">
             <button type="submit" name="action" value="draft" class="btn btn-outline-primary px-4">
-                <i class="fas fa-save me-1"></i> حفظ كـ مسودة (Draft)
+                <i class="fas fa-save me-1"></i> حفظ كـ مسودة
             </button>
             <button type="submit" name="action" value="post" class="btn btn-danger px-4">
-                <i class="fas fa-check-circle me-1"></i> حفظ وترحيل وتعديل المخزون فوراً (Post)
+                <i class="fas fa-check-circle me-1"></i> حفظ وترحيل وتعديل المخزون فوراً
             </button>
         </div>
 

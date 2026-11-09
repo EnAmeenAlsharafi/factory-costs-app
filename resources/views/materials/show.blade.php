@@ -226,7 +226,7 @@
                                 <span class="fw-semibold text-dark">{{ $material->fabricSpec->pattern_type ?? '-' }}</span>
                             </div>
                             <div class="col-md-3 col-6">
-                                <span class="text-muted fs-8 d-block mb-1">الوزن (GSM)</span>
+                                <span class="text-muted fs-8 d-block mb-1">الوزن</span>
                                 <span class="badge bg-light text-dark border font-monospace fs-7">{{ $material->fabricSpec->weight_gsm ? number_format($material->fabricSpec->weight_gsm, 0) . ' gsm' : '-' }}</span>
                             </div>
 
@@ -238,7 +238,7 @@
                             @endif
                             @if ($material->fabricSpec->martindale_rub_count)
                                 <div class="col-md-6 col-12">
-                                    <span class="text-muted fs-8 d-block mb-1">مقاومة الاحتكاك (Martindale)</span>
+                                    <span class="text-muted fs-8 d-block mb-1">مقاومة الاحتكاك</span>
                                     <span class="text-dark fs-7">{{ number_format($material->fabricSpec->martindale_rub_count) }} دورة</span>
                                 </div>
                             @endif
@@ -556,7 +556,7 @@
                                     </select>
                                 </div>
                                 <div class="col-md-3">
-                                    <label class="form-label fs-8 mb-1">معامل التحويل (Conversion Factor)</label>
+                                    <label class="form-label fs-8 mb-1">معامل التحويل</label>
                                     <input type="number" step="0.0001" name="conversion_factor" class="form-control form-control-sm" placeholder="مثال: 50" required min="0.0001">
                                 </div>
                                 <div class="col-md-3 pt-3">
@@ -572,9 +572,9 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>الوحدة المصدر (From)</th>
+                            <th>الوحدة المصدر</th>
                             <th>معامل التحويل</th>
-                            <th>الوحدة الهدف (To)</th>
+                            <th>الوحدة الهدف</th>
                             <th>صيغة المعادلة</th>
                             @can('materials.manage')
                                 <th class="text-center">إجراء</th>

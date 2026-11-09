@@ -22,7 +22,7 @@
                 <form action="{{ route('purchasing.orders.receive-form', $purchaseOrder) }}" method="POST">
                     @csrf
                     <button type="submit" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm">
-                        <i class="fas fa-truck-loading me-1"></i>استلام خامات بالمخزن (Stage 5)
+                        <i class="fas fa-truck-loading me-1"></i>استلام خامات بالمخزن
                     </button>
                 </form>
                 @endcan
@@ -90,8 +90,8 @@
                                     @endif
                                 </td>
                                 <td>{{ number_format($line->ordered_quantity, 2) }} {{ $line->purchaseUnit?->name_ar }}</td>
-                                <td class="fw-bold">{{ number_format($line->unit_price, 2) }} SAR</td>
-                                <td class="fw-bold text-dark">{{ number_format($line->line_total, 2) }} SAR</td>
+                                <td class="fw-bold">{{ number_format($line->unit_price, 2) }} ر.س</td>
+                                <td class="fw-bold text-dark">{{ number_format($line->line_total, 2) }} ر.س</td>
                                 <td><span class="badge bg-success fs-7">{{ number_format($line->received_base_quantity, 2) }} {{ $line->material?->baseUnit?->name_ar }}</span></td>
                                 <td>
                                     @if($line->remaining_base_quantity > 0)
@@ -113,10 +113,10 @@
             <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
                 <div class="card-header bg-light border-0 py-3 d-flex justify-content-between align-items-center">
                     <h6 class="fw-bold mb-0 text-dark">
-                        <i class="fas fa-chart-line text-warning me-2"></i>تقرير فروقات أسعار الشراء (Price Variance)
+                        <i class="fas fa-chart-line text-warning me-2"></i>تقرير فروقات أسعار الشراء
                     </h6>
                     <span class="badge {{ $varianceSummary['net_variance'] > 0 ? 'bg-danger' : 'bg-success' }} px-3 py-2">
-                        صافي الفرق: {{ number_format($varianceSummary['net_variance'], 2) }} SAR
+                        صافي الفرق: {{ number_format($varianceSummary['net_variance'], 2) }} ر.س
                     </span>
                 </div>
                 <div class="table-responsive">
@@ -135,12 +135,12 @@
                             @foreach($varianceSummary['lines'] as $var)
                             <tr>
                                 <td class="fw-bold">{{ $var['material_name'] }}</td>
-                                <td>{{ number_format($var['expected_base_unit_price'], 4) }} SAR</td>
-                                <td class="fw-bold text-primary">{{ number_format($var['actual_average_base_unit_cost'], 4) }} SAR</td>
-                                <td>{{ number_format($var['expected_total_cost'], 2) }} SAR</td>
-                                <td class="fw-bold">{{ number_format($var['actual_total_cost'], 2) }} SAR</td>
+                                <td>{{ number_format($var['expected_base_unit_price'], 4) }} ر.س</td>
+                                <td class="fw-bold text-primary">{{ number_format($var['actual_average_base_unit_cost'], 4) }} ر.س</td>
+                                <td>{{ number_format($var['expected_total_cost'], 2) }} ر.س</td>
+                                <td class="fw-bold">{{ number_format($var['actual_total_cost'], 2) }} ر.س</td>
                                 <td class="fw-bold {{ $var['variance_amount'] > 0 ? 'text-danger' : 'text-success' }}">
-                                    {{ $var['variance_amount'] > 0 ? '+' : '' }}{{ number_format($var['variance_amount'], 2) }} SAR
+                                    {{ $var['variance_amount'] > 0 ? '+' : '' }}{{ number_format($var['variance_amount'], 2) }} ر.س
                                 </td>
                             </tr>
                             @endforeach
@@ -155,7 +155,7 @@
             @if($purchaseOrder->materialReceipts->count() > 0)
             <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
                 <div class="card-header bg-light border-0 py-3">
-                    <h6 class="fw-bold mb-0 text-dark">سندات الاستلام المخزنية المرتبطة (Stage 5 Material Receipts)</h6>
+                    <h6 class="fw-bold mb-0 text-dark">سندات الاستلام المخزنية المرتبطة</h6>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
@@ -176,7 +176,7 @@
                                     </a>
                                 </td>
                                 <td>{{ $mr->receipt_date->format('Y-m-d') }}</td>
-                                <td class="fw-bold">{{ number_format($mr->total_amount, 2) }} SAR</td>
+                                <td class="fw-bold">{{ number_format($mr->total_amount, 2) }} ر.س</td>
                                 <td>
                                     @if($mr->isPosted())
                                     <span class="badge bg-success">معتمد ومرحل للمخزون واللوتات</span>
@@ -201,20 +201,20 @@
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted small">المجموع الفرعي:</span>
-                        <span class="fw-bold text-dark">{{ number_format($purchaseOrder->subtotal, 2) }} SAR</span>
+                        <span class="fw-bold text-dark">{{ number_format($purchaseOrder->subtotal, 2) }} ر.س</span>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted small">الخصم:</span>
-                        <span class="fw-bold text-danger">-{{ number_format($purchaseOrder->discount_amount, 2) }} SAR</span>
+                        <span class="fw-bold text-danger">-{{ number_format($purchaseOrder->discount_amount, 2) }} ر.س</span>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted small">أجور الشحن والنقل:</span>
-                        <span class="fw-bold text-dark">+{{ number_format($purchaseOrder->shipping_amount, 2) }} SAR</span>
+                        <span class="fw-bold text-dark">+{{ number_format($purchaseOrder->shipping_amount, 2) }} ر.س</span>
                     </div>
                     <hr>
                     <div class="d-flex justify-content-between mb-3">
                         <span class="fw-bold">الإجمالي المعتمد:</span>
-                        <span class="fw-bold fs-5 text-primary">{{ number_format($purchaseOrder->total_amount, 2) }} SAR</span>
+                        <span class="fw-bold fs-5 text-primary">{{ number_format($purchaseOrder->total_amount, 2) }} ر.س</span>
                     </div>
 
                     <div class="mb-3">

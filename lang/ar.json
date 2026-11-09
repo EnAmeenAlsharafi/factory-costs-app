@@ -1,0 +1,22 @@
+{
+    "Showing": "عرض",
+    "to": "إلى",
+    "of": "من",
+    "results": "نتيجة",
+    "Previous": "السابق",
+    "Next": "التالي",
+    "Pagination Navigation": "التنقل بين الصفحات",
+    "Go to page :page": "انتقل إلى الصفحة :page",
+    "Login": "تسجيل الدخول",
+    "Logout": "تسجيل الخروج",
+    "Password": "كلمة المرور",
+    "Remember Me": "تذكرني",
+    "Unauthorized": "غير مصرح",
+    "Forbidden": "غير مسموح",
+    "Not Found": "الصفحة غير موجودة",
+    "Page Expired": "انتهت صلاحية الصفحة",
+    "Too Many Requests": "طلبات كثيرة",
+    "Server Error": "خطأ في الخادم",
+    "Service Unavailable": "الخدمة غير متاحة",
+    "This action is unauthorized.": "لا تملك صلاحية تنفيذ هذا الإجراء."
+}

@@ -45,7 +45,7 @@
 
                 <!-- Username -->
                 <div class="col-md-6">
-                    <label for="username" class="form-label">اسم المستخدم للدخول (Username) <span class="text-danger">*</span></label>
+                    <label for="username" class="form-label">اسم المستخدم للدخول <span class="text-danger">*</span></label>
                     <input type="text" 
                            name="username" 
                            id="username" 

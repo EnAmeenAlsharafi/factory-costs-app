@@ -116,7 +116,7 @@
                             <span class="status-chip status-chip-warning"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i> لا توجد وصفة معتمدة لهذا التكوين</span>
                         @endif
                     </div>
-                    <label for="recipe-{{ $line->id }}" class="form-label fs-8 mb-1">ربط وصفة التصنيع (BOM)</label>
+                    <label for="recipe-{{ $line->id }}" class="form-label fs-8 mb-1">ربط وصفة التصنيع</label>
                     <select id="recipe-{{ $line->id }}" name="lines[{{ $line->id }}][recipe_version_id]" class="form-select">
                         <option value="">-- بدون ربط وصفة حالياً --</option>
                         @foreach ($recipeVersions as $version)

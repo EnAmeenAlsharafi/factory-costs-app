@@ -19,11 +19,11 @@
                 <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">تسوية مخزنية: <span class="text-primary fw-mono">{{ $adjustment->adjustment_number }}</span></h1>
                 @if($adjustment->status === 'POSTED')
                     <span class="badge bg-success bg-opacity-10 text-success fw-bold px-3 py-2 fs-7">
-                        <i class="fas fa-check-circle me-1"></i> مُرحل ومطبق على المخزون (Posted)
+                        <i class="fas fa-check-circle me-1"></i> مُرحل ومطبق على المخزون
                     </span>
                 @else
                     <span class="badge bg-warning bg-opacity-10 text-warning fw-bold px-3 py-2 fs-7">
-                        <i class="fas fa-clock me-1"></i> مسودة (Draft)
+                        <i class="fas fa-clock me-1"></i> مسودة
                     </span>
                 @endif
             </div>
@@ -35,7 +35,7 @@
                     <form action="{{ route('inventory.adjustments.post', $adjustment) }}" method="POST" onsubmit="return confirm('هل أنت تأكد من ترحيل هذه التسوية؟ سيتم تعديل كميات أرصدة المخزون فوراً.');">
                         @csrf
                         <button type="submit" class="btn btn-danger">
-                            <i class="fas fa-check-circle me-1"></i> ترحيل وتطبيق التسوية (Post)
+                            <i class="fas fa-check-circle me-1"></i> ترحيل وتطبيق التسوية
                         </button>
                     </form>
                 @endcan
@@ -51,7 +51,7 @@
         <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center mb-4">
             <i class="fas fa-exclamation-circle fs-4 me-3 text-warning"></i>
             <div>
-                <strong>تنبيه:</strong> هذه التسوية ما زالت في حالة <strong>مسودة (Draft)</strong> ولم يتم تطبيقا على أرصدة المخزون بعد.
+                <strong>تنبيه:</strong> هذه التسوية ما زالت في حالة <strong>مسودة</strong> ولم يتم تطبيقا على أرصدة المخزون بعد.
             </div>
         </div>
     @endif
@@ -109,7 +109,7 @@
                             <th class="ps-3">#</th>
                             <th>نوع الحركة</th>
                             <th>المادة الخام</th>
-                            <th>الدفعة المستهدفة (Lot)</th>
+                            <th>الدفعة المستهدفة</th>
                             <th class="text-center">الكمية المسوية</th>
                             <th class="text-end">تكلفة الوحدة</th>
                             <th class="text-end pe-3">إجمالي القيمة المعدلة</th>

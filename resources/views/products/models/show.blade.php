@@ -19,9 +19,9 @@
                 <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">{{ $model->name_ar }}</h1>
                 <span class="badge bg-primary bg-opacity-10 text-primary fw-mono px-3 py-2 fs-7">{{ $model->model_code }}</span>
                 @if($model->is_active)
-                    <span class="badge bg-success bg-opacity-10 text-success fw-bold px-3 py-2 fs-7">نشط (Active)</span>
+                    <span class="badge bg-success bg-opacity-10 text-success fw-bold px-3 py-2 fs-7">نشط</span>
                 @else
-                    <span class="badge bg-secondary bg-opacity-10 text-secondary fw-bold px-3 py-2 fs-7">معطل (Inactive)</span>
+                    <span class="badge bg-secondary bg-opacity-10 text-secondary fw-bold px-3 py-2 fs-7">معطل</span>
                 @endif
             </div>
         </div>
@@ -96,7 +96,7 @@
     <div class="card border-0 shadow-sm rounded-3 mb-4">
         <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
             <div>
-                <h5 class="card-title fw-bold mb-0 text-dark"><i class="fas fa-ruler-combined text-primary me-2"></i>تكوينات التصنيع القياسية (Product Configurations)</h5>
+                <h5 class="card-title fw-bold mb-0 text-dark"><i class="fas fa-ruler-combined text-primary me-2"></i>تكوينات التصنيع القياسية</h5>
                 <small class="text-muted">المقاسات وخيارات الهيكل المصنعي (مثل خيار التخزين) المتاحة لهذا الموديل</small>
             </div>
             @can('products.manage')
@@ -182,7 +182,7 @@
     <div class="card border-0 shadow-sm rounded-3">
         <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
             <div>
-                <h5 class="card-title fw-bold mb-0 text-dark"><i class="fas fa-tags text-primary me-2"></i>مسميات المنتج لدى العملاء (Customer Product Aliases)</h5>
+                <h5 class="card-title fw-bold mb-0 text-dark"><i class="fas fa-tags text-primary me-2"></i>مسميات المنتج لدى العملاء</h5>
                 <small class="text-muted">ربط اسم الموديل الداخلي بمسميات متجر سدير والعملاء التجاريين والموزعين</small>
             </div>
             @can('products.manage')
@@ -300,7 +300,7 @@
 
                     <div class="form-check form-switch mb-3">
                         <input class="form-check-input" type="checkbox" name="has_storage" id="cfg_has_storage" value="1">
-                        <label class="form-check-label fw-semibold ms-2" for="cfg_has_storage">يتضمن تخزين (Storage Box)</label>
+                        <label class="form-check-label fw-semibold ms-2" for="cfg_has_storage">يتضمن تخزين</label>
                     </div>
 
                     <div class="mb-3">
@@ -346,7 +346,7 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="customer_product_code" class="form-label fw-semibold">كود المنتج لدى العميل (SKU / Code)</label>
+                        <label for="customer_product_code" class="form-label fw-semibold">كود المنتج لدى العميل</label>
                         <input type="text" name="customer_product_code" id="customer_product_code" class="form-control dir-ltr" placeholder="e.g. SALLA-102 or R-202">
                     </div>
 

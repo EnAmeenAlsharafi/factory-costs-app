@@ -46,7 +46,7 @@
                         <td class="fw-bold text-dark">{{ $sq->supplier?->name }}</td>
                         <td>{{ $sq->quotation_date->format('Y-m-d') }}</td>
                         <td>{{ $sq->lead_time_days ? $sq->lead_time_days . ' أيام' : '-' }}</td>
-                        <td class="fw-bold fs-6 text-dark">{{ number_format($sq->total_amount, 2) }} SAR</td>
+                        <td class="fw-bold fs-6 text-dark">{{ number_format($sq->total_amount, 2) }} ر.س</td>
                         <td><span class="badge bg-light text-dark border">{{ $sq->payment_terms ?? 'نقداً' }}</span></td>
                         <td>
                             @if($sq->status === 'SELECTED')

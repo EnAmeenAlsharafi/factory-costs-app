@@ -5,8 +5,8 @@
 <p class="text-muted fs-7 mb-3">طلباتك المعتمدة ومراحل تنفيذها وما استلمته منها.</p>
 
 <form method="GET" class="d-flex gap-2 mb-3" role="search">
-    <label for="search" class="visually-hidden">رقم الطلب أو مرجع المعرض</label>
-    <input class="form-control" id="search" name="search" value="{{ request('search') }}" placeholder="رقم الطلب أو مرجعك" inputmode="search" enterkeyhint="search">
+    <label for="search" class="visually-hidden">رقم الطلب</label>
+    <input class="form-control" id="search" name="search" value="{{ request('search') }}" placeholder="ابحث برقم الطلب" inputmode="search" enterkeyhint="search">
     <button class="btn btn-primary flex-shrink-0" aria-label="بحث"><i class="fas fa-magnifying-glass" aria-hidden="true"></i></button>
 </form>
 

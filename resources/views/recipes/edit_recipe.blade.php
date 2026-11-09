@@ -90,10 +90,10 @@
 
                     {{-- Target Type --}}
                     <div class="col-md-4">
-                        <label class="form-label fw-bold fs-7">نوع الهدف المصنع (Target Type) <span class="text-danger">*</span></label>
+                        <label class="form-label fw-bold fs-7">نوع الهدف المصنع <span class="text-danger">*</span></label>
                         <select name="target_type" class="form-select @error('target_type') is-invalid @enderror" x-model="targetType" :disabled="hasProductionHistory">
-                            <option value="PRODUCT_CONFIGURATION">تكوين منتج نهائي (Product Configuration)</option>
-                            <option value="SEMI_FINISHED_COMPONENT">مكون نصف مصنع (Semi-Finished Component)</option>
+                            <option value="PRODUCT_CONFIGURATION">تكوين منتج نهائي</option>
+                            <option value="SEMI_FINISHED_COMPONENT">مكون نصف مصنع</option>
                         </select>
                         @if($hasProductionHistory)
                             <input type="hidden" name="target_type" :value="targetType">

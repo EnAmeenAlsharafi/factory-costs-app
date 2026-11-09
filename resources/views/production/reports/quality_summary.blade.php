@@ -44,7 +44,7 @@
         <div class="col-md-3 col-sm-6">
             <div class="card border-0 shadow-sm">
                 <div class="card-body p-3 text-center">
-                    <small class="text-muted d-block mb-1">البلاغات الحرجة (Critical)</small>
+                    <small class="text-muted d-block mb-1">البلاغات الحرجة</small>
                     <span class="fs-2 fw-bold text-danger">{{ $bySeverity['CRITICAL'] ?? 0 }}</span>
                 </div>
             </div>

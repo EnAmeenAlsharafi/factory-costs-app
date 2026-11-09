@@ -46,7 +46,7 @@
 
                 <!-- Symbol -->
                 <div class="col-md-6">
-                    <label for="symbol" class="form-label">الرمز المختصر (Symbol)</label>
+                    <label for="symbol" class="form-label">الرمز المختصر</label>
                     <input type="text" 
                            name="symbol" 
                            id="symbol" 
@@ -92,12 +92,12 @@
                     <label for="unit_type" class="form-label">طبيعة القياس / النوع</label>
                     <select name="unit_type" id="unit_type" class="form-select @error('unit_type') is-invalid @enderror">
                         <option value="">-- اختياري --</option>
-                        <option value="LENGTH" {{ old('unit_type') === 'LENGTH' ? 'selected' : '' }}>أطوال (Length)</option>
-                        <option value="AREA" {{ old('unit_type') === 'AREA' ? 'selected' : '' }}>مساحة (Area)</option>
-                        <option value="VOLUME" {{ old('unit_type') === 'VOLUME' ? 'selected' : '' }}>حجم (Volume)</option>
-                        <option value="WEIGHT" {{ old('unit_type') === 'WEIGHT' ? 'selected' : '' }}>وزن (Weight)</option>
-                        <option value="COUNT" {{ old('unit_type') === 'COUNT' ? 'selected' : '' }}>عدد / حبات (Count/Piece)</option>
-                        <option value="PACKAGING" {{ old('unit_type') === 'PACKAGING' ? 'selected' : '' }}>تغليف وتعبئة (Packaging)</option>
+                        <option value="LENGTH" {{ old('unit_type') === 'LENGTH' ? 'selected' : '' }}>أطوال</option>
+                        <option value="AREA" {{ old('unit_type') === 'AREA' ? 'selected' : '' }}>مساحة</option>
+                        <option value="VOLUME" {{ old('unit_type') === 'VOLUME' ? 'selected' : '' }}>حجم</option>
+                        <option value="WEIGHT" {{ old('unit_type') === 'WEIGHT' ? 'selected' : '' }}>وزن</option>
+                        <option value="COUNT" {{ old('unit_type') === 'COUNT' ? 'selected' : '' }}>عدد / حبات</option>
+                        <option value="PACKAGING" {{ old('unit_type') === 'PACKAGING' ? 'selected' : '' }}>تغليف وتعبئة</option>
                     </select>
                     @error('unit_type')
                         <div class="invalid-feedback">{{ $message }}</div>

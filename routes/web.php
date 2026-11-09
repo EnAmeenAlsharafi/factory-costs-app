@@ -100,6 +100,7 @@ Route::middleware('guest')->group(function () {
 // Authenticated Application Routes
 // Installable app (PWA): manifest and home-screen icons built from the company settings.
 Route::get('/manifest.webmanifest', [WebAppController::class, 'manifest'])->name('webapp.manifest');
+Route::get('/portal/manifest.webmanifest', [WebAppController::class, 'portalManifest'])->name('webapp.portal-manifest');
 Route::get('/app-icon/{size}/{purpose?}', [WebAppController::class, 'icon'])->whereNumber('size')->name('webapp.icon');
 Route::view('/offline', 'webapp.offline')->name('webapp.offline');
 

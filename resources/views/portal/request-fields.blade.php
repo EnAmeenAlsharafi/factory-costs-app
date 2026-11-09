@@ -17,7 +17,6 @@
 <div class="card border-0 shadow-sm mb-3"><div class="card-body">
     <h2 class="h6 fw-bold mb-3">بيانات الطلب والتسليم</h2>
     <div class="row g-3">
-        <div class="col-md-6"><label for="customer_reference" class="form-label">رقم الطلب لديك / مرجع المعرض</label><input class="form-control" id="customer_reference" name="customer_reference" maxlength="255" value="{{ old('customer_reference', $submission->customer_reference) }}" autocomplete="off"></div>
         <div class="col-md-6"><label for="requested_delivery_date" class="form-label">تاريخ التسليم المطلوب</label><input type="date" class="form-control" id="requested_delivery_date" name="requested_delivery_date" value="{{ old('requested_delivery_date', $submission->requested_delivery_date?->toDateString()) }}"></div>
         <div class="col-md-4"><label for="delivery_city" class="form-label">مدينة التسليم</label><input class="form-control" id="delivery_city" name="delivery_city" maxlength="255" value="{{ old('delivery_city', $submission->delivery_city) }}" autocomplete="address-level2"></div>
         <div class="col-md-8"><label for="delivery_address" class="form-label">عنوان التسليم</label><input class="form-control" id="delivery_address" name="delivery_address" maxlength="3000" value="{{ old('delivery_address', $submission->delivery_address) }}" autocomplete="street-address"></div>
@@ -38,7 +37,36 @@
             </div>
             <div class="row g-3">
                 <div class="col-md-4"><label class="form-label" :for="'type-'+index">نوع المنتج</label><select class="form-select" :id="'type-'+index" :name="'lines['+index+'][line_type]'" x-model="line.line_type"><option value="MANUFACTURED">منتج يُصنّع حسب الطلب</option><option value="READY_STOCK">منتج جاهز</option></select></div>
-                <div class="col-md-8" x-show="line.line_type === 'MANUFACTURED' && !line.custom_design"><label class="form-label" :for="'model-'+index">الموديل</label><select class="form-select" :id="'model-'+index" :name="'lines['+index+'][product_model_id]'" x-model="line.product_model_id" @change="line.product_configuration_id = ''; line.has_storage = 0" :disabled="line.line_type !== 'MANUFACTURED' || line.custom_design" :required="line.line_type === 'MANUFACTURED' && !line.custom_design"><option value="">اختر الموديل</option><template x-for="model in models" :key="model.id"><option :value="model.id" x-text="model.name"></option></template></select></div>
+                <div class="col-md-8" x-show="line.line_type === 'MANUFACTURED' && !line.custom_design">
+                    <label class="form-label" :for="'model-'+index">الموديل</label>
+                    <div class="typeahead-container" @click.outside="close()"
+                         x-data="localPicker({ items: () => models, get: () => line.product_model_id, set: (id) => { if (String(id) !== String(line.product_model_id)) { line.product_configuration_id = ''; line.has_storage = 0; } line.product_model_id = id; } })"
+                         x-effect="$refs.box.setCustomValidity(line.line_type === 'MANUFACTURED' && !line.custom_design && !line.product_model_id ? 'اختر الموديل من القائمة.' : '')">
+                        <input type="hidden" :name="'lines['+index+'][product_model_id]'" :value="line.product_model_id" :disabled="line.line_type !== 'MANUFACTURED' || line.custom_design">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white"><i class="fas fa-magnifying-glass text-muted" aria-hidden="true"></i></span>
+                            <input type="text" class="form-control" :id="'model-'+index" x-ref="box" x-model="query"
+                                   role="combobox" aria-autocomplete="list" autocomplete="off" inputmode="search" enterkeyhint="search"
+                                   :aria-expanded="isOpen.toString()" :aria-controls="listboxId" :aria-activedescendant="isOpen ? listboxId + '-' + highlighted : null"
+                                   placeholder="ابحث باسم الموديل..."
+                                   @focus="open(); $event.target.select()" @input="open()"
+                                   @keydown.arrow-down.prevent="move(1)" @keydown.arrow-up.prevent="move(-1)"
+                                   @keydown.enter.prevent="pickHighlighted()" @keydown.escape="close()" @keydown.tab="close()">
+                            <button type="button" class="btn btn-outline-secondary" x-show="line.product_model_id" @click="clear()" aria-label="مسح الموديل المختار"><i class="fas fa-times" aria-hidden="true"></i></button>
+                        </div>
+                        <div class="typeahead-dropdown portal-model-list" x-show="isOpen" x-cloak :id="listboxId" role="listbox" aria-label="الموديلات" @mousedown.prevent>
+                            <template x-for="(model, i) in matches" :key="model.id">
+                                <div class="typeahead-item" role="option" :id="listboxId + '-' + i" :aria-selected="(String(model.id) === String(line.product_model_id)).toString()"
+                                     :class="{ 'active': i === highlighted }" @mouseenter="highlighted = i" @click="choose(model)">
+                                    <span class="portal-model-thumb" aria-hidden="true"><template x-if="model.image_url"><img :src="model.image_url" alt="" loading="lazy"></template><template x-if="!model.image_url"><i class="fas fa-bed"></i></template></span>
+                                    <span class="flex-grow-1 text-truncate" x-text="model.name"></span>
+                                    <i class="fas fa-check text-primary" x-show="String(model.id) === String(line.product_model_id)" aria-hidden="true"></i>
+                                </div>
+                            </template>
+                            <div class="typeahead-status" x-show="matches.length === 0">لا توجد موديلات مطابقة. جرّب جزءاً آخر من الاسم.</div>
+                        </div>
+                    </div>
+                </div>
                 <div class="col-md-8" x-show="line.line_type === 'READY_STOCK'"><label class="form-label" :for="'material-'+index">المنتج الجاهز</label><select class="form-select" :id="'material-'+index" :name="'lines['+index+'][material_id]'" x-model="line.material_id" :required="line.line_type === 'READY_STOCK'"><option value="">اختر المنتج</option><template x-for="product in ready" :key="product.id"><option :value="product.id" x-text="product.name"></option></template></select></div>
                 <div class="col-12" x-show="line.line_type === 'MANUFACTURED'">
                     <div class="form-check"><input type="checkbox" class="form-check-input" :id="'custom-'+index" x-model="line.custom_design" @change="line.product_configuration_id = ''; line.has_storage = 0"><label class="form-check-label" :for="'custom-'+index">تصميم خاص حسب الطلب</label></div>

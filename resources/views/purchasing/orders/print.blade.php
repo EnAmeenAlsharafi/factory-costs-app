@@ -42,7 +42,7 @@
     <div class="row mb-4">
         <div class="col-6">
             <div class="border p-3 rounded">
-                <h6 class="fw-bold mb-2">بيانات المورد (Supplier):</h6>
+                <h6 class="fw-bold mb-2">بيانات المورد:</h6>
                 <div><strong>الاسم:</strong> {{ $purchaseOrder->supplier?->name }}</div>
                 <div><strong>رقم الهاتف:</strong> {{ $purchaseOrder->supplier?->phone ?? '-' }}</div>
                 <div><strong>مرجع المورد:</strong> {{ $purchaseOrder->supplier_reference ?? '-' }}</div>
@@ -50,7 +50,7 @@
         </div>
         <div class="col-6">
             <div class="border p-3 rounded">
-                <h6 class="fw-bold mb-2">بيانات الشحن والتسليم (Delivery):</h6>
+                <h6 class="fw-bold mb-2">بيانات الشحن والتسليم:</h6>
                 <div><strong>جهة الاستلام:</strong> المصنع{{ collect([$company->city, $company->address])->filter()->isNotEmpty() ? ' — '.collect([$company->city, $company->address])->filter()->implode('، ') : '' }}</div>
                 <div><strong>تاريخ التسليم المتوقع:</strong> {{ $purchaseOrder->expected_delivery_date ? $purchaseOrder->expected_delivery_date->format('Y-m-d') : '-' }}</div>
                 <div><strong>شروط الدفع:</strong> {{ $purchaseOrder->payment_terms ?? 'نقداً' }}</div>
@@ -95,8 +95,8 @@
                 </td>
                 <td class="fw-bold">{{ number_format($line->ordered_quantity, 2) }}</td>
                 <td>{{ $line->purchaseUnit?->name_ar }}</td>
-                <td>{{ number_format($line->unit_price, 2) }} SAR</td>
-                <td class="fw-bold">{{ number_format($line->line_total, 2) }} SAR</td>
+                <td>{{ number_format($line->unit_price, 2) }} ر.س</td>
+                <td class="fw-bold">{{ number_format($line->line_total, 2) }} ر.س</td>
             </tr>
             @endforeach
         </tbody>
@@ -116,23 +116,23 @@
             <table class="table table-bordered">
                 <tr>
                     <td>المجموع الفرعي:</td>
-                    <td class="fw-bold text-end">{{ number_format($purchaseOrder->subtotal, 2) }} SAR</td>
+                    <td class="fw-bold text-end">{{ number_format($purchaseOrder->subtotal, 2) }} ر.س</td>
                 </tr>
                 @if($purchaseOrder->discount_amount > 0)
                 <tr>
                     <td>الخصم:</td>
-                    <td class="fw-bold text-end text-danger">-{{ number_format($purchaseOrder->discount_amount, 2) }} SAR</td>
+                    <td class="fw-bold text-end text-danger">-{{ number_format($purchaseOrder->discount_amount, 2) }} ر.س</td>
                 </tr>
                 @endif
                 @if($purchaseOrder->shipping_amount > 0)
                 <tr>
                     <td>أجور الشحن والنقل:</td>
-                    <td class="fw-bold text-end">+{{ number_format($purchaseOrder->shipping_amount, 2) }} SAR</td>
+                    <td class="fw-bold text-end">+{{ number_format($purchaseOrder->shipping_amount, 2) }} ر.س</td>
                 </tr>
                 @endif
                 <tr class="table-dark">
                     <td class="fw-bold">الإجمالي النهائي:</td>
-                    <td class="fw-bold text-end fs-5">{{ number_format($purchaseOrder->total_amount, 2) }} SAR</td>
+                    <td class="fw-bold text-end fs-5">{{ number_format($purchaseOrder->total_amount, 2) }} ر.س</td>
                 </tr>
             </table>
         </div>

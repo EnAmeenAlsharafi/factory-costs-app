@@ -73,7 +73,7 @@
 
                         <div class="row g-3 mb-4">
                             <div class="col-md-6">
-                                <label class="form-label required">مستودع الإيداع (Finished Goods Warehouse)</label>
+                                <label class="form-label required">مستودع الإيداع</label>
                                 <select name="warehouse_id" class="form-select @error('warehouse_id') is-invalid @enderror" required>
                                     @foreach($warehouses as $wh)
                                         <option value="{{ $wh->id }}" {{ (old('warehouse_id', $fgWarehouse->id) == $wh->id) ? 'selected' : '' }}>

@@ -35,10 +35,10 @@
                 <div class="col-md-4">
                     <select name="status" class="form-select" onchange="this.form.submit()">
                         <option value="">جميع الحالات</option>
-                        <option value="DRAFT" {{ request('status') === 'DRAFT' ? 'selected' : '' }}>مسودة (DRAFT)</option>
-                        <option value="SUBMITTED" {{ request('status') === 'SUBMITTED' ? 'selected' : '' }}>مقدم للمستودع (SUBMITTED)</option>
-                        <option value="PARTIALLY_FULFILLED" {{ request('status') === 'PARTIALLY_FULFILLED' ? 'selected' : '' }}>مستوفى جزئياً (PARTIALLY FULFILLED)</option>
-                        <option value="FULFILLED" {{ request('status') === 'FULFILLED' ? 'selected' : '' }}>مستوفى بالكامل (FULFILLED)</option>
+                        <option value="DRAFT" {{ request('status') === 'DRAFT' ? 'selected' : '' }}>مسودة</option>
+                        <option value="SUBMITTED" {{ request('status') === 'SUBMITTED' ? 'selected' : '' }}>مقدم للمستودع</option>
+                        <option value="PARTIALLY_FULFILLED" {{ request('status') === 'PARTIALLY_FULFILLED' ? 'selected' : '' }}>مستوفى جزئياً</option>
+                        <option value="FULFILLED" {{ request('status') === 'FULFILLED' ? 'selected' : '' }}>مستوفى بالكامل</option>
                     </select>
                 </div>
                 <div class="col-md-3 d-flex gap-2">

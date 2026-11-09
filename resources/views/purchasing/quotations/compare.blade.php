@@ -68,11 +68,11 @@
                         <td class="fw-bold">{{ $q['quotation_number'] }}</td>
                         <td>{{ number_format($q['quoted_quantity'], 2) }}</td>
                         <td><span class="badge bg-secondary">{{ $q['purchase_unit'] }}</span></td>
-                        <td>{{ number_format($q['unit_price'], 2) }} SAR</td>
+                        <td>{{ number_format($q['unit_price'], 2) }} ر.س</td>
                         <td class="bg-warning bg-opacity-10 fw-bold fs-6 text-primary">
-                            {{ number_format($q['base_unit_equivalent_price'], 4) }} SAR / {{ $matData['base_unit'] }}
+                            {{ number_format($q['base_unit_equivalent_price'], 4) }} ر.س / {{ $matData['base_unit'] }}
                         </td>
-                        <td class="fw-bold">{{ number_format($q['line_total'], 2) }} SAR</td>
+                        <td class="fw-bold">{{ number_format($q['line_total'], 2) }} ر.س</td>
                         <td>{{ $q['lead_time_days'] ? $q['lead_time_days'] . ' أيام' : '-' }}</td>
                         <td>
                             @if($q['is_selected'])

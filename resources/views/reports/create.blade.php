@@ -50,7 +50,7 @@
                     <span class="invalid-feedback">{{ $message }}</span>
                 @enderror
                 <small style="display: block; color: var(--text-muted); margin-top: 0.25rem; font-size: 0.8rem;">
-                    التوقيت المعتمد: توقيت الرياض (Asia/Riyadh)
+                    التوقيت المعتمد: توقيت الرياض
                 </small>
             </div>
         </div>

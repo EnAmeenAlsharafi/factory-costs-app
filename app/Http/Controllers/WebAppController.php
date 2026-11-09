@@ -8,17 +8,71 @@ use Illuminate\Support\Facades\File;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
- * Makes the internal system installable on phones as an app (PWA): the web app manifest and
- * the home-screen icons, both built from the company settings so a new logo or colour carries over.
+ * Makes the internal system and the customer portal installable on phones as apps (PWA):
+ * one manifest per app, sharing the home-screen icons drawn from the Sadir mark.
  */
 class WebAppController extends Controller
 {
     public const ICON_SIZES = [192, 512];
 
+    /**
+     * Bundled app icon (the Sadir mark). Falls back to the company logo when it is missing.
+     */
+    public const APP_ICON = 'images/sadir-app-icon.png';
+
+    /**
+     * The internal system app (staff).
+     */
     public function manifest(): JsonResponse
     {
         $company = CompanySetting::current();
-        $version = $company->updated_at?->timestamp;
+
+        return $this->manifestResponse([
+            'id' => '/dashboard',
+            'name' => $company->name_ar,
+            'short_name' => $this->shortName($company->name_ar),
+            'description' => 'نظام إدارة الإنتاج والمبيعات والمشتريات — '.$company->name_ar,
+            'start_url' => '/dashboard?source=app',
+            'scope' => '/',
+            'theme_color' => $company->primary_color ?: '#1d4ed8',
+            'shortcuts' => [
+                ['name' => 'لوحة التحكم', 'url' => '/dashboard?source=app'],
+                ['name' => 'مهامي', 'url' => '/production/my-tasks?source=app'],
+                ['name' => 'مركز تمرير الإنتاج', 'url' => '/production/pipeline?source=app'],
+            ],
+        ]);
+    }
+
+    /**
+     * The customer portal app (customers and showrooms): its own name, home page and scope.
+     */
+    public function portalManifest(): JsonResponse
+    {
+        $company = CompanySetting::current();
+        $brand = $this->lastWord($company->name_ar);
+
+        return $this->manifestResponse([
+            'id' => '/portal',
+            'name' => 'بوابة عملاء '.$company->name_ar,
+            'short_name' => 'بوابة '.$brand,
+            'description' => 'اطلب منتجات '.$company->name_ar.' وتابع طلباتك وحسابك.',
+            'start_url' => '/portal?source=app',
+            'scope' => '/portal',
+            'theme_color' => '#142d43',
+            'shortcuts' => [
+                ['name' => 'طلب جديد', 'url' => '/portal/requests/create?source=app'],
+                ['name' => 'طلباتي وعروضي', 'url' => '/portal/requests?source=app'],
+                ['name' => 'متابعة التنفيذ', 'url' => '/portal/orders?source=app'],
+            ],
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $app
+     */
+    private function manifestResponse(array $app): JsonResponse
+    {
+        $version = $this->iconVersion();
         $icon = fn (int $size, string $purpose) => [
             'src' => route('webapp.icon', ['size' => $size, 'purpose' => $purpose, 'v' => $version]),
             'sizes' => "{$size}x{$size}",
@@ -26,30 +80,31 @@ class WebAppController extends Controller
             'purpose' => $purpose,
         ];
 
-        return response()->json([
-            'id' => '/dashboard',
-            'name' => $company->name_ar,
-            'short_name' => $this->shortName($company->name_ar),
-            'description' => 'نظام إدارة الإنتاج والمبيعات والمشتريات — '.$company->name_ar,
+        return response()->json($app + [
             'lang' => 'ar',
             'dir' => 'rtl',
-            'start_url' => '/dashboard?source=app',
-            'scope' => '/',
             'display' => 'standalone',
             'orientation' => 'portrait',
             'background_color' => '#ffffff',
-            'theme_color' => $company->primary_color ?: '#1d4ed8',
-            'icons' => [
-                $icon(192, 'any'),
-                $icon(512, 'any'),
-                $icon(512, 'maskable'),
-            ],
-            'shortcuts' => [
-                ['name' => 'لوحة التحكم', 'url' => '/dashboard?source=app'],
-                ['name' => 'مهامي', 'url' => '/production/my-tasks?source=app'],
-                ['name' => 'مركز تمرير الإنتاج', 'url' => '/production/pipeline?source=app'],
-            ],
+            'icons' => [$icon(192, 'any'), $icon(512, 'any'), $icon(512, 'maskable')],
         ], 200, ['Content-Type' => 'application/manifest+json', 'Cache-Control' => 'public, max-age=3600'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+
+    /**
+     * Changes whenever the icon source changes, so phones fetch the new icon.
+     */
+    public function iconVersion(): string
+    {
+        $source = $this->iconSource();
+
+        return substr(md5(($source ?? 'none').'|'.($source ? filemtime($source) : '').'|'.CompanySetting::current()->updated_at?->timestamp), 0, 10);
+    }
+
+    private function iconSource(): ?string
+    {
+        $bundled = resource_path(self::APP_ICON);
+
+        return is_file($bundled) ? $bundled : CompanySetting::current()->logoFilePath();
     }
 
     public function icon(int $size, string $purpose = 'any'): BinaryFileResponse
@@ -57,10 +112,10 @@ class WebAppController extends Controller
         abort_unless(in_array($size, self::ICON_SIZES, true) && in_array($purpose, ['any', 'maskable'], true), 404);
 
         $company = CompanySetting::current();
-        $logo = $company->logoFilePath();
+        $logo = $this->iconSource();
         $dir = storage_path('app/app-icons');
         File::ensureDirectoryExists($dir);
-        $path = $dir.'/'.md5(($logo ?? 'none').'|'.$company->primary_color.'|'.$company->updated_at?->timestamp)."-{$size}-{$purpose}.png";
+        $path = $dir.'/'.$this->iconVersion()."-{$size}-{$purpose}.png";
 
         if (! is_file($path)) {
             $this->drawIcon($path, $size, $purpose === 'maskable', $logo, $company->primary_color ?: '#1d4ed8');
@@ -80,9 +135,13 @@ class WebAppController extends Controller
         $source = $logo ? @imagecreatefromstring((string) file_get_contents($logo)) : false;
 
         if ($source) {
-            // Logos often arrive with wide light margins: trim them, and paint the canvas in the logo's own background.
-            $background = imagecolorsforindex($source, imagecolorat($source, 0, 0));
-            $trimmed = @imagecropauto($source, IMG_CROP_THRESHOLD, 0.25, imagecolorat($source, 0, 0));
+            // Trim empty margins (transparent or flat light) and paint the canvas in the logo's own background.
+            $corner = imagecolorsforindex($source, imagecolorat($source, 0, 0));
+            $isTransparent = $corner['alpha'] > 100;
+            $background = $isTransparent ? ['red' => 255, 'green' => 255, 'blue' => 255] : $corner;
+            $trimmed = $isTransparent
+                ? @imagecropauto($source, IMG_CROP_TRANSPARENT)
+                : @imagecropauto($source, IMG_CROP_THRESHOLD, 0.25, imagecolorat($source, 0, 0));
             if ($trimmed) {
                 imagedestroy($source);
                 $source = $trimmed;
@@ -106,6 +165,13 @@ class WebAppController extends Controller
 
         imagepng($canvas, $path);
         imagedestroy($canvas);
+    }
+
+    private function lastWord(string $name): string
+    {
+        $words = preg_split('/\s+/u', trim($name));
+
+        return end($words) ?: $name;
     }
 
     /**

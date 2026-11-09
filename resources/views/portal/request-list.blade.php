@@ -6,7 +6,7 @@
             <div class="task-card-head">
                 <div class="min-w-0">
                     <h3 class="task-card-title">
-                        <a class="text-reset text-decoration-none" href="{{ route('portal.requests.show', $submission) }}">{{ $submission->customer_reference ?: 'طلب بدون مرجع' }}</a>
+                        <a class="text-reset text-decoration-none" href="{{ route('portal.requests.show', $submission) }}">@if($submission->order)طلب <span class="ltr-isolate">{{ $submission->order->order_number }}</span>@else طلب <span class="ltr-isolate">PR-{{ $submission->id }}</span>@endif</a>
                     </h3>
                     <div class="task-card-ref"><span class="ltr-isolate">PR-{{ $submission->id }}</span>@if($submission->order) &bull; رقم الطلب <span class="ltr-isolate">{{ $submission->order->order_number }}</span>@endif</div>
                 </div>

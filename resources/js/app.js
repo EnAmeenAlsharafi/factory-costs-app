@@ -757,6 +757,111 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('[title]:not([aria-label])').forEach((element) => element.setAttribute('aria-label', element.title));
 });
 
+/**
+ * Arabic-friendly matching: ignore diacritics and tatweel, and treat spelling variants alike
+ * (أ/إ/آ → ا، ة → ه، ى/ی → ي، ڤ → ف، پ → ب، گ → ك) so «افالون» finds «أڤالون».
+ */
+const normalizeArabic = (text) => String(text ?? '')
+    .toLowerCase()
+    .replace(/[ً-ٰٟ]/g, '')
+    .replace(/[أإآ]/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/[ىیئ]/g, 'ي')
+    .replace(/ؤ/g, 'و')
+    .replace(/ڤ/g, 'ف')
+    .replace(/پ/g, 'ب')
+    .replace(/[گک]/g, 'ك')
+    .replace(/ـ/g, '')
+    .trim();
+
+/**
+ * Searchable picker over a list already on the page (no server call) — used where the list is
+ * small and preloaded, e.g. the customer portal's models. `get`/`set` read and write the bound value.
+ */
+Alpine.data('localPicker', (config) => ({
+    query: '',
+    isOpen: false,
+    highlighted: 0,
+    listboxId: 'picker-' + Math.random().toString(36).slice(2),
+
+    init() {
+        this.query = this.labelFor(config.get());
+        this.$watch(() => config.get(), (id) => {
+            if (!this.isOpen) {
+                this.query = this.labelFor(id);
+            }
+        });
+    },
+
+    get matches() {
+        const needle = normalizeArabic(this.query);
+        const items = config.items();
+        const selectedLabel = this.labelFor(config.get());
+        if (!needle || this.query === selectedLabel) {
+            return items.slice(0, 60);
+        }
+        return items.filter((item) => normalizeArabic(item.name).includes(needle)).slice(0, 60);
+    },
+
+    labelFor(id) {
+        return config.items().find((item) => String(item.id) === String(id))?.name ?? '';
+    },
+
+    open() {
+        this.isOpen = true;
+        this.highlighted = 0;
+    },
+
+    close() {
+        this.isOpen = false;
+        this.query = this.labelFor(config.get());
+    },
+
+    choose(item) {
+        config.set(item.id);
+        this.query = item.name;
+        this.isOpen = false;
+    },
+
+    clear() {
+        config.set('');
+        this.query = '';
+        this.$refs.box?.focus();
+        this.open();
+    },
+
+    move(step) {
+        if (!this.isOpen) {
+            this.open();
+            return;
+        }
+        const count = this.matches.length;
+        if (count) {
+            this.highlighted = (this.highlighted + step + count) % count;
+            this.$nextTick(() => {
+                // Scroll the list only (scrollIntoView could also move the page).
+                const list = document.getElementById(this.listboxId);
+                const option = document.getElementById(this.listboxId + '-' + this.highlighted);
+                if (!list || !option) {
+                    return;
+                }
+                if (option.offsetTop < list.scrollTop) {
+                    list.scrollTop = option.offsetTop;
+                } else if (option.offsetTop + option.offsetHeight > list.scrollTop + list.clientHeight) {
+                    list.scrollTop = option.offsetTop + option.offsetHeight - list.clientHeight;
+                }
+            });
+        }
+    },
+
+    pickHighlighted() {
+        const item = this.matches[this.highlighted];
+        if (this.isOpen && item) {
+            this.choose(item);
+        }
+    },
+}));
+
 /*
  * Installable app (PWA). Chrome/Android fire beforeinstallprompt early, so it is captured here and
  * replayed by the install banner; iOS Safari has no prompt, so the banner shows the share-menu steps.

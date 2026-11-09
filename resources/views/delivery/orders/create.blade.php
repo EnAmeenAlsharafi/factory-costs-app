@@ -28,7 +28,7 @@
                 <div class="card border-0 shadow-sm rounded-3 mb-4">
                     <div class="card-header bg-light border-0 py-3">
                         <h6 class="fw-bold mb-0 text-dark">
-                            <i class="fas fa-map-marked-alt text-primary me-2"></i>بيانات موقع التسليم والعميل (Address Snapshot)
+                            <i class="fas fa-map-marked-alt text-primary me-2"></i>بيانات موقع التسليم والعميل
                         </h6>
                     </div>
                     <div class="card-body">
@@ -110,7 +110,7 @@
                 <div class="card border-0 shadow-sm rounded-3 mb-4">
                     <div class="card-header bg-light border-0 py-3">
                         <h6 class="fw-bold mb-0 text-dark">
-                            <i class="fas fa-boxes text-primary me-2"></i>قطع الأثاث الجاهزة للطلب (Lines)
+                            <i class="fas fa-boxes text-primary me-2"></i>قطع الأثاث الجاهزة للطلب
                         </h6>
                     </div>
                     <div class="card-body p-0">

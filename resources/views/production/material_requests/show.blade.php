@@ -192,7 +192,7 @@
                                     </td>
                                     <td>{{ $issue->issue_date?->format('Y-m-d') }}</td>
                                     <td>{{ $issue->issuedByUser?->name }}</td>
-                                    <td><span class="badge bg-success">معتمد ومرحل (POSTED)</span></td>
+                                    <td><span class="badge bg-success">معتمد ومرحل</span></td>
                                     <td class="text-end">
                                         <a href="{{ route('inventory.issues.show', $issue) }}" class="btn btn-sm btn-outline-primary"><i class="fas fa-eye me-1"></i> عرض السند</a>
                                     </td>

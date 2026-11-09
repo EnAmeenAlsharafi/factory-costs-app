@@ -30,9 +30,9 @@
                 <div class="col-md-3">
                     <select name="status" class="form-select" onchange="this.form.submit()">
                         <option value="">جميع الحالات</option>
-                        <option value="OPEN" {{ request('status') === 'OPEN' ? 'selected' : '' }}>مفتوح (OPEN)</option>
-                        <option value="ACTION_REQUIRED" {{ request('status') === 'ACTION_REQUIRED' ? 'selected' : '' }}>يتطلب إجراء (ACTION REQUIRED)</option>
-                        <option value="RESOLVED" {{ request('status') === 'RESOLVED' ? 'selected' : '' }}>تمت المعالجة (RESOLVED)</option>
+                        <option value="OPEN" {{ request('status') === 'OPEN' ? 'selected' : '' }}>مفتوح</option>
+                        <option value="ACTION_REQUIRED" {{ request('status') === 'ACTION_REQUIRED' ? 'selected' : '' }}>يتطلب إجراء</option>
+                        <option value="RESOLVED" {{ request('status') === 'RESOLVED' ? 'selected' : '' }}>تمت المعالجة</option>
                     </select>
                 </div>
                 <div class="col-md-3">

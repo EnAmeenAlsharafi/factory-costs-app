@@ -127,11 +127,11 @@
                                             </td>
                                             <td>
                                                 <select name="lines[{{ $index }}][request_reason]" class="form-select form-select-sm" style="min-width: 9rem;">
-                                                    <option value="PLANNED_PRODUCTION" selected>إنتاج مخطط (PLANNED)</option>
-                                                    <option value="ADDITIONAL_REQUIREMENT">احتياج إضافي (ADDITIONAL)</option>
-                                                    <option value="REWORK">إعادة تصنيع (REWORK)</option>
-                                                    <option value="REMANUFACTURE">إعادة إنتاج (REMANUFACTURE)</option>
-                                                    <option value="CORRECTION">تصحيح (CORRECTION)</option>
+                                                    <option value="PLANNED_PRODUCTION" selected>إنتاج مخطط</option>
+                                                    <option value="ADDITIONAL_REQUIREMENT">احتياج إضافي</option>
+                                                    <option value="REWORK">إعادة تصنيع</option>
+                                                    <option value="REMANUFACTURE">إعادة إنتاج</option>
+                                                    <option value="CORRECTION">تصحيح</option>
                                                 </select>
                                             </td>
                                             <td>

@@ -68,13 +68,11 @@
             <section class="card-factory p-3" aria-labelledby="delivery-customer-heading">
                 <h2 id="delivery-customer-heading" class="h6 fw-bold text-dark mb-3"><i class="fas fa-user text-primary" aria-hidden="true"></i> العميل والعنوان</h2>
                 @if ($phoneDial)
-                    <a href="tel:{{ $phoneDial }}" class="btn btn-success w-100 mb-3 fw-bold" style="min-height: 50px;">
-                        <i class="fas fa-phone" aria-hidden="true"></i> اتصال بالعميل
-                        <span class="ltr-isolate">{{ $delivery->customer_phone_snapshot }}</span>
-                    </a>
+                    <p class="mb-2 fs-7 text-muted">جوال العميل: <strong class="text-dark ltr-isolate">{{ $delivery->customer_phone_snapshot }}</strong></p>
                 @else
                     <div class="alert alert-warning py-2 fs-7">لا يوجد رقم تواصل مسجل لهذا التوصيل.</div>
                 @endif
+                <div class="mb-3">@include('delivery.orders.partials.contact-actions', ['delivery' => $delivery])</div>
                 <dl class="detail-list">
                     <div><dt>المدينة</dt><dd>{{ $delivery->city_snapshot ?? 'غير محددة' }}</dd></div>
                     <div><dt>الحي</dt><dd>{{ $delivery->district_snapshot ?? '—' }}</dd></div>

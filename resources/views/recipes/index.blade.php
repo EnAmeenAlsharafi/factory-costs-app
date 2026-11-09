@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'وصفات التصنيع (BOM)')
+@section('title', 'وصفات التصنيع')
 
 @section('content')
 <div class="container-fluid px-4 py-4">

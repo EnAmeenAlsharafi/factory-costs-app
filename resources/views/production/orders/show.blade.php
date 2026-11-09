@@ -164,7 +164,7 @@
                                         <div class="d-flex flex-wrap align-items-center gap-2">
                                             @if($order->fabric_color_code)
                                                 <span class="badge bg-light text-dark border">
-                                                    داخلي (CS): <code class="text-dark fw-bold fs-7">{{ $order->fabric_color_code }}</code>
+                                                    داخلي: <code class="text-dark fw-bold fs-7">{{ $order->fabric_color_code }}</code>
                                                 </span>
                                             @elseif($order->fabricColor)
                                                 <span class="badge bg-light text-dark border"><i class="fas fa-circle me-1" style="color: {{ $order->fabricColor->hex_code ?? '#ccc' }};"></i>{{ $order->fabricColor->color_name_ar }}</span>
@@ -523,7 +523,7 @@
                         <div class="col-md-6">
                             <table class="table table-sm table-borderless">
                                 <tr>
-                                    <td class="text-muted">التكلفة التقديرية المخططة (BOM):</td>
+                                    <td class="text-muted">التكلفة التقديرية المخططة:</td>
                                     <td class="fw-bold">
                                         @if($canViewCost)
                                             {{ number_format($costSummary['planned_bom_cost'], 2) }} ر.س

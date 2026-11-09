@@ -78,7 +78,7 @@
                             <form action="{{ route('recipes.versions.copy', [$recipe, $selectedVersion]) }}" method="POST" class="d-inline">
                                 @csrf
                                 <button type="submit" class="btn btn-outline-primary fw-semibold" title="نسخ مكونات هذا الإصدار في مسودة جديدة V{{ $recipe->versions->max('version_number') + 1 }}">
-                                    <i class="fas fa-copy me-1"></i> نسخ كإصدار جديد (New Draft)
+                                    <i class="fas fa-copy me-1"></i> نسخ كإصدار جديد
                                 </button>
                             </form>
                         @endcan
@@ -177,7 +177,7 @@
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <div>
                         <h6 class="fw-bold mb-1 text-primary">
-                            <i class="fas fa-calculator me-1"></i> معاينة التكلفة المعيارية التقديرية (Standard Cost Preview)
+                            <i class="fas fa-calculator me-1"></i> معاينة التكلفة المعيارية التقديرية
                         </h6>
                         <small class="text-muted d-block">
                             ملاحظة: هذه التكلفة معيارية تقريبية بناءً على أحدث أسعار اللوت المتاحة، وتكلفة التصنيع الحقيقية تحسب مستقبلاً عند صرف المواد من المخزن.

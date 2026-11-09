@@ -125,8 +125,8 @@
                         <div class="mb-3">
                             <label class="form-label fw-bold fs-7">نوع الهدف المصنع <span class="text-danger">*</span></label>
                             <select name="target_type" class="form-select" x-model="targetType">
-                                <option value="PRODUCT_CONFIGURATION">تكوين منتج نهائي (Product Configuration)</option>
-                                <option value="SEMI_FINISHED_COMPONENT">مكون نصف مصنع (Semi-Finished Component)</option>
+                                <option value="PRODUCT_CONFIGURATION">تكوين منتج نهائي</option>
+                                <option value="SEMI_FINISHED_COMPONENT">مكون نصف مصنع</option>
                             </select>
                         </div>
 

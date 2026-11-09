@@ -40,8 +40,8 @@
                 <div class="col-12 col-sm-6 col-md-3">
                     <select name="status" class="form-select bg-light">
                         <option value="">كل الحالات</option>
-                        <option value="DRAFT" {{ request('status') == 'DRAFT' ? 'selected' : '' }}>مسودة (Draft)</option>
-                        <option value="POSTED" {{ request('status') == 'POSTED' ? 'selected' : '' }}>مُرحل (Posted)</option>
+                        <option value="DRAFT" {{ request('status') == 'DRAFT' ? 'selected' : '' }}>مسودة</option>
+                        <option value="POSTED" {{ request('status') == 'POSTED' ? 'selected' : '' }}>مُرحل</option>
                     </select>
                 </div>
 
@@ -95,9 +95,9 @@
                                 <td class="text-muted">{{ Str::limit($issue->notes, 30) ?: '-' }}</td>
                                 <td class="text-center">
                                     @if($issue->status === 'POSTED')
-                                        <span class="badge bg-success bg-opacity-10 text-success fw-bold px-3 py-1">مُرحل (Posted)</span>
+                                        <span class="badge bg-success bg-opacity-10 text-success fw-bold px-3 py-1">مُرحل</span>
                                     @else
-                                        <span class="badge bg-warning bg-opacity-10 text-warning fw-bold px-3 py-1">مسودة (Draft)</span>
+                                        <span class="badge bg-warning bg-opacity-10 text-warning fw-bold px-3 py-1">مسودة</span>
                                     @endif
                                 </td>
                                 <td class="text-end fw-mono fw-bold text-dark">@can('costing.view'){{ number_format($issue->total_cost, 2) }} ر.س@else<span class="text-muted">سري</span>@endcan</td>

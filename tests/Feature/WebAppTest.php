@@ -37,6 +37,24 @@ class WebAppTest extends TestCase
         $this->assertSame('maskable', $response->json('icons.2.purpose'));
     }
 
+    public function test_customer_portal_is_its_own_app_opening_on_the_portal(): void
+    {
+        $response = $this->get(route('webapp.portal-manifest'));
+
+        $response->assertOk()->assertJson([
+            'id' => '/portal',
+            'short_name' => 'بوابة سدير',
+            'start_url' => '/portal?source=app',
+            'scope' => '/portal',
+            'display' => 'standalone',
+        ]);
+        $this->assertSame($this->get(route('webapp.manifest'))->json('icons.0.src'), $response->json('icons.0.src'));
+
+        $this->get(route('portal.login'))->assertOk()
+            ->assertSee(route('webapp.portal-manifest'), false)
+            ->assertSee('ثبّت بوابة العملاء كتطبيق على جوالك');
+    }
+
     public function test_home_screen_icons_are_png_in_the_supported_sizes_only(): void
     {
         foreach ([[192, 'any'], [512, 'any'], [512, 'maskable']] as [$size, $purpose]) {

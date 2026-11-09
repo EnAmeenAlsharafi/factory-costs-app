@@ -181,7 +181,7 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="sort_order" class="form-label fw-semibold">ترتيب العرض (Sort Order)</label>
+                        <label for="sort_order" class="form-label fw-semibold">ترتيب العرض</label>
                         <input type="number" name="sort_order" id="sort_order" class="form-control" value="0">
                         <small class="text-muted fs-8">الأرقام الأقل تظهر أولاً في القوائم المنسدلة بدليل الموديلات والطلبات.</small>
                     </div>
@@ -232,7 +232,7 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="sort_order_{{ $size->id }}" class="form-label fw-semibold">ترتيب العرض (Sort Order)</label>
+                        <label for="sort_order_{{ $size->id }}" class="form-label fw-semibold">ترتيب العرض</label>
                         <input type="number" name="sort_order" id="sort_order_{{ $size->id }}" class="form-control" value="{{ old('sort_order', $size->sort_order) }}">
                         <small class="text-muted fs-8">حدد رقم الترتيب المصنعي للتحكم بأولوية ظهور هذا المقاس.</small>
                     </div>

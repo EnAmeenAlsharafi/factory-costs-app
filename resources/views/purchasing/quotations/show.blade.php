@@ -49,10 +49,10 @@
                             <tr>
                                 <td class="fw-bold text-dark">{{ $line->material?->name_ar }}</td>
                                 <td>{{ number_format($line->quoted_quantity, 2) }} {{ $line->purchaseUnit?->name_ar }}</td>
-                                <td class="fw-bold">{{ number_format($line->unit_price, 2) }} SAR</td>
+                                <td class="fw-bold">{{ number_format($line->unit_price, 2) }} ر.س</td>
                                 <td>1 {{ $line->purchaseUnit?->name_ar }} = {{ number_format($line->conversion_factor, 2) }} {{ $line->material?->baseUnit?->name_ar }}</td>
-                                <td class="fw-bold text-primary">{{ number_format($line->base_unit_equivalent_price, 4) }} SAR / {{ $line->material?->baseUnit?->name_ar }}</td>
-                                <td class="fw-bold text-dark">{{ number_format($line->line_total, 2) }} SAR</td>
+                                <td class="fw-bold text-primary">{{ number_format($line->base_unit_equivalent_price, 4) }} ر.س / {{ $line->material?->baseUnit?->name_ar }}</td>
+                                <td class="fw-bold text-dark">{{ number_format($line->line_total, 2) }} ر.س</td>
                             </tr>
                             @endforeach
                         </tbody>
@@ -69,20 +69,20 @@
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted small">المجموع الفرعي:</span>
-                        <span class="fw-bold text-dark">{{ number_format($supplierQuotation->subtotal, 2) }} SAR</span>
+                        <span class="fw-bold text-dark">{{ number_format($supplierQuotation->subtotal, 2) }} ر.س</span>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted small">الخصم التجاري:</span>
-                        <span class="fw-bold text-danger">-{{ number_format($supplierQuotation->discount_amount, 2) }} SAR</span>
+                        <span class="fw-bold text-danger">-{{ number_format($supplierQuotation->discount_amount, 2) }} ر.س</span>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted small">أجور الشحن والنقل:</span>
-                        <span class="fw-bold text-dark">+{{ number_format($supplierQuotation->shipping_amount, 2) }} SAR</span>
+                        <span class="fw-bold text-dark">+{{ number_format($supplierQuotation->shipping_amount, 2) }} ر.س</span>
                     </div>
                     <hr>
                     <div class="d-flex justify-content-between mb-3">
                         <span class="fw-bold">الإجمالي الصافي:</span>
-                        <span class="fw-bold fs-5 text-primary">{{ number_format($supplierQuotation->total_amount, 2) }} SAR</span>
+                        <span class="fw-bold fs-5 text-primary">{{ number_format($supplierQuotation->total_amount, 2) }} ر.س</span>
                     </div>
 
                     <div class="mb-3">

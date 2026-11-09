@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'أوامر الشراء (PO)')
+@section('title', 'أوامر الشراء')
 
 @section('content')
 <div class="container-fluid">
@@ -13,7 +13,7 @@
         </div>
         @can('purchasing.create_po')
         <a href="{{ route('purchasing.orders.create') }}" class="btn btn-factory-warning rounded-pill px-4">
-            <i class="fas fa-plus me-1"></i>أمر شراء جديد (PO)
+            <i class="fas fa-plus me-1"></i>أمر شراء جديد
         </a>
         @endcan
     </div>
@@ -76,7 +76,7 @@
                         <td>{{ $po->order_date->format('Y-m-d') }}</td>
                         <td>{{ $po->expected_delivery_date ? $po->expected_delivery_date->format('Y-m-d') : '-' }}</td>
                         <td><span class="badge bg-light text-dark border">{{ $po->warehouse?->name_ar }}</span></td>
-                        <td class="fw-bold fs-6 text-dark">{{ number_format($po->total_amount, 2) }} SAR</td>
+                        <td class="fw-bold fs-6 text-dark">{{ number_format($po->total_amount, 2) }} ر.س</td>
                         <td>
                             @php
                                 $poBadges = [

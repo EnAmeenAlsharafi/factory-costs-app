@@ -170,7 +170,7 @@
     <div class="card border-0 shadow-sm mb-4 rounded-3">
         <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
             <h5 class="card-title mb-0 fw-bold fs-6 text-dark">
-                <i class="fas fa-money-bill-wave text-success me-2"></i> الدفعات والتحصيل ومتابعة المستحقات (Payment & Receivables Status)
+                <i class="fas fa-money-bill-wave text-success me-2"></i> الدفعات والتحصيل ومتابعة المستحقات
             </h5>
             <div class="d-flex gap-2">
                 @can('receivables.payment.create')
@@ -194,8 +194,8 @@
                             @switch($order->payment_terms_type)
                                 @case('FULL_BEFORE_PRODUCTION') سداد كامل قبل الإنتاج @break
                                 @case('DEPOSIT_AND_BALANCE') عربون + المتبقي عند التسليم @break
-                                @case('CASH_ON_DELIVERY') الدفع عند الاستلام (COD) @break
-                                @case('CREDIT') بيع آجل (Credit Order) @break
+                                @case('CASH_ON_DELIVERY') الدفع عند الاستلام @break
+                                @case('CREDIT') بيع آجل @break
                                 @default {{ $order->payment_terms_type ?? 'سداد قبل الإنتاج' }}
                             @endswitch
                         </span>
@@ -211,7 +211,7 @@
 
                 <div class="col-12 col-md-3">
                     <div class="p-2 border rounded bg-light">
-                        <small class="text-muted d-block fw-bold">المتبقي القائم (Outstanding):</small>
+                        <small class="text-muted d-block fw-bold">المتبقي القائم:</small>
                         <div class="fw-bold text-danger mt-1">{{ number_format($order->outstanding_balance, 2) }} ر.س</div>
                     </div>
                 </div>
@@ -347,7 +347,7 @@
                             <th>الموديل / التصميم</th>
                             <th>المقاس المطلوب من العميل</th>
                             <th>المقاس المرجعي للإنتاج</th>
-                            <th>وصفة التصنيع المعتمدة (BOM)</th>
+                            <th>وصفة التصنيع المعتمدة</th>
                             <th class="text-center">الكمية</th>
                             <th class="text-end">سعر الوحدة</th>
                             <th class="text-end pe-3">المجموع</th>
@@ -390,7 +390,7 @@
                                                 <span>•</span>
                                                 <span><strong>المورد:</strong> {{ $line->fabricSupplier?->name ?? $line->fabricMaterial?->fabricSpec?->supplier?->name ?? 'غير محدد' }}</span>
                                                 <span>•</span>
-                                                <span><strong>رقم اللون الداخلي (CS):</strong> <code class="text-dark bg-white px-1 border rounded fw-bold">{{ $line->fabric_color_code ?? 'غير محدد' }}</code></span>
+                                                <span><strong>رقم اللون الداخلي:</strong> <code class="text-dark bg-white px-1 border rounded fw-bold">{{ $line->fabric_color_code ?? 'غير محدد' }}</code></span>
                                                 @if($line->fabric_supplier_color_code)
                                                     <span>•</span>
                                                     <span><strong>كود لون المورد:</strong> <code class="text-primary bg-white px-1 border rounded fw-bold">{{ $line->fabric_supplier_color_code }}</code></span>

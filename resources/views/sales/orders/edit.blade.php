@@ -87,8 +87,8 @@
                     <div class="col-md-2">
                         <label class="form-label fw-semibold">أولوية الطلب <span class="text-danger">*</span></label>
                         <select name="priority" class="form-select @error('priority') is-invalid @enderror" required>
-                            <option value="NORMAL" {{ old('priority', $order->priority) == 'NORMAL' ? 'selected' : '' }}>عادية (Normal)</option>
-                            <option value="URGENT" {{ old('priority', $order->priority) == 'URGENT' ? 'selected' : '' }}>عاجلة (Urgent)</option>
+                            <option value="NORMAL" {{ old('priority', $order->priority) == 'NORMAL' ? 'selected' : '' }}>عادية</option>
+                            <option value="URGENT" {{ old('priority', $order->priority) == 'URGENT' ? 'selected' : '' }}>عاجلة</option>
                             <option value="VIP" {{ old('priority', $order->priority) == 'VIP' ? 'selected' : '' }}>VIP عالية الأهمية</option>
                         </select>
                     </div>

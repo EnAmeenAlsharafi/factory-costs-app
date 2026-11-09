@@ -64,9 +64,9 @@
                             <div class="col-12 col-md-6">
                                 <label class="form-label fw-bold small text-dark">طريقة الدفع <span class="text-danger">*</span></label>
                                 <select name="payment_method" class="form-select form-select-lg @error('payment_method') is-invalid @enderror" required>
-                                    <option value="BANK_TRANSFER" {{ old('payment_method') === 'BANK_TRANSFER' ? 'selected' : '' }}>تحويل بنكي (Bank Transfer)</option>
-                                    <option value="CASH" {{ old('payment_method') === 'CASH' ? 'selected' : '' }}>نقداً (Cash)</option>
-                                    <option value="CARD" {{ old('payment_method') === 'CARD' ? 'selected' : '' }}>بطاقة شبكة / مدى (POS Card)</option>
+                                    <option value="BANK_TRANSFER" {{ old('payment_method') === 'BANK_TRANSFER' ? 'selected' : '' }}>تحويل بنكي</option>
+                                    <option value="CASH" {{ old('payment_method') === 'CASH' ? 'selected' : '' }}>نقداً</option>
+                                    <option value="CARD" {{ old('payment_method') === 'CARD' ? 'selected' : '' }}>بطاقة شبكة / مدى</option>
                                     <option value="SADAD_OR_EXTERNAL" {{ old('payment_method') === 'SADAD_OR_EXTERNAL' ? 'selected' : '' }}>سداد / دفع خارجي</option>
                                     <option value="CHEQUE" {{ old('payment_method') === 'CHEQUE' ? 'selected' : '' }}>شيك مصرفي</option>
                                     <option value="OTHER" {{ old('payment_method') === 'OTHER' ? 'selected' : '' }}>طريقة أخرى</option>

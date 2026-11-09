@@ -39,7 +39,7 @@
         <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center mb-4">
             <i class="fas fa-exclamation-circle fs-4 me-3 text-warning"></i>
             <div>
-                <strong>تنبيه:</strong> هذا السند ما زال في حالة <strong>مسودة (Draft)</strong> ولم يتم ترحيله إلى أرصدة المخزون بعد. يمكنك مراجعته وتأكيد الترحيل ليتم إنشاء الدفعات وتحديث كميات المواد.
+                <strong>تنبيه:</strong> هذا السند ما زال في حالة <strong>مسودة</strong> ولم يتم ترحيله إلى أرصدة المخزون بعد. يمكنك مراجعته وتأكيد الترحيل ليتم إنشاء الدفعات وتحديث كميات المواد.
             </div>
         </div>
     @endif
@@ -139,10 +139,10 @@
                             <th class="text-center">كمية المستند</th>
                             <th>الوحدة المستلمة</th>
                             <th class="text-center">معامل التحويل للأساسية</th>
-                            <th class="text-center">الكمية الأساسية (Base)</th>
+                            <th class="text-center">الكمية الأساسية</th>
                             <th class="text-end">سعر الوحدة</th>
                             <th class="text-end">الإجمالي</th>
-                            <th class="text-center pe-3">الدفعة المنشأة (Lot Number)</th>
+                            <th class="text-center pe-3">الدفعة المنشأة</th>
                         </tr>
                     </thead>
                     <tbody>

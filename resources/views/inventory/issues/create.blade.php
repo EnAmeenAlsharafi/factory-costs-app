@@ -99,7 +99,7 @@
                     <table class="table table-bordered align-middle mb-0">
                         <thead class="bg-light">
                             <tr>
-                                <th style="width: 35%;">الدفعة والمادة الخام (Lot & Material) <span class="text-danger">*</span></th>
+                                <th style="width: 35%;">الدفعة والمادة الخام <span class="text-danger">*</span></th>
                                 <th style="width: 15%;">الرصيد المتاح بالدفعة</th>
                                 <th style="width: 15%;">الكمية المصروفة <span class="text-danger">*</span></th>
                                 <th style="width: 15%;">وحدة القياس <span class="text-danger">*</span></th>
@@ -153,10 +153,10 @@
         <!-- Submission Actions -->
         <div class="d-flex justify-content-end gap-3 mb-5">
             <button type="submit" name="action" value="draft" class="btn btn-outline-primary px-4">
-                <i class="fas fa-save me-1"></i> حفظ كـ مسودة (Draft)
+                <i class="fas fa-save me-1"></i> حفظ كـ مسودة
             </button>
             <button type="submit" name="action" value="post" class="btn btn-success px-4">
-                <i class="fas fa-check-circle me-1"></i> حفظ وترحيل وصرف فوراً (Post)
+                <i class="fas fa-check-circle me-1"></i> حفظ وترحيل وصرف فوراً
             </button>
         </div>
 

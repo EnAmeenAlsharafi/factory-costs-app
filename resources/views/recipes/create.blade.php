@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'إنشاء وصفة تصنيع جديدة (BOM)')
+@section('title', 'إنشاء وصفة تصنيع جديدة')
 
 @section('content')
 <div class="container-fluid px-4 py-4" x-data="recipeForm()">
@@ -11,7 +11,7 @@
             <i class="fas fa-arrow-right me-1"></i> العودة لقائمة الوصفات
         </a>
         <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">إنشاء وصفة تصنيع جديدة</h1>
-        <p class="page-header-subtitle text-muted mb-0 fs-7">تعريف قائمة خامات التصنيع والمكونات الهيكلية للإصدار الأول المسودة (V1 Draft)</p>
+        <p class="page-header-subtitle text-muted mb-0 fs-7">تعريف قائمة خامات التصنيع والمكونات الهيكلية للإصدار الأول المسودة</p>
     </div>
 
     {{-- Error Flash --}}
@@ -45,10 +45,10 @@
                 <div class="row g-3">
 
                     <div class="col-md-4">
-                        <label class="form-label fw-bold fs-7">نوع الهدف المصنع (Target Type) <span class="text-danger">*</span></label>
+                        <label class="form-label fw-bold fs-7">نوع الهدف المصنع <span class="text-danger">*</span></label>
                         <select name="target_type" class="form-select" x-model="targetType">
-                            <option value="PRODUCT_CONFIGURATION">تكوين منتج نهائي (Product Configuration)</option>
-                            <option value="SEMI_FINISHED_COMPONENT">مكون نصف مصنع (Semi-Finished Component)</option>
+                            <option value="PRODUCT_CONFIGURATION">تكوين منتج نهائي</option>
+                            <option value="SEMI_FINISHED_COMPONENT">مكون نصف مصنع</option>
                         </select>
                     </div>
 
@@ -215,7 +215,7 @@
         <div class="d-flex justify-content-end gap-2">
             <a href="{{ route('recipes.index') }}" class="btn btn-outline-secondary px-4">إلغاء</a>
             <button type="submit" class="btn btn-warning px-4 fw-bold" :disabled="items.length === 0">
-                <i class="fas fa-save me-1"></i> حفظ مسودة الوصفة (Save Draft V1)
+                <i class="fas fa-save me-1"></i> حفظ مسودة الوصفة
             </button>
         </div>
     </form>

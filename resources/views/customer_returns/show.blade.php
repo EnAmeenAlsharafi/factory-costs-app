@@ -134,7 +134,7 @@
             <div class="card border-0 shadow-sm rounded-3 mb-4">
                 <div class="card-header bg-light border-0 py-3">
                     <h6 class="fw-bold mb-0 text-dark">
-                        <i class="fas fa-shield-alt text-warning me-2"></i>ربط الجودة وضبط جودة التصنيع (Stage 10)
+                        <i class="fas fa-shield-alt text-warning me-2"></i>ربط الجودة وضبط جودة التصنيع
                     </h6>
                 </div>
                 <div class="card-body">

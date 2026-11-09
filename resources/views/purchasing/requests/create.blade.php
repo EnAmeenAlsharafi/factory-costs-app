@@ -46,9 +46,9 @@
                     <div class="col-md-4">
                         <label class="form-label small fw-bold">درجة الأولوية *</label>
                         <select name="priority" class="form-select" required>
-                            <option value="NORMAL">عادي (Normal)</option>
-                            <option value="URGENT">عاجل (Urgent)</option>
-                            <option value="CRITICAL">حرج / طارئ (Critical)</option>
+                            <option value="NORMAL">عادي</option>
+                            <option value="URGENT">عاجل</option>
+                            <option value="CRITICAL">حرج / طارئ</option>
                         </select>
                     </div>
 

@@ -74,7 +74,7 @@
                                 {{ $line->material->sales_display_name ?: $line->material->name_ar }}
                                 <span class="text-muted">— منتج جاهز</span>
                             @else
-                                {{ $linePo?->productModel?->name_ar ?? $linePo?->customerOrderLine?->productModel?->name_ar ?? 'منتج أثاث' }}
+                                {{ $linePo?->display_name ?? 'منتج أثاث' }}
                                 @if ($linePo?->requested_width_cm)
                                     <span class="text-muted">— <span class="ltr-isolate">{{ (int) $linePo->requested_width_cm }}×{{ (int) $linePo->requested_length_cm }}</span></span>
                                 @endif
@@ -85,16 +85,13 @@
                 @endforeach
             </ul>
 
-            <div class="task-card-actions">
-                @if ($delivery->customer_phone_snapshot)
-                    <a href="tel:{{ preg_replace('/[^0-9+]/', '', $delivery->customer_phone_snapshot) }}" class="btn btn-outline-success">
-                        <i class="fas fa-phone" aria-hidden="true"></i> اتصال
-                    </a>
-                @endif
-                <a href="{{ route('delivery.orders.show', $delivery) }}" class="btn btn-outline-secondary">
-                    <i class="fas fa-folder-open" aria-hidden="true"></i> التفاصيل
-                </a>
-            </div>
+            @if (in_array($delivery->status, ['ASSIGNED', 'OUT_FOR_DELIVERY', 'DELIVERED'], true))
+                @include('delivery.orders.partials.contact-actions', ['delivery' => $delivery])
+            @endif
+            <a href="{{ route('delivery.orders.show', $delivery) }}" class="driver-details-link">
+                <span><i class="fas fa-circle-info" aria-hidden="true"></i> تفاصيل التوصيل والعنوان الكامل</span>
+                <i class="fas fa-chevron-left" aria-hidden="true"></i>
+            </a>
             <div class="task-card-actions">
                 @include('delivery.orders.partials.next-actions', ['delivery' => $delivery, 'failSheetId' => 'fail-sheet-'.$delivery->id, 'assignSheetId' => null])
             </div>
