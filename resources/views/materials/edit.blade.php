@@ -340,7 +340,7 @@
                         <input type="file" name="catalog_image" id="catalog_image" class="form-control @error('catalog_image') is-invalid @enderror" accept="image/*">
                         @if($material->fabricSpec?->catalog_image_path)
                             <div class="mt-2 d-flex align-items-center gap-2">
-                                <img src="{{ asset('storage/' . $material->fabricSpec->catalog_image_path) }}" alt="غلاف الكتالوج" class="rounded border" style="width: 50px; height: 50px; object-fit: cover;">
+                                <img src="{{ \App\Http\Controllers\PublicFileController::url($material->fabricSpec->catalog_image_path) }}" alt="غلاف الكتالوج" class="rounded border" style="width: 50px; height: 50px; object-fit: cover;">
                                 <span class="text-muted small">الصورة الحالية مسجلة</span>
                             </div>
                         @endif

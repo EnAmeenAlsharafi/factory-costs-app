@@ -49,6 +49,7 @@ use App\Http\Controllers\ProductionReworkController;
 use App\Http\Controllers\ProductionRoutingController;
 use App\Http\Controllers\ProductionWasteController;
 use App\Http\Controllers\ProductModelController;
+use App\Http\Controllers\PublicFileController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\PurchaseRequestController;
 use App\Http\Controllers\PurchaseRfqController;
@@ -107,6 +108,7 @@ Route::get('/sw.js', [WebAppController::class, 'serviceWorker'])->name('webapp.s
 
 // Company logo for documents and pages; read straight from storage so it never depends on the public/storage link.
 Route::get('/company/logo', [CompanySettingController::class, 'logo'])->name('company.logo');
+Route::get('/files/{path}', PublicFileController::class)->where('path', '.+')->name('public-file');
 
 Route::middleware('auth')->group(function () {
 

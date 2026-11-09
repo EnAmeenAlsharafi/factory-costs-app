@@ -4,9 +4,15 @@
 @section('page-title', 'تفاصيل ومواصفات المادة الخام')
 
 @section('content')
+@php
+    $spec = $material->category?->code === 'FABRIC' ? $material->fabricSpec : null;
+    $unitSymbol = $material->baseUnit->symbol ?? '';
+    $colors = $material->fabricColors->sortBy('color_code', SORT_NATURAL)->values();
+    $availableColors = $colors->where('is_active', true)->where('is_available', true)->count();
+    $decimal = fn ($value, int $places = 2) => rtrim(rtrim(number_format((float) $value, $places, '.', ''), '0'), '.');
+@endphp
 <div class="d-flex flex-column gap-4">
 
-    <!-- Page Header -->
     @include('partials.page-header', [
         'title' => $material->name_ar,
         'subtitle' => 'كود المادة: ' . $material->code . ' | التصنيف: ' . ($material->category->name_ar ?? '-'),
@@ -22,87 +28,91 @@
         'actionPermission' => 'materials.manage'
     ])
 
-    <!-- Overview Card -->
-    <div class="card border-0 shadow-sm">
-        <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0 d-flex justify-content-between align-items-center">
-            <h5 class="fw-bold text-dark mb-0"><i class="fas fa-info-circle text-primary me-2"></i>معلومات المادة الخام</h5>
-            <div>
-                @if ($material->is_sellable_ready_product)
-                    <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 px-3 py-1.5 fs-7 me-1">
-                        <i class="fas fa-store me-1"></i> منتج جاهز للبيع
-                        @if ($material->sales_sku)
-                            <code class="ms-1">{{ $material->sales_sku }}</code>
+    @if ($spec)
+        {{-- Fabric catalogue: the cover photo beside what identifies the catalogue. --}}
+        <section class="card border-0 shadow-sm" aria-labelledby="catalog-heading">
+            <div class="card-body p-3 p-md-4">
+                <div class="catalog-hero">
+                    <figure class="catalog-hero-cover mb-0">
+                        @if ($spec->catalog_image_url)
+                            <a href="{{ $spec->catalog_image_url }}" target="_blank" rel="noopener" aria-label="عرض صورة الكتالوج بالحجم الكامل">
+                                <img src="{{ $spec->catalog_image_url }}" alt="غلاف كتالوج {{ $spec->catalog_name ?? $material->name_ar }}" loading="lazy">
+                            </a>
+                            <figcaption>كتالوج <bdi>{{ $spec->catalog_number ?? '—' }}</bdi></figcaption>
+                        @else
+                            <div class="catalog-hero-empty">
+                                <i class="fas fa-image fs-3 mb-2" aria-hidden="true"></i>
+                                <span>لا توجد صورة للكتالوج</span>
+                                @can('materials.manage')
+                                    <a href="{{ route('materials.edit', $material) }}#catalog_image" class="small mt-1">إضافة صورة</a>
+                                @endcan
+                            </div>
                         @endif
-                    </span>
-                @endif
-                @if ($material->is_active)
-                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-1.5 fs-7">
-                        <i class="fas fa-check-circle me-1"></i> نشط
-                    </span>
-                @else
-                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-3 py-1.5 fs-7">
-                        <i class="fas fa-ban me-1"></i> معطل
-                    </span>
-                @endif
+                    </figure>
+                    <div class="min-w-0 flex-grow-1">
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                            <h2 id="catalog-heading" class="h5 fw-bold mb-0">كتالوج {{ $spec->catalog_name ?? $spec->fabric_type }}</h2>
+                            @if ($material->is_active)
+                                <span class="status-chip status-chip-success"><i class="fas fa-circle-check" aria-hidden="true"></i> نشط</span>
+                            @else
+                                <span class="status-chip status-chip-danger"><i class="fas fa-ban" aria-hidden="true"></i> معطل</span>
+                            @endif
+                            @if ($material->is_sellable_ready_product)
+                                <span class="status-chip status-chip-info"><i class="fas fa-store" aria-hidden="true"></i> منتج جاهز للبيع</span>
+                            @endif
+                        </div>
+                        <dl class="row g-3 mb-0 facts-list">
+                            <div class="col-6 col-lg-4"><dt>المورد</dt><dd>@if ($spec->supplier)<a href="{{ route('suppliers.show', $spec->supplier) }}" class="fw-bold text-decoration-none">{{ $spec->supplier->name }}</a>@else<span class="text-muted">غير محدد</span>@endif</dd></div>
+                            <div class="col-6 col-lg-4"><dt>رقم الكتالوج لدى المورد</dt><dd class="fs-5 fw-bold"><bdi>{{ $spec->catalog_number ?? '—' }}</bdi></dd></div>
+                            <div class="col-6 col-lg-4"><dt>درجات الألوان</dt><dd><strong>{{ $colors->count() }}</strong> <span class="text-muted small">({{ $availableColors }} متوفرة)</span></dd></div>
+                            <div class="col-6 col-lg-4"><dt>نوع القماش</dt><dd>{{ $spec->fabric_type ?: '—' }}</dd></div>
+                            <div class="col-6 col-lg-4"><dt>عرض الرول</dt><dd>@if ($spec->width_cm)<bdi>{{ $decimal($spec->width_cm) }}</bdi> سم @else — @endif</dd></div>
+                            <div class="col-6 col-lg-4"><dt>النقش / النمط</dt><dd>{{ $spec->pattern_type ?: '—' }}</dd></div>
+                            <div class="col-6 col-lg-4"><dt>الوزن</dt><dd>@if ($spec->weight_gsm)<bdi>{{ number_format($spec->weight_gsm) }}</bdi> غم/م² @else — @endif</dd></div>
+                            <div class="col-6 col-lg-4"><dt>التركيب الخامي</dt><dd>{{ $spec->composition ?: '—' }}</dd></div>
+                            <div class="col-6 col-lg-4"><dt>مقاومة الاحتكاك</dt><dd>@if ($spec->martindale_rub_count)<bdi>{{ number_format($spec->martindale_rub_count) }}</bdi> دورة @else — @endif</dd></div>
+                        </dl>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div class="card-body p-4">
-            <div class="row g-4">
-                <div class="col-md-3 col-6">
-                    <span class="text-muted fs-8 d-block mb-1">كود المادة</span>
-                    <code class="code-badge fs-6">{{ $material->code }}</code>
-                </div>
+        </section>
+    @endif
 
-                <div class="col-md-3 col-6">
-                    <span class="text-muted fs-8 d-block mb-1">التصنيف</span>
-                    <span class="fw-bold text-dark">{{ $material->category->name_ar ?? '-' }}</span>
-                    <span class="badge bg-light text-muted border ms-1">{{ $material->category->code ?? '' }}</span>
-                </div>
-
-                <div class="col-md-3 col-6">
-                    <span class="text-muted fs-8 d-block mb-1">الوحدة الأساسية (الصرف والإنتاج)</span>
-                    <span class="fw-bold text-dark">{{ $material->baseUnit->name_ar ?? '-' }}</span>
-                    <span class="text-muted fs-8">({{ $material->baseUnit->symbol ?? $material->baseUnit->code }})</span>
-                </div>
-
-                <div class="col-md-3 col-6">
-                    <span class="text-muted fs-8 d-block mb-1">وحدة الشراء الافتراضية</span>
-                    @if ($material->purchaseUnit)
-                        <span class="fw-bold text-primary">{{ $material->purchaseUnit->name_ar }}</span>
-                        <span class="text-muted fs-8">({{ $material->purchaseUnit->symbol ?? $material->purchaseUnit->code }})</span>
+    {{-- Stock and units. --}}
+    <section class="card border-0 shadow-sm" aria-labelledby="stock-heading">
+        <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <h2 id="stock-heading" class="h6 fw-bold text-dark mb-0"><i class="fas fa-warehouse text-primary me-2" aria-hidden="true"></i>{{ $spec ? 'المخزون والوحدات' : 'معلومات المادة الخام' }}</h2>
+            @unless ($spec)
+                <div class="d-flex flex-wrap gap-2">
+                    @if ($material->is_sellable_ready_product)
+                        <span class="status-chip status-chip-info"><i class="fas fa-store" aria-hidden="true"></i> منتج جاهز للبيع @if ($material->sales_sku)<bdi>{{ $material->sales_sku }}</bdi>@endif</span>
+                    @endif
+                    @if ($material->is_active)
+                        <span class="status-chip status-chip-success"><i class="fas fa-circle-check" aria-hidden="true"></i> نشط</span>
                     @else
-                        <span class="text-muted fs-7">نفس الوحدة الأساسية</span>
+                        <span class="status-chip status-chip-danger"><i class="fas fa-ban" aria-hidden="true"></i> معطل</span>
                     @endif
                 </div>
-
-                <div class="col-md-3 col-6">
-                    <span class="text-muted fs-8 d-block mb-1">الاسم بالإنجليزية</span>
-                    <span dir="ltr" class="text-dark">{{ $material->name_en ?? '-' }}</span>
-                </div>
-
-                <div class="col-md-3 col-6">
-                    <span class="text-muted fs-8 d-block mb-1">الحد الأدنى للمخزون</span>
-                    <span class="fw-semibold text-dark">{{ number_format($material->min_stock_level, 2) }} {{ $material->baseUnit->symbol ?? '' }}</span>
-                </div>
-
-                <div class="col-md-3 col-6">
-                    <span class="text-muted fs-8 d-block mb-1">نقطة إعادة الطلب</span>
-                    <span class="fw-semibold text-primary">{{ number_format($material->reorder_point, 2) }} {{ $material->baseUnit->symbol ?? '' }}</span>
-                </div>
-
-                <div class="col-md-3 col-12">
-                    <span class="text-muted fs-8 d-block mb-1">ملاحظات</span>
-                    <span class="text-dark fs-7">{{ $material->notes ?? 'لا توجد ملاحظات مسجلة.' }}</span>
-                </div>
-            </div>
+            @endunless
         </div>
-    </div>
+        <div class="card-body p-4">
+            <dl class="row g-3 mb-0 facts-list">
+                <div class="col-6 col-md-3"><dt>كود المادة</dt><dd><bdi class="fw-bold">{{ $material->code }}</bdi></dd></div>
+                <div class="col-6 col-md-3"><dt>التصنيف</dt><dd>{{ $material->category->name_ar ?? '—' }}</dd></div>
+                <div class="col-6 col-md-3"><dt>وحدة الصرف والإنتاج</dt><dd>{{ $material->baseUnit->name_ar ?? '—' }} @if ($unitSymbol)<span class="text-muted small">({{ $unitSymbol }})</span>@endif</dd></div>
+                <div class="col-6 col-md-3"><dt>وحدة الشراء</dt><dd>{{ $material->purchaseUnit->name_ar ?? 'نفس وحدة الصرف' }}</dd></div>
+                <div class="col-6 col-md-3"><dt>الحد الأدنى للمخزون</dt><dd><bdi>{{ $decimal($material->min_stock_level) }}</bdi> {{ $unitSymbol }}</dd></div>
+                <div class="col-6 col-md-3"><dt>نقطة إعادة الطلب</dt><dd><bdi>{{ $decimal($material->reorder_point) }}</bdi> {{ $unitSymbol }}</dd></div>
+                <div class="col-6 col-md-3"><dt>الاسم بالإنجليزية</dt><dd><bdi>{{ $material->name_en ?: '—' }}</bdi></dd></div>
+                <div class="col-6 col-md-3"><dt>ملاحظات</dt><dd>{{ $material->notes ?: '—' }}</dd></div>
+            </dl>
+        </div>
+    </section>
 
-    <!-- Category Specifications Card -->
     @if ($material->category?->code === 'WOOD' && $material->woodSpec)
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0">
-                <h5 class="fw-bold text-dark mb-0"><i class="fas fa-tree text-success me-2"></i>المواصفات الفنية للأخشاب والألواح</h5>
+                <h2 class="h6 fw-bold text-dark mb-0"><i class="fas fa-tree text-success me-2"></i>المواصفات الفنية للأخشاب والألواح</h2>
             </div>
             <div class="card-body p-4">
                 <div class="row g-4">
@@ -132,7 +142,7 @@
     @elseif ($material->category?->code === 'FOAM' && $material->foamSpec)
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0">
-                <h5 class="fw-bold text-dark mb-0"><i class="fas fa-cubes text-warning me-2"></i>المواصفات الفنية للإسفنج والكتل</h5>
+                <h2 class="h6 fw-bold text-dark mb-0"><i class="fas fa-cubes text-warning me-2"></i>المواصفات الفنية للإسفنج والكتل</h2>
             </div>
             <div class="card-body p-4">
                 <div class="row g-4">
@@ -169,244 +179,111 @@
                 </div>
             </div>
         </div>
-    @elseif ($material->category?->code === 'FABRIC' && $material->fabricSpec)
-        <!-- Fabric Catalog & Technical Specs Card -->
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0 d-flex justify-content-between align-items-center">
-                <h5 class="fw-bold text-dark mb-0"><i class="fas fa-book-open text-primary me-2"></i>بيانات كتالوج ومواصفات القماش</h5>
-                @if ($material->fabricSpec->supplier)
-                    <a href="{{ route('suppliers.show', $material->fabricSpec->supplier) }}" class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-3 py-1.5 fs-7 text-decoration-none">
-                        <i class="fas fa-truck me-1"></i>المورد: {{ $material->fabricSpec->supplier->name }}
-                    </a>
-                @endif
-            </div>
-            <div class="card-body p-4">
-                <div class="row g-4 align-items-center">
-                    @if ($material->fabricSpec->catalog_image_path)
-                        <div class="col-md-3 col-12 text-center border-start">
-                            <div class="position-relative d-inline-block">
-                                <img src="{{ asset('storage/' . $material->fabricSpec->catalog_image_path) }}"
-                                     alt="{{ $material->fabricSpec->catalog_name ?? $material->name_ar }}"
-                                     class="img-fluid rounded-3 border shadow-sm"
-                                     style="max-height: 180px; object-fit: cover;">
-                                <span class="position-absolute bottom-0 end-0 bg-dark bg-opacity-75 text-white px-2 py-0.5 rounded-bottom-3 fs-8">
-                                    كتالوج {{ $material->fabricSpec->catalog_number }}
-                                </span>
-                            </div>
-                        </div>
-                    @endif
-
-                    <div class="{{ $material->fabricSpec->catalog_image_path ? 'col-md-9 col-12' : 'col-12' }}">
-                        <div class="row g-3">
-                            <div class="col-md-4 col-6">
-                                <span class="text-muted fs-8 d-block mb-1">المورد المعتمد للكتالوج</span>
-                                <span class="fw-bold text-dark fs-6">{{ $material->fabricSpec->supplier?->name ?? 'غير محدد' }}</span>
-                            </div>
-                            <div class="col-md-4 col-6">
-                                <span class="text-muted fs-8 d-block mb-1">رقم الكتالوج لدى المورد</span>
-                                <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 fs-7 font-monospace px-2.5 py-1">
-                                    {{ $material->fabricSpec->catalog_number ?? '-' }}
-                                </span>
-                            </div>
-                            <div class="col-md-4 col-6">
-                                <span class="text-muted fs-8 d-block mb-1">اسم الكتالوج التجاري</span>
-                                <span class="fw-semibold text-dark">{{ $material->fabricSpec->catalog_name ?? '-' }}</span>
-                            </div>
-
-                            <div class="col-md-3 col-6">
-                                <span class="text-muted fs-8 d-block mb-1">عائلة / نوع القماش</span>
-                                <span class="fw-bold text-dark">{{ $material->fabricSpec->fabric_type }}</span>
-                            </div>
-                            <div class="col-md-3 col-6">
-                                <span class="text-muted fs-8 d-block mb-1">عرض الرول (سم)</span>
-                                <span class="badge bg-light text-dark border font-monospace fs-7">{{ $material->fabricSpec->width_cm }} سم</span>
-                            </div>
-                            <div class="col-md-3 col-6">
-                                <span class="text-muted fs-8 d-block mb-1">النقش / النمط</span>
-                                <span class="fw-semibold text-dark">{{ $material->fabricSpec->pattern_type ?? '-' }}</span>
-                            </div>
-                            <div class="col-md-3 col-6">
-                                <span class="text-muted fs-8 d-block mb-1">الوزن</span>
-                                <span class="badge bg-light text-dark border font-monospace fs-7">{{ $material->fabricSpec->weight_gsm ? number_format($material->fabricSpec->weight_gsm, 0) . ' gsm' : '-' }}</span>
-                            </div>
-
-                            @if ($material->fabricSpec->composition)
-                                <div class="col-md-6 col-12">
-                                    <span class="text-muted fs-8 d-block mb-1">التركيب الخامي</span>
-                                    <span class="text-dark fs-7">{{ $material->fabricSpec->composition }}</span>
-                                </div>
-                            @endif
-                            @if ($material->fabricSpec->martindale_rub_count)
-                                <div class="col-md-6 col-12">
-                                    <span class="text-muted fs-8 d-block mb-1">مقاومة الاحتكاك</span>
-                                    <span class="text-dark fs-7">{{ number_format($material->fabricSpec->martindale_rub_count) }} دورة</span>
-                                </div>
-                            @endif
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
     @endif
 
-    <!-- Fabric Colors Section (Only for Fabric materials) -->
     @if ($material->category?->code === 'FABRIC')
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0 d-flex justify-content-between align-items-center">
+        {{-- Catalogue colours as swatches: the internal number customer service quotes, and the supplier code purchasing orders. --}}
+        <section class="card border-0 shadow-sm" aria-labelledby="colors-heading">
+            <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0 d-flex flex-wrap justify-content-between align-items-start gap-2">
                 <div>
-                    <h1 id="page-heading" class="h5 fw-bold text-dark mb-1"><i class="fas fa-palette text-primary me-2"></i>درجات ألوان الكتالوج</h1>
-                    <p class="text-muted fs-8 mb-0">يرتبط كل لون برقم داخلي (لخدمة العملاء) وكود مورد (للمشتريات والإنتاج).</p>
+                    <h2 id="colors-heading" class="h6 fw-bold text-dark mb-1"><i class="fas fa-palette text-primary me-2" aria-hidden="true"></i>درجات ألوان الكتالوج ({{ $colors->count() }})</h2>
+                    <p class="text-muted small mb-0">لكل لون رقم داخلي تستخدمه خدمة العملاء، وكود المورد للمشتريات والإنتاج.</p>
                 </div>
                 @can('materials.manage')
-                    <button class="btn btn-sm btn-primary" data-bs-toggle="collapse" data-bs-target="#add-color-form">
-                        <i class="fas fa-plus me-1"></i> إضافة لون جديد
+                    <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#add-color-form" aria-expanded="false" aria-controls="add-color-form">
+                        <i class="fas fa-plus me-1" aria-hidden="true"></i> إضافة لون
                     </button>
                 @endcan
             </div>
             <div class="card-body p-4">
-
                 @can('materials.manage')
                     <div class="collapse mb-4" id="add-color-form">
-                        <div class="p-3 bg-light rounded-3 border">
-                            <h6 class="fw-bold mb-3 text-primary fs-7"><i class="fas fa-plus-circle me-1"></i>إضافة درجة لون جديدة للكتالوج</h6>
-                            <form action="{{ route('fabric-colors.store') }}" method="POST">
-                                @csrf
-                                <input type="hidden" name="material_id" value="{{ $material->id }}">
-                                <div class="row g-2 align-items-end">
-                                    <div class="col-md-2 col-6">
-                                        <label class="form-label fs-8 text-muted mb-1">الرقم الداخلي (خدمة العملاء) <span class="text-danger">*</span></label>
-                                        <input type="text" name="color_code" class="form-control form-control-sm" placeholder="مثال: 1" required dir="ltr">
-                                    </div>
-                                    <div class="col-md-2 col-6">
-                                        <label class="form-label fs-8 text-muted mb-1">كود المورد (المشتريات) <span class="text-danger">*</span></label>
-                                        <input type="text" name="supplier_color_code" class="form-control form-control-sm" placeholder="مثال: {{ $material->fabricSpec?->catalog_number ? $material->fabricSpec->catalog_number . '-1' : '2020-1' }}" required dir="ltr">
-                                    </div>
-                                    <div class="col-md-3 col-12">
-                                        <label class="form-label fs-8 text-muted mb-1">اسم اللون (اختياري)</label>
-                                        <input type="text" name="color_name_ar" class="form-control form-control-sm" placeholder="مثال: رمادي فاتح">
-                                    </div>
-                                    <div class="col-md-1 col-3">
-                                        <label class="form-label fs-8 text-muted mb-1">الرمز</label>
-                                        <input type="color" name="hex_code" class="form-control form-control-sm form-control-color w-100 p-1" value="#6c757d" title="اختر رمز اللون">
-                                    </div>
-                                    <div class="col-md-2 col-5">
-                                        <label class="form-label fs-8 text-muted mb-1">النقشة (اختياري)</label>
-                                        <input type="text" name="pattern" class="form-control form-control-sm" placeholder="سادة">
-                                    </div>
-                                    <div class="col-md-2 col-4">
-                                        <button type="submit" class="btn btn-sm btn-primary w-100">
-                                            <i class="fas fa-check me-1"></i> حفظ اللون
-                                        </button>
-                                    </div>
+                        <form action="{{ route('fabric-colors.store') }}" method="POST" class="p-3 bg-light rounded-3 border">
+                            @csrf
+                            <input type="hidden" name="material_id" value="{{ $material->id }}">
+                            <div class="row g-3 align-items-end">
+                                <div class="col-6 col-md-2">
+                                    <label class="form-label small mb-1" for="new_color_code">الرقم الداخلي <span class="text-danger">*</span></label>
+                                    <input type="text" id="new_color_code" name="color_code" class="form-control" placeholder="مثال: 1" required dir="ltr">
                                 </div>
-                            </form>
-                        </div>
+                                <div class="col-6 col-md-3">
+                                    <label class="form-label small mb-1" for="new_supplier_color_code">كود المورد <span class="text-danger">*</span></label>
+                                    <input type="text" id="new_supplier_color_code" name="supplier_color_code" class="form-control" placeholder="مثال: {{ $spec?->catalog_number ? $spec->catalog_number . '-1' : '2020-1' }}" required dir="ltr">
+                                </div>
+                                <div class="col-12 col-md-3">
+                                    <label class="form-label small mb-1" for="new_color_name">اسم اللون</label>
+                                    <input type="text" id="new_color_name" name="color_name_ar" class="form-control" placeholder="مثال: رمادي فاتح">
+                                </div>
+                                <div class="col-4 col-md-1">
+                                    <label class="form-label small mb-1" for="new_color_hex">اللون</label>
+                                    <input type="color" id="new_color_hex" name="hex_code" class="form-control form-control-color w-100 p-1" value="#6c757d">
+                                </div>
+                                <div class="col-8 col-md-3">
+                                    <label class="form-label small mb-1" for="new_color_pattern">النقشة</label>
+                                    <input type="text" id="new_color_pattern" name="pattern" class="form-control" placeholder="سادة">
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary"><i class="fas fa-check me-1" aria-hidden="true"></i> حفظ اللون</button>
+                                </div>
+                            </div>
+                        </form>
                     </div>
                 @endcan
 
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>معاينة</th>
-                                <th>الرقم الداخلي (خدمة العملاء)</th>
-                                <th>كود المورد والإنتاج</th>
-                                <th>اسم اللون</th>
-                                <th>النقشة</th>
-                                <th>التوفر</th>
-                                <th>الحالة</th>
-                                @can('materials.manage')
-                                    <th class="text-center">إجراءات</th>
-                                @endcan
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse ($material->fabricColors as $color)
-                                <tr>
-                                    <td>
-                                        <div class="d-flex align-items-center gap-2">
-                                            <span class="d-inline-block rounded-circle border shadow-sm" style="width: 22px; height: 22px; background-color: {{ $color->hex_code ?? '#cccccc' }};"></span>
-                                            @if ($color->hex_code)
-                                                <code class="code-badge fs-8">{{ $color->hex_code }}</code>
-                                            @endif
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-light text-dark border font-monospace fs-7 px-2.5 py-1">
-                                            {{ $color->color_code }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="fw-bold text-primary font-monospace fs-7">
-                                            {{ $color->supplier_color_code ?? '-' }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="fw-semibold text-dark">{{ $color->color_name_ar }}</span>
-                                        @if ($color->color_name_en)
-                                            <span dir="ltr" class="text-muted fs-8 d-block">{{ $color->color_name_en }}</span>
-                                        @endif
-                                    </td>
-                                    <td><span class="text-muted fs-8">{{ $color->pattern ?? '-' }}</span></td>
-                                    <td>
-                                        @if ($color->is_available)
-                                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-0.5 fs-8">متوفر</span>
+                @if ($colors->isEmpty())
+                    <div class="d-flex flex-column align-items-center text-center text-muted py-4">
+                        <i class="fas fa-palette fs-3 mb-2" aria-hidden="true"></i>
+                        لا توجد درجات ألوان لهذا الكتالوج بعد. أضف الألوان ليتمكن البيع والبوابة من اختيارها.
+                    </div>
+                @else
+                    <ul class="swatch-grid list-unstyled mb-0">
+                        @foreach ($colors as $color)
+                            <li class="swatch-card {{ $color->is_active ? '' : 'is-inactive' }}">
+                                <span class="swatch-chip" style="background-color: {{ $color->hex_code ?? '#cbd5e1' }};" aria-hidden="true"></span>
+                                <div class="swatch-body">
+                                    <div class="d-flex align-items-baseline justify-content-between gap-2">
+                                        <span class="swatch-number" title="الرقم الداخلي">رقم <bdi>{{ $color->color_code }}</bdi></span>
+                                        @if (! $color->is_active)
+                                            <span class="status-chip status-chip-secondary">معطل</span>
+                                        @elseif ($color->is_available)
+                                            <span class="status-chip status-chip-success">متوفر</span>
                                         @else
-                                            <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2 py-0.5 fs-8">غير متوفر</span>
+                                            <span class="status-chip status-chip-warning">غير متوفر</span>
                                         @endif
-                                    </td>
-                                    <td>
-                                        @if ($color->is_active)
-                                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-0.5 fs-8">نشط</span>
-                                        @else
-                                            <span class="badge bg-secondary bg-opacity-10 text-muted border px-2 py-0.5 fs-8">معطل</span>
-                                        @endif
-                                    </td>
+                                    </div>
+                                    <div class="fw-semibold text-truncate">{{ $color->color_name_ar ?: 'بدون اسم' }}</div>
+                                    <div class="small text-muted">كود المورد: <bdi class="text-dark fw-semibold">{{ $color->supplier_color_code ?? '—' }}</bdi>@if ($color->pattern) · {{ $color->pattern }}@endif</div>
                                     @can('materials.manage')
-                                        <td class="text-center">
-                                            <div class="d-flex justify-content-center gap-1">
-                                                <form action="{{ route('fabric-colors.toggle-status', $color) }}" method="POST" class="d-inline">
-                                                    @csrf
-                                                    <input type="hidden" name="toggle_availability" value="1">
-                                                    <button type="submit" class="btn btn-sm btn-light border p-1" title="{{ $color->is_available ? 'تعطيل التوفر' : 'تفعيل التوفر' }}">
-                                                        <i class="fas fa-boxes-stacked {{ $color->is_available ? 'text-success' : 'text-muted' }}"></i>
-                                                    </button>
-                                                </form>
-                                                <form action="{{ route('fabric-colors.toggle-status', $color) }}" method="POST" class="d-inline">
-                                                    @csrf
-                                                    <button type="submit" class="btn btn-sm btn-light border p-1" title="{{ $color->is_active ? 'تعطيل اللون' : 'تفعيل اللون' }}">
-                                                        <i class="fas fa-power-off {{ $color->is_active ? 'text-success' : 'text-danger' }}"></i>
-                                                    </button>
-                                                </form>
-                                                <form action="{{ route('fabric-colors.destroy', $color) }}" method="POST" class="d-inline">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-sm btn-light text-danger border p-1" onclick="return confirm('هل أنت متأكد من حذف هذا اللون؟ لا يمكن حذفه إذا كان مستخدماً في عمليات تشغيلية.');" title="حذف">
-                                                        <i class="fas fa-trash-alt"></i>
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        </td>
+                                        <div class="swatch-actions">
+                                            <form action="{{ route('fabric-colors.toggle-status', $color) }}" method="POST">
+                                                @csrf
+                                                <input type="hidden" name="toggle_availability" value="1">
+                                                <button type="submit" class="btn btn-sm btn-light border">{{ $color->is_available ? 'إيقاف التوفر' : 'إتاحة اللون' }}</button>
+                                            </form>
+                                            <form action="{{ route('fabric-colors.toggle-status', $color) }}" method="POST">
+                                                @csrf
+                                                <button type="submit" class="btn btn-sm btn-light border">{{ $color->is_active ? 'تعطيل' : 'تفعيل' }}</button>
+                                            </form>
+                                            <form action="{{ route('fabric-colors.destroy', $color) }}" method="POST" class="ms-auto">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-light border text-danger" onclick="return confirm('حذف هذا اللون؟ لا يمكن حذفه إذا كان مستخدماً في طلبات أو مخزون.');" aria-label="حذف اللون {{ $color->color_code }}"><i class="fas fa-trash-alt" aria-hidden="true"></i></button>
+                                            </form>
+                                        </div>
                                     @endcan
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="8" class="text-center py-4 text-muted">
-                                        لا توجد درجات ألوان مسجلة لهذا الكتالوج حتى الآن.
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
+                                </div>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
             </div>
-        </div>
+        </section>
     @endif
 
     <!-- Linked Suppliers Section -->
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0 d-flex justify-content-between align-items-center">
-            <h5 class="fw-bold text-dark mb-0"><i class="fas fa-truck text-secondary me-2"></i>الموردون المعتمدون للمادة الخام</h5>
+            <h2 class="h6 fw-bold text-dark mb-0"><i class="fas fa-truck text-secondary me-2"></i>الموردون المعتمدون للمادة الخام</h2>
             @can('materials.manage')
                 <button class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#add-supplier-form">
                     <i class="fas fa-plus me-1"></i> ربط مورد جديد
@@ -424,7 +301,7 @@
                             <input type="hidden" name="material_id" value="{{ $material->id }}">
                             <div class="row g-2">
                                 <div class="col-md-3">
-                                    <select name="supplier_id" class="form-select form-select-sm" required>
+                                    <select name="supplier_id" class="form-select form-select-sm" required aria-label="المورد">
                                         <option value="">-- اختر المورد --</option>
                                         @foreach ($allSuppliers as $sup)
                                             <option value="{{ $sup->id }}">{{ $sup->name }} ({{ $sup->supplier_code ?? $sup->code }}){{ $sup->commercial_name && $sup->commercial_name !== $sup->name ? ' - ' . $sup->commercial_name : '' }}</option>
@@ -432,13 +309,13 @@
                                     </select>
                                 </div>
                                 <div class="col-md-3">
-                                    <input type="text" name="supplier_item_code" class="form-control form-control-sm" placeholder="كود المادة لدى المورد" dir="ltr">
+                                    <input type="text" name="supplier_item_code" class="form-control form-control-sm" placeholder="كود المادة لدى المورد" aria-label="كود المادة لدى المورد" dir="ltr">
                                 </div>
                                 <div class="col-md-2">
-                                    <input type="number" name="lead_time_days" class="form-control form-control-sm" placeholder="التوريد (أيام)" min="0">
+                                    <input type="number" name="lead_time_days" class="form-control form-control-sm" placeholder="التوريد (أيام)" aria-label="مدة التوريد بالأيام" min="0">
                                 </div>
                                 <div class="col-md-2">
-                                    <input type="number" step="0.01" name="minimum_order_qty" class="form-control form-control-sm" placeholder="الحد الأدنى للطلب" min="0">
+                                    <input type="number" step="0.01" name="minimum_order_qty" class="form-control form-control-sm" placeholder="الحد الأدنى للطلب" aria-label="الحد الأدنى للطلب" min="0">
                                 </div>
                                 <div class="col-md-2 d-flex align-items-center">
                                     <div class="form-check form-switch mb-0">
@@ -495,7 +372,7 @@
                                         <form action="{{ route('material-suppliers.destroy', [$material, $supplier->id]) }}" method="POST" class="d-inline">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-light text-danger p-1" onclick="return confirm('إلغاء ربط هذا المورد؟');" title="إلغاء الربط">
+                                            <button type="submit" class="btn btn-sm btn-light text-danger p-1" onclick="return confirm('إلغاء ربط هذا المورد؟');" title="إلغاء الربط" aria-label="إلغاء ربط المورد">
                                                 <i class="fas fa-unlink"></i>
                                             </button>
                                         </form>
@@ -518,7 +395,7 @@
     <!-- Material Unit Conversions Section -->
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0 d-flex justify-content-between align-items-center">
-            <h5 class="fw-bold text-dark mb-0"><i class="fas fa-exchange-alt text-primary me-2"></i>تحويلات الوحدات الخاصة بالمادة</h5>
+            <h2 class="h6 fw-bold text-dark mb-0"><i class="fas fa-exchange-alt text-primary me-2"></i>تحويلات الوحدات الخاصة بالمادة</h2>
             @can('materials.manage')
                 <button class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#add-conversion-form">
                     <i class="fas fa-plus me-1"></i> إضافة تحويل وحدات
@@ -537,7 +414,7 @@
                             <div class="row g-2 align-items-center">
                                 <div class="col-md-3">
                                     <label class="form-label fs-8 mb-1">من وحدة</label>
-                                    <select name="from_unit_id" class="form-select form-select-sm" required>
+                                    <select name="from_unit_id" class="form-select form-select-sm" required aria-label="من وحدة">
                                         <option value="">-- اختر الوحدة --</option>
                                         @foreach ($allUnits as $u)
                                             <option value="{{ $u->id }}">{{ $u->name_ar }} ({{ $u->symbol ?? $u->code }})</option>
@@ -546,7 +423,7 @@
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label fs-8 mb-1">إلى وحدة (عادة الوحدة الأساسية)</label>
-                                    <select name="to_unit_id" class="form-select form-select-sm" required>
+                                    <select name="to_unit_id" class="form-select form-select-sm" required aria-label="إلى وحدة">
                                         <option value="">-- اختر الوحدة --</option>
                                         @foreach ($allUnits as $u)
                                             <option value="{{ $u->id }}" {{ $u->id == $material->base_unit_id ? 'selected' : '' }}>
@@ -557,7 +434,7 @@
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label fs-8 mb-1">معامل التحويل</label>
-                                    <input type="number" step="0.0001" name="conversion_factor" class="form-control form-control-sm" placeholder="مثال: 50" required min="0.0001">
+                                    <input type="number" step="0.0001" name="conversion_factor" class="form-control form-control-sm" aria-label="معامل التحويل" placeholder="مثال: 50" required min="0.0001">
                                 </div>
                                 <div class="col-md-3 pt-3">
                                     <button type="submit" class="btn btn-sm btn-primary w-100">حفظ معامل التحويل</button>
@@ -607,7 +484,7 @@
                                         <form action="{{ route('material-conversions.destroy', $conv) }}" method="POST" class="d-inline">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-light text-danger p-1" onclick="return confirm('حذف هذا التحويل؟');" title="حذف">
+                                            <button type="submit" class="btn btn-sm btn-light text-danger p-1" onclick="return confirm('حذف هذا التحويل؟');" title="حذف" aria-label="حذف التحويل">
                                                 <i class="fas fa-trash-alt"></i>
                                             </button>
                                         </form>

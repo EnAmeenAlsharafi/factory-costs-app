@@ -18,6 +18,7 @@ class RestrictCustomerPortalAccess
         'webapp.service-worker',
         'webapp.offline',
         'company.logo',
+        'public-file',
     ];
 
     /**

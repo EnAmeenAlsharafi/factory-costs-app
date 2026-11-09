@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\PublicFileController;
 use App\Models\Material;
 use App\Models\ProductConfiguration;
 use App\Models\ProductModel;
@@ -205,7 +206,7 @@ class SearchApiController extends Controller
                 'fabric_type' => $spec?->fabric_type,
                 'catalog_number' => $spec?->catalog_number,
                 'catalog_name' => $spec?->catalog_name,
-                'catalog_image_url' => $spec?->catalog_image_path ? asset('storage/'.$spec->catalog_image_path) : null,
+                'catalog_image_url' => PublicFileController::url($spec?->catalog_image_path),
                 'supplier_id' => $supplier?->id,
                 'supplier_name' => $supplier?->name,
                 'supplier_code' => $supplier?->supplier_code,

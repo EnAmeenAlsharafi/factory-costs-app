@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Http\Controllers\PublicFileController;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -57,6 +58,6 @@ class ProductModel extends Model
             return $this->reference_image_path;
         }
 
-        return asset('storage/'.$this->reference_image_path);
+        return PublicFileController::url($this->reference_image_path);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Http\Controllers\PublicFileController;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -38,5 +39,13 @@ class FabricMaterialSpec extends Model
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    /**
+     * The catalogue cover photo, served from storage.
+     */
+    public function getCatalogImageUrlAttribute(): ?string
+    {
+        return PublicFileController::url($this->catalog_image_path);
     }
 }
