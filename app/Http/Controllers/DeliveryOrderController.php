@@ -142,12 +142,17 @@ class DeliveryOrderController extends Controller
         }
     }
 
-    public function create(Request $request): View
+    public function create(Request $request): View|RedirectResponse
     {
         abort_if(! $request->user()->can('delivery.create'), 403);
 
         $orderId = $request->query('customer_order_id');
         $customerOrder = CustomerOrder::with('customer', 'lines.productionOrders', 'lines.material')->findOrFail($orderId);
+
+        if ($this->deliveryService->deliverableQuantity($customerOrder) <= 0) {
+            return redirect()->route('sales.orders.show', $customerOrder)
+                ->with('error', 'لا توجد منتجات جاهزة لهذا الطلب بعد. يُتاح أمر التوصيل عند اكتمال الإنتاج واستلام المنتجات في المستودع.');
+        }
 
         $deliveryRole = Role::where('name', 'delivery_user')->first();
         $drivers = $deliveryRole

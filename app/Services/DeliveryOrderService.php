@@ -42,6 +42,48 @@ class DeliveryOrderService
     /**
      * Create a new Delivery Order with customer address snapshotting.
      */
+    /**
+     * Delivery orders whose goods have not left the warehouse yet, so they still hold stock aside.
+     */
+    public const UNDISPATCHED_STATUSES = ['DRAFT', 'READY_FOR_DELIVERY', 'ASSIGNED'];
+
+    /**
+     * How many pieces of this order can go on a new delivery order now: finished goods received
+     * from its production orders plus ready stock in the warehouse, less what open delivery orders
+     * already hold. Zero while the order is still in production.
+     */
+    public function deliverableQuantity(CustomerOrder $customerOrder): float
+    {
+        $customerOrder->loadMissing('lines.productionOrders', 'lines.material');
+        $heldByOpenDeliveries = DB::table('delivery_order_lines')
+            ->join('delivery_orders', 'delivery_orders.id', '=', 'delivery_order_lines.delivery_order_id')
+            ->where('delivery_orders.customer_order_id', $customerOrder->id)
+            ->whereIn('delivery_orders.status', self::UNDISPATCHED_STATUSES);
+        $heldByProductionOrder = (clone $heldByOpenDeliveries)->whereNotNull('delivery_order_lines.production_order_id')
+            ->groupBy('delivery_order_lines.production_order_id')
+            ->pluck(DB::raw('SUM(delivery_order_lines.quantity)'), 'delivery_order_lines.production_order_id');
+        $onDeliveriesByLine = DB::table('delivery_order_lines')
+            ->join('delivery_orders', 'delivery_orders.id', '=', 'delivery_order_lines.delivery_order_id')
+            ->where('delivery_orders.customer_order_id', $customerOrder->id)
+            ->where('delivery_orders.status', '!=', 'CANCELLED')
+            ->groupBy('delivery_order_lines.customer_order_line_id')
+            ->pluck(DB::raw('SUM(delivery_order_lines.quantity)'), 'delivery_order_lines.customer_order_line_id');
+
+        $deliverable = 0.0;
+        foreach ($customerOrder->lines as $line) {
+            if ($line->line_type === 'MANUFACTURED') {
+                foreach ($line->productionOrders->where('status', '!=', 'CANCELLED') as $productionOrder) {
+                    $deliverable += max(0.0, $this->finishedGoodsService->getAvailableQuantity($productionOrder) - (float) ($heldByProductionOrder[$productionOrder->id] ?? 0));
+                }
+            } elseif ($line->line_type === 'READY_STOCK' && $line->material) {
+                $stillToDeliver = (float) $line->quantity - (float) ($onDeliveriesByLine[$line->id] ?? 0);
+                $deliverable += max(0.0, min($stillToDeliver, (float) $this->inventoryService->getReadyProductAvailability($line->material)['on_hand']));
+            }
+        }
+
+        return round($deliverable, 4);
+    }
+
     public function createDeliveryOrder(CustomerOrder $customerOrder, User $creator, array $data): DeliveryOrder
     {
         return DB::transaction(function () use ($customerOrder, $creator, $data) {

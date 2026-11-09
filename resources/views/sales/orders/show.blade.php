@@ -63,12 +63,6 @@
                 @endcan
             @endif
 
-            @if(in_array($order->status, ['APPROVED_FOR_PRODUCTION', 'APPROVED_FOR_FULFILLMENT']) && auth()->user()->can('delivery.create'))
-                <a href="{{ route('delivery.orders.create', ['customer_order_id' => $order->id]) }}" class="btn btn-factory-warning fw-bold">
-                    <i class="fas fa-truck-loading me-1"></i> إنشاء أمر توصيل وتركيب
-                </a>
-            @endif
-
             @if(in_array($order->status, ['DRAFT', 'PENDING_PRODUCTION_REVIEW', 'APPROVED_FOR_PRODUCTION']))
                 @can('orders.edit')
                     <a href="{{ route('sales.orders.edit', $order) }}" class="btn btn-outline-primary">
@@ -92,26 +86,14 @@
 
     {{-- Flash messages are rendered once by the layout (partials.flash). --}}
 
-    {{-- Production Approval Notice --}}
-    @if($order->status === 'APPROVED_FOR_PRODUCTION')
-        <div class="alert alert-success border-0 shadow-sm mb-4">
-            <div class="d-flex align-items-center justify-content-between">
-                <div>
-                    <h6 class="fw-bold mb-1"><i class="fas fa-check-circle me-2"></i> هذا الطلب معتمد رسمياً للإنتاج</h6>
-                    <span class="fs-7">تم الاعتماد بواسطة: <strong>{{ $order->productionApprover?->name }}</strong> بتاريخ {{ $order->production_approved_at ? $order->production_approved_at->format('Y-m-d H:i') : '' }}</span>
-                </div>
-            </div>
-        </div>
-    @endif
-
-    {{-- Stage 16.5: Order Tracking Summary — "أين وصل الطلب؟" --}}
-    @if ($order->status === 'APPROVED_FOR_PRODUCTION')
-        <x-order-tracking-summary :order="$order" />
+    @php $orderJourney = $order->status === 'CANCELLED' ? null : app(\App\Services\OrderTrackingService::class)->journey($order); @endphp
+    @if ($orderJourney)
+        @include('sales.orders.partials.journey', ['journey' => $orderJourney])
     @endif
 
     {{-- Summary Cards --}}
     <div class="row g-3 mb-4">
-        <div class="col-md-3">
+        <div class="col-6 col-md-3">
             <div class="card border-0 shadow-sm rounded-3 h-100">
                 <div class="card-body">
                     <span class="text-muted fs-7 d-block mb-1">العميل</span>
@@ -120,7 +102,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-6 col-md-3">
             <div class="card border-0 shadow-sm rounded-3 h-100">
                 <div class="card-body">
                     <span class="text-muted fs-7 d-block mb-1">قناة البيع</span>
@@ -128,7 +110,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-6 col-md-3">
             <div class="card border-0 shadow-sm rounded-3 h-100">
                 <div class="card-body">
                     <span class="text-muted fs-7 d-block mb-1">تاريخ الطلب / التسليم</span>
@@ -137,7 +119,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-6 col-md-3">
             <div class="card border-0 shadow-sm rounded-3 h-100 bg-warning bg-opacity-10 border-start border-4 border-warning">
                 <div class="card-body">
                     <span class="text-muted fs-7 d-block mb-1">إجمالي مبلغ الطلب</span>
@@ -333,140 +315,7 @@
         </div>
     @endcan
 
-    {{-- Order Lines Table --}}
-    <div class="card border-0 shadow-sm mb-4 rounded-3">
-        <div class="card-header bg-light py-3">
-            <h5 class="card-title mb-0 fw-bold fs-6 text-dark"><i class="fas fa-list text-primary me-2"></i> بنود الطلب والمواصفات الفنية ({{ $order->lines->count() }})</h5>
-        </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="ps-3" style="width: 50px;">#</th>
-                            <th>الموديل / التصميم</th>
-                            <th>المقاس المطلوب من العميل</th>
-                            <th>المقاس المرجعي للإنتاج</th>
-                            <th>وصفة التصنيع المعتمدة</th>
-                            <th class="text-center">الكمية</th>
-                            <th class="text-end">سعر الوحدة</th>
-                            <th class="text-end pe-3">المجموع</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($order->lines as $index => $line)
-                            <tr>
-                                <td class="ps-3 font-monospace text-muted">{{ $index + 1 }}</td>
-                                <td>
-                                    @if($line->line_type === 'READY_STOCK')
-                                        <span class="badge bg-success bg-opacity-10 text-success mb-1">منتج جاهز</span>
-                                        <div class="fw-bold text-dark">{{ $line->display_name }}</div>
-                                        <small class="text-muted">SKU: {{ $line->external_sku ?: ($line->material?->sales_sku ?? '-') }}</small>
-                                    @elseif($line->line_type === 'BUNDLE')
-                                        <span class="badge bg-info bg-opacity-10 text-info mb-1">بكج</span>
-                                        <div class="fw-bold text-dark">{{ $line->display_name }}</div>
-                                    @elseif($line->custom_design)
-                                        <span class="badge bg-purple text-white mb-1" style="background-color: #6f42c1;">تصميم خاص</span>
-                                        <div class="fw-bold text-dark">{{ $line->custom_design_name ?? 'تصميم خاص بدون اسم' }}</div>
-                                        @if($line->custom_design_image_path)
-                                            <a href="{{ route('sales.orders.design-image', [$order, $line]) }}" target="_blank" rel="noopener" class="d-block mt-2" aria-label="عرض صورة التصميم الخاص">
-                                                <img src="{{ route('sales.orders.design-image', [$order, $line]) }}" alt="صورة {{ $line->custom_design_name }}" class="img-thumbnail" style="max-width: 180px; max-height: 140px; object-fit: contain;" loading="lazy">
-                                            </a>
-                                        @endif
-                                    @else
-                                        <div class="fw-bold text-dark">{{ $line->productModel?->name_ar ?? 'موديل غير محدد' }}</div>
-                                        <small class="text-muted">كود: {{ $line->productModel?->model_code }}</small>
-                                    @endif
-
-                                    @if($line->fabricMaterial || $line->fabricSupplier || $line->fabric_color_code || $line->fabric_supplier_color_code)
-                                        <div class="mt-2 p-2 bg-light rounded border border-warning-subtle fs-8">
-                                            <strong class="text-dark d-block mb-1"><i class="fas fa-palette text-warning me-1"></i> مواصفات القماش والكتالوج:</strong>
-                                            <div class="d-flex flex-wrap align-items-center gap-2 text-dark">
-                                                <span><strong>المادة:</strong> {{ $line->fabricMaterial?->name_ar ?? 'غير محدد' }}</span>
-                                                @if($line->fabricMaterial?->fabricSpec?->catalog_number)
-                                                    <span>•</span>
-                                                    <span><strong>رقم الكتالوج:</strong> <span class="badge bg-white text-primary border">#{{ $line->fabricMaterial->fabricSpec->catalog_number }}</span></span>
-                                                @endif
-                                                <span>•</span>
-                                                <span><strong>المورد:</strong> {{ $line->fabricSupplier?->name ?? $line->fabricMaterial?->fabricSpec?->supplier?->name ?? 'غير محدد' }}</span>
-                                                <span>•</span>
-                                                <span><strong>رقم اللون الداخلي:</strong> <code class="text-dark bg-white px-1 border rounded fw-bold">{{ $line->fabric_color_code ?? 'غير محدد' }}</code></span>
-                                                @if($line->fabric_supplier_color_code)
-                                                    <span>•</span>
-                                                    <span><strong>كود لون المورد:</strong> <code class="text-primary bg-white px-1 border rounded fw-bold">{{ $line->fabric_supplier_color_code }}</code></span>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    @endif
-
-                                    @if($line->notes)
-                                        <div class="fs-8 text-muted mt-1"><i class="fas fa-info-circle me-1"></i> {{ $line->notes }}</div>
-                                    @endif
-                                </td>
-                                <td>
-                                    @if($line->requested_width_cm && $line->requested_length_cm)
-                                        <div class="fw-semibold text-dark">
-                                            {{ $line->requested_width_cm }} × {{ $line->requested_length_cm }} سم
-                                        </div>
-                                    @else
-                                        <span class="text-muted">حسب التكوين</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    @if($line->reference_width_cm && $line->reference_length_cm)
-                                        <span class="badge bg-info-subtle text-info border border-info-subtle">
-                                            {{ $line->reference_width_cm }} × {{ $line->reference_length_cm }} سم
-                                        </span>
-                                    @else
-                                        <span class="text-muted fs-8">لم تحدد في المراجعة</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    @if($line->recipeVersion)
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle">
-                                            <i class="fas fa-scroll me-1"></i> {{ $line->recipeVersion->recipe?->name }} (V{{ $line->recipeVersion->version_number }})
-                                        </span>
-                                    @else
-                                        <span class="text-muted fs-8">غير ربط</span>
-                                    @endif
-                                </td>
-                                <td class="text-center fw-bold text-dark fs-6">
-                                    {{ $line->quantity }}
-                                    @php
-                                        $alreadyReleased = $line->productionOrders ? $line->productionOrders->where('status', '!=', 'CANCELLED')->sum('released_quantity') : 0;
-                                    @endphp
-                                    @if($alreadyReleased > 0)
-                                        <small class="d-block text-success fw-normal fs-8">مُطلق للإنتاج: {{ $alreadyReleased }}</small>
-                                    @endif
-                                </td>
-                                <td class="text-end font-monospace text-dark">{{ $canSeeCommercial ? number_format($line->unit_price, 2).' ر.س' : '—' }}</td>
-                                <td class="text-end pe-3 font-monospace fw-bold text-primary fs-6">
-                                    <div>{{ $canSeeCommercial ? number_format($line->line_total, 2).' ر.س' : '—' }}</div>
-                                    @if($order->status === 'APPROVED_FOR_PRODUCTION' && auth()->user()->can('production.release'))
-                                        @if($line->quantity - $alreadyReleased > 0)
-                                            <a href="{{ route('production.orders.create', ['line_id' => $line->id]) }}" class="btn btn-sm btn-success mt-1">
-                                                <i class="fas fa-industry me-1"></i> أمر إنتاج
-                                            </a>
-                                        @else
-                                            <span class="badge bg-light text-success border mt-1"><i class="fas fa-check me-1"></i>مكتمل الإطلاق</span>
-                                        @endif
-                                    @endif
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                    <tfoot class="table-light">
-                        <tr>
-                            <td colspan="7" class="text-end fw-bold fs-6">الإجمالي الكلي:</td>
-                            <td class="text-end pe-3 fw-bold text-primary fs-5 font-monospace">
-                                {{ $canSeeCommercial ? number_format($order->total_amount, 2).' ر.س' : '—' }}
-                            </td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-        </div>
-    </div>
+    @include('sales.orders.partials.lines')
 
     {{-- Delivery Orders Section --}}
     @php
@@ -477,7 +326,7 @@
             <h5 class="card-title mb-0 fw-bold fs-6 text-dark">
                 <i class="fas fa-truck text-primary me-2"></i>أوامر التوصيل والتركيب الميداني ({{ $deliveries->count() }})
             </h5>
-            @if(in_array($order->status, ['APPROVED_FOR_PRODUCTION', 'APPROVED_FOR_FULFILLMENT']) && auth()->user()->can('delivery.create'))
+            @if(($orderJourney['deliverable'] ?? 0) > 0 && auth()->user()->can('delivery.create'))
                 <a href="{{ route('delivery.orders.create', ['customer_order_id' => $order->id]) }}" class="btn btn-sm btn-primary">
                     <i class="fas fa-plus me-1"></i>أمر توصيل جديد
                 </a>
@@ -508,7 +357,7 @@
                                 <td>{{ $delivery->city_snapshot }} - {{ $delivery->district_snapshot }}</td>
                                 <td>{{ $delivery->scheduled_delivery_date ? $delivery->scheduled_delivery_date->format('Y-m-d') : 'غير محدد' }}</td>
                                 <td>
-                                    <span class="badge bg-primary px-2 py-1">{{ $delivery->status }}</span>
+                                    <x-status-badge domain="delivery" :status="$delivery->status" />
                                 </td>
                                 <td class="text-end pe-3">
                                     <a href="{{ route('delivery.orders.show', $delivery) }}" class="btn btn-sm btn-light rounded-circle shadow-sm">
@@ -519,7 +368,8 @@
                         @empty
                             <tr>
                                 <td colspan="6" class="text-center py-4 text-muted">
-                                    لا توجد أوامر توصيل صادرة لطلب المبيعات هذا بعد.
+                                    لا توجد أوامر توصيل بعد.
+                                    @if(($orderJourney['deliverable'] ?? 0) <= 0)<span class="d-block small mt-1">يُتاح إنشاء أمر التوصيل عند اكتمال الإنتاج واستلام المنتجات الجاهزة في المستودع.</span>@endif
                                 </td>
                             </tr>
                         @endforelse

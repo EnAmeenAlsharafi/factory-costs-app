@@ -115,6 +115,68 @@ class OrderTrackingService
         return 'PRODUCTION_COMPLETED';
     }
 
+    /**
+     * The order's path through the factory as four steps, and the one thing to do next.
+     *
+     * Steps: review and approval → release to production → manufacturing in the departments →
+     * delivery and installation. Production steps are skipped when every line is ready stock.
+     *
+     * @return array{steps: list<array{key: string, label: string, state: string, detail: ?string}>, next: array{title: string, text: string, action: ?array{label: string, url: string, icon: string}, tone: string}, deliverable: float, production_orders: Collection<int, ProductionOrder>}
+     */
+    public function journey(CustomerOrder $order): array
+    {
+        $order->loadMissing('lines.productionOrders');
+        $user = auth()->user();
+        $approved = in_array($order->status, ['APPROVED_FOR_PRODUCTION', 'APPROVED_FOR_FULFILLMENT'], true);
+        $manufacturedLines = $order->lines->where('line_type', 'MANUFACTURED');
+        $needsProduction = $manufacturedLines->isNotEmpty();
+        $productionOrders = ProductionOrder::where('customer_order_id', $order->id)->where('status', '!=', 'CANCELLED')
+            ->withCount('materialRequests')->orderBy('id')->get();
+        $unreleasedQuantity = $manufacturedLines->sum(fn ($line) => max(0, (int) $line->quantity - (int) $line->productionOrders->where('status', '!=', 'CANCELLED')->sum('released_quantity')));
+        $draftOrders = $productionOrders->whereIn('status', ['DRAFT', 'READY_FOR_RELEASE']);
+        $released = $productionOrders->diff($draftOrders);
+        $operations = ProductionOrderOperation::whereIn('production_order_id', $released->pluck('id'))->where('status', '!=', 'SKIPPED')->get();
+        $unassigned = $operations->where('status', 'READY')->whereNull('assigned_user_id')->count();
+        $withoutMaterials = $released->where('status', 'RELEASED')->where('material_requests_count', 0);
+        $releaseDone = $approved && $unreleasedQuantity === 0 && $draftOrders->isEmpty();
+        $productionDone = $releaseDone && $released->every(fn (ProductionOrder $po) => $po->status === 'COMPLETED');
+        $deliveries = DeliveryOrder::where('customer_order_id', $order->id)->where('status', '!=', 'CANCELLED')->latest('id')->get();
+        $deliverable = $approved ? app(DeliveryOrderService::class)->deliverableQuantity($order) : 0.0;
+        $deliveryDone = $deliveries->isNotEmpty() && $deliverable <= 0 && (! $needsProduction || $productionDone)
+            && $deliveries->every(fn (DeliveryOrder $delivery) => $delivery->isCompleted());
+
+        $state = function (bool $done, bool $reachable): string {
+            return $done ? 'done' : ($reachable ? 'current' : 'upcoming');
+        };
+        $steps = [
+            ['key' => 'review', 'label' => 'المراجعة والاعتماد', 'state' => $state($approved, true), 'detail' => $approved ? $order->production_approved_at?->format('Y-m-d') : null],
+            ['key' => 'release', 'label' => 'إطلاق الإنتاج', 'state' => $needsProduction ? $state($releaseDone, $approved) : 'skipped',
+                'detail' => $needsProduction ? ($releaseDone ? $productionOrders->count().' أمر إنتاج' : ($approved ? $unreleasedQuantity.' قطعة بانتظار الإطلاق' : null)) : 'منتجات جاهزة'],
+            ['key' => 'production', 'label' => 'التصنيع في الأقسام', 'state' => $needsProduction ? $state($productionDone, $releaseDone || $released->isNotEmpty()) : 'skipped',
+                'detail' => $needsProduction ? ($operations->isNotEmpty() ? $operations->where('status', 'COMPLETED')->count().' من '.$operations->count().' مراحل' : null) : 'لا يحتاج تصنيعاً'],
+            ['key' => 'delivery', 'label' => 'التوصيل والتركيب', 'state' => $state($deliveryDone, $deliverable > 0 || $deliveries->isNotEmpty()),
+                'detail' => $deliveries->isNotEmpty() ? $deliveries->count().' أمر توصيل' : ($deliverable > 0 ? 'جاهز للتوصيل' : null)],
+        ];
+
+        $link = fn (string $label, string $url, string $icon, ?string $permission): ?array => $permission === null || $user?->can($permission) ? compact('label', 'url', 'icon') : null;
+        $search = ['search' => $order->order_number];
+        $next = match (true) {
+            $order->status === 'CANCELLED' => ['title' => 'الطلب ملغى', 'text' => 'لا توجد خطوات تالية لهذا الطلب.', 'action' => null, 'tone' => 'danger'],
+            $order->status === 'DRAFT' => ['title' => 'أرسل الطلب لمراجعة الإنتاج', 'text' => 'أكمل بيانات البنود ثم أرسل الطلب لمراجعة الإنتاج من الزر أعلى الصفحة.', 'action' => null, 'tone' => 'secondary'],
+            ! $approved => ['title' => 'مراجعة الإنتاج واعتماد الطلب', 'text' => 'يراجع مدير الإنتاج المقاسات والوصفات ثم يعتمد الطلب للإنتاج.', 'action' => $link('مراجعة واعتماد الطلب', route('sales.orders.review', $order), 'fa-clipboard-check', 'orders.review_production'), 'tone' => 'warning'],
+            $needsProduction && ! $releaseDone => ['title' => 'أطلق أوامر الإنتاج', 'text' => "الطلب معتمد لكن لم يدخل الإنتاج بعد: {$unreleasedQuantity} قطعة بانتظار الإطلاق مع اختيار مسار التصنيع.", 'action' => $link('إطلاق للإنتاج', route('production.pipeline.index', ['stage' => 'release'] + $search), 'fa-rocket', 'production.release'), 'tone' => 'primary'],
+            $withoutMaterials->isNotEmpty() => ['title' => 'اطلب مواد الإنتاج', 'text' => 'أُطلق أمر الإنتاج ولم تُطلب مواده من المستودع بعد.', 'action' => $link('طلب المواد', route('production.pipeline.index', ['stage' => 'materials'] + $search), 'fa-boxes-packing', 'production.material_requests'), 'tone' => 'primary'],
+            $unassigned > 0 => ['title' => 'أسند المراحل للأقسام', 'text' => "{$unassigned} مرحلة جاهزة للعمل ولم تُسند لموظف في القسم المختص.", 'action' => $link('إسناد للأقسام', route('production.pipeline.index', ['stage' => 'assign'] + $search), 'fa-people-arrows', 'production.assignment.manage'), 'tone' => 'primary'],
+            $needsProduction && ! $productionDone => ['title' => 'قيد التصنيع في الأقسام', 'text' => 'المراحل تسير حسب مسار التصنيع؛ يُتاح التوصيل بعد اكتمال الإنتاج واستلام المنتج الجاهز.', 'action' => $released->first() ? $link('متابعة أمر الإنتاج', route('production.orders.show', $released->first()), 'fa-industry', 'production.view') : null, 'tone' => 'info'],
+            $deliverable > 0 => ['title' => 'جاهز للتوصيل والتركيب', 'text' => 'المنتجات جاهزة في المستودع. أنشئ أمر التوصيل وحدد الموعد والسائق.', 'action' => $link('إنشاء أمر توصيل وتركيب', route('delivery.orders.create', ['customer_order_id' => $order->id]), 'fa-truck-ramp-box', 'delivery.create'), 'tone' => 'success'],
+            $deliveries->isNotEmpty() && ! $deliveryDone => ['title' => 'قيد التوصيل', 'text' => 'تابع أمر التوصيل حتى التسليم والتركيب.', 'action' => $link('متابعة أمر التوصيل', route('delivery.orders.show', $deliveries->first()), 'fa-truck-fast', 'delivery.view'), 'tone' => 'info'],
+            $deliveryDone => ['title' => 'اكتمل الطلب', 'text' => 'تم الإنتاج والتسليم لجميع البنود.', 'action' => null, 'tone' => 'success'],
+            default => ['title' => 'بانتظار استلام المنتج الجاهز', 'text' => 'اكتمل التصنيع؛ يُتاح التوصيل عند استلام المنتجات الجاهزة في المستودع.', 'action' => null, 'tone' => 'info'],
+        };
+
+        return ['steps' => $steps, 'next' => $next, 'deliverable' => $deliverable, 'production_orders' => $released];
+    }
+
     public function statusLabel(string $status): string
     {
         return self::LABELS[$status] ?? $status;

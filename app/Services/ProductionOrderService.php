@@ -33,6 +33,12 @@ class ProductionOrderService
             ]);
         }
 
+        if ($line->line_type !== 'MANUFACTURED') {
+            throw ValidationException::withMessages([
+                'customer_order_line_id' => 'هذا البند منتج جاهز يُسلّم من المستودع ولا يحتاج أمر إنتاج.',
+            ]);
+        }
+
         $alreadyReleased = ProductionOrder::where('customer_order_line_id', $line->id)
             ->where('status', '!=', 'CANCELLED')
             ->sum('released_quantity');

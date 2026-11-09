@@ -492,6 +492,16 @@ code { max-width: 100%; overflow-wrap: anywhere; }
 .portal-review-facts dd { margin: 0; color: var(--factory-text); overflow-wrap: anywhere; }
 .portal-review-facts .text-pre-line { white-space: pre-line; }
 .portal-review-staff { background: #f8fafc; border: 1px dashed #cbd5e1; }
+.sales-line-list > .sales-line { padding: 1rem 1.1rem; border-top: 1px solid var(--factory-border); }
+.sales-line-list > .sales-line:first-child { border-top: 0; }
+.sales-line-main { display: flex; align-items: flex-start; gap: .9rem; }
+.sales-line-money { flex: 0 0 auto; text-align: end; min-width: 7.5rem; }
+.sales-line-release { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; margin-top: .8rem; padding: .55rem .75rem; border-radius: .6rem; background: #f8fafc; font-size: .875rem; }
+@media (max-width: 575.98px) {
+    .sales-line-main { flex-wrap: wrap; }
+    .sales-line-money { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem .75rem; text-align: start; min-width: 0; }
+    .sales-line-money > div { margin: 0 !important; }
+}
 .color-dot { display: inline-block; width: .85rem; height: .85rem; border-radius: 50%; border: 1px solid rgba(15,23,42,.25); vertical-align: middle; }
 
 /* ---- Quantity progress block (target / done / remaining) ---- */
@@ -1150,6 +1160,11 @@ a.metric-tile:hover { color: var(--factory-text); border-color: #94a3b8; }
 .order-journey-label { font-weight: 700; color: #0f172a; font-size: .9rem; }
 .order-journey-detail { font-size: .78rem; color: var(--factory-muted); }
 .order-journey-next { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; padding: .75rem .9rem; border-radius: 12px; background: var(--tone-primary-bg); color: #1e293b; }
+.order-journey-step.is-skipped { opacity: .6; }
+.order-journey-next.is-success { background: var(--tone-success-bg); }
+.order-journey-next.is-warning { background: var(--tone-warning-bg); }
+.order-journey-next.is-info { background: var(--tone-info-bg); }
+.order-journey-next.is-secondary, .order-journey-next.is-danger { background: var(--tone-secondary-bg); }
 .op-assign-form { display: flex; gap: .4rem; align-items: center; max-width: 420px; }
 @media (max-width: 767.98px) {
     .order-journey-steps { grid-template-columns: 1fr 1fr; row-gap: .8rem; }

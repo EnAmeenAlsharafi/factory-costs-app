@@ -171,6 +171,7 @@ class ProductionPipelineController extends Controller
     private function releasableLinesQuery(): Builder
     {
         return CustomerOrderLine::query()
+            ->where('line_type', 'MANUFACTURED')
             ->whereHas('customerOrder', fn (Builder $q) => $q->where('status', 'APPROVED_FOR_PRODUCTION'))
             ->whereRaw('quantity > (SELECT COALESCE(SUM(released_quantity), 0) FROM production_orders WHERE production_orders.customer_order_line_id = customer_order_lines.id AND production_orders.status != ?)', ['CANCELLED']);
     }
