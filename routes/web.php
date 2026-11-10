@@ -319,6 +319,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/points', [ProductionPointCategoryController::class, 'store'])->name('points.store');
         Route::put('/points/departments', [ProductionPointCategoryController::class, 'updateDepartments'])->name('points.departments');
         Route::put('/points/models', [ProductionPointCategoryController::class, 'classifyModels'])->name('points.models');
+        Route::put('/points/models/move', [ProductionPointCategoryController::class, 'moveModels'])->name('points.models.move');
         Route::post('/points/credit-unclassified', [ProductionPointCategoryController::class, 'creditUnclassified'])->name('points.credit-unclassified');
         Route::put('/points/{category}', [ProductionPointCategoryController::class, 'update'])->name('points.update');
 

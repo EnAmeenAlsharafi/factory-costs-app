@@ -22,9 +22,12 @@ class ProductionPointCategoryController extends Controller
     {
         abort_unless($request->user()->can('production.manage_routing'), 403);
 
-        $categories = ProductionPointCategory::ordered()->withCount('productModels')->get();
+        $categories = ProductionPointCategory::ordered()
+            ->withCount('productModels')
+            ->with(['productModels' => fn ($query) => $query->orderBy('name_ar')->select(['id', 'name_ar', 'model_code', 'point_category_id', 'is_active', 'reference_image_path'])])
+            ->get();
         $departments = Department::where('is_production_department', true)->orderBy('id')->get();
-        $unclassifiedModels = ProductModel::where('is_active', true)->whereNull('point_category_id')->orderBy('name_ar')->get(['id', 'name_ar', 'model_code']);
+        $unclassifiedModels = ProductModel::where('is_active', true)->whereNull('point_category_id')->orderBy('name_ar')->get(['id', 'name_ar', 'model_code', 'is_active']);
 
         return view('production.points.index', compact('categories', 'departments', 'unclassifiedModels'));
     }
@@ -71,6 +74,25 @@ class ProductionPointCategoryController extends Controller
         }
 
         return back()->with('success', "تم تصنيف {$classified} موديل.");
+    }
+
+    /**
+     * Move the chosen models to another category, or take them out of every category.
+     */
+    public function moveModels(Request $request): RedirectResponse
+    {
+        abort_unless($request->user()->can('production.manage_routing'), 403);
+        $validated = $request->validate([
+            'model_ids' => ['required', 'array', 'min:1'],
+            'model_ids.*' => ['integer', 'exists:product_models,id'],
+            'target_category_id' => ['nullable', 'exists:production_point_categories,id'],
+        ], ['model_ids.required' => 'اختر موديلاً واحداً على الأقل.']);
+        $target = isset($validated['target_category_id']) ? ProductionPointCategory::find($validated['target_category_id']) : null;
+        $moved = ProductModel::whereIn('id', $validated['model_ids'])->update(['point_category_id' => $target?->id]);
+
+        return back()->with('success', $target
+            ? "تم نقل {$moved} موديل إلى «{$target->name_ar}». التصنيف الجديد يُحتسب على الإنجاز المسجل من الآن."
+            : "تمت إزالة التصنيف عن {$moved} موديل.");
     }
 
     public function creditUnclassified(Request $request, WorkerPointsService $points): RedirectResponse

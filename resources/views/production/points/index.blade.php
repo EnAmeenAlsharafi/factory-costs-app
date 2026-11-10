@@ -54,14 +54,20 @@
 
                     <ul class="list-unstyled mb-0 d-flex flex-column gap-2">
                         @foreach ($categories as $category)
-                            <li class="points-category {{ $category->is_active ? '' : 'is-inactive' }}" x-data="{ editing: false }">
+                            <li class="points-category {{ $category->is_active ? '' : 'is-inactive' }}" x-data="{ editing: false, models: false }">
                                 <div class="d-flex flex-wrap align-items-center gap-3" x-show="!editing">
                                     <span class="points-badge" aria-label="{{ $pointsLabel($category->points) }} نقطة"><bdi>{{ $pointsLabel($category->points) }}</bdi><small>نقطة</small></span>
                                     <div class="flex-grow-1 min-w-0">
                                         <div class="fw-bold">{{ $category->name_ar }} @unless($category->is_active)<span class="status-chip status-chip-secondary ms-1">معطل</span>@endunless</div>
                                         <div class="small text-muted">{{ $category->description ?: '—' }} · {{ $category->product_models_count }} موديل</div>
                                     </div>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" @click="editing = true">تعديل</button>
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-sm btn-outline-primary" @click="models = !models" :aria-expanded="models.toString()" aria-controls="models-{{ $category->id }}"><i class="fas fa-bed me-1" aria-hidden="true"></i> الموديلات ({{ $category->product_models_count }})</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" @click="editing = true">تعديل</button>
+                                    </div>
+                                </div>
+                                <div id="models-{{ $category->id }}" class="points-models" x-show="models && !editing" x-cloak>
+                                    @include('production.points.partials.model-mover', ['models' => $category->productModels, 'currentId' => $category->id, 'key' => 'cat-'.$category->id])
                                 </div>
                                 <form x-show="editing" x-cloak method="POST" action="{{ route('production.points.update', $category) }}" class="row g-2 align-items-end">
                                     @csrf @method('PUT')
@@ -116,26 +122,10 @@
             <h2 id="unclassified-heading" class="h6 fw-bold mb-0">موديلات بلا تصنيف ({{ $unclassifiedModels->count() }})</h2>
         </div>
         <div class="card-body">
-            @if ($unclassifiedModels->isEmpty())
-                <p class="text-success mb-0"><i class="fas fa-circle-check me-1" aria-hidden="true"></i> كل الموديلات النشطة مصنفة.</p>
-            @else
-                <p class="small text-muted">إنجاز هذه الموديلات في أقسام النقاط لا يكسب نقاطاً حتى تُصنّف. يمكن أيضاً تصنيف الموديل من صفحة تعديله.</p>
-                <form method="POST" action="{{ route('production.points.models') }}">
-                    @csrf @method('PUT')
-                    <div class="row g-2">
-                        @foreach ($unclassifiedModels as $model)
-                            <div class="col-md-6 col-xl-4">
-                                <label class="form-label small mb-1" for="model-{{ $model->id }}">{{ $model->name_ar }} <span class="text-muted"><bdi>{{ $model->model_code }}</bdi></span></label>
-                                <select class="form-select" id="model-{{ $model->id }}" name="models[{{ $model->id }}]">
-                                    <option value="">— بلا تصنيف —</option>
-                                    @foreach ($categories->where('is_active', true) as $category)<option value="{{ $category->id }}">{{ $category->label }}</option>@endforeach
-                                </select>
-                            </div>
-                        @endforeach
-                    </div>
-                    <button class="btn btn-primary mt-3">حفظ التصنيفات</button>
-                </form>
+            @if ($unclassifiedModels->isNotEmpty())
+                <p class="small text-muted">إنجاز هذه الموديلات في أقسام النقاط لا يكسب نقاطاً حتى تُصنّف. حدد الموديلات المتشابهة ثم اختر تصنيفها. يمكن أيضاً تصنيف الموديل من صفحة تعديله.</p>
             @endif
+            @include('production.points.partials.model-mover', ['models' => $unclassifiedModels, 'currentId' => null, 'key' => 'unclassified'])
         </div>
     </section>
 </div>

@@ -114,6 +114,25 @@ class WorkerPointsTest extends TestCase
         $this->get(route('reports.index'))->assertOk()->assertSee('أداء الموظفين ونقاط المكافآت');
     }
 
+    public function test_settings_list_each_category_models_and_move_them_to_another_or_none(): void
+    {
+        $admin = User::where('username', 'admin')->firstOrFail();
+        $barrier = ProductionPointCategory::where('name_ar', 'سرير حواجز')->firstOrFail();
+        $models = ProductModel::factory()->count(2)->create(['point_category_id' => $this->padded->id]);
+
+        $this->actingAs($admin)->get(route('production.points.index'))->assertOk()
+            ->assertSee($models[0]->name_ar)->assertSee('الموديلات (3)', false);
+
+        $this->put(route('production.points.models.move'), ['model_ids' => $models->pluck('id')->all(), 'target_category_id' => $barrier->id])
+            ->assertRedirect()->assertSessionHas('success');
+        $this->assertSame([$barrier->id, $barrier->id], $models->map(fn ($model) => $model->fresh()->point_category_id)->all());
+
+        $this->put(route('production.points.models.move'), ['model_ids' => [$models[0]->id], 'target_category_id' => null])->assertRedirect();
+        $this->assertNull($models[0]->fresh()->point_category_id);
+
+        $this->put(route('production.points.models.move'), ['model_ids' => []])->assertSessionHasErrors('model_ids');
+    }
+
     public function test_work_recorded_before_classification_is_credited_from_settings(): void
     {
         ProductModel::whereKey($this->line->product_model_id)->update(['point_category_id' => null]);
