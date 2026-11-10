@@ -883,6 +883,27 @@ const isIos = /iphone|ipad|ipod/i.test(userAgent) || (navigator.platform === 'Ma
 // Browsers built into other apps (WhatsApp, Instagram, Snapchat, Facebook, Android WebView) cannot install apps.
 const isInAppBrowser = /FBAN|FBAV|Instagram|WhatsApp|Snapchat|Line\/|TikTok|; wv\)/i.test(userAgent);
 const isTouchDevice = () => window.matchMedia('(pointer: coarse)').matches || isMobileViewport();
+const isAndroid = /android/i.test(userAgent);
+
+/**
+ * An Android link that always opens in Chrome itself — not inside the app the page was opened from
+ * (WhatsApp, or the installed staff app, whose scope swallows links to its own domain). Only Chrome
+ * can install the customer portal as its own app beside the staff app.
+ */
+const chromeIntentUrl = (href) => {
+    const url = new URL(href, window.location.href);
+
+    return `intent://${url.host}${url.pathname}${url.search}#Intent;scheme=${url.protocol.replace(':', '')};package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(url.href)};end`;
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (!isAndroid || !(isStandalone() || isInAppBrowser)) {
+        return;
+    }
+    document.querySelectorAll('a[data-open-in-chrome]').forEach((link) => {
+        link.href = chromeIntentUrl(link.href);
+    });
+});
 
 /**
  * Install banner. Always offered on phones until the app is installed or the banner is dismissed:
@@ -895,6 +916,8 @@ Alpine.data('installApp', () => ({
     visible: false,
     mode: 'manual',
     copied: false,
+    canOpenInChrome: isAndroid,
+    chromeUrl: isAndroid ? chromeIntentUrl(window.location.href) : null,
 
     get canPrompt() {
         return this.mode === 'prompt';

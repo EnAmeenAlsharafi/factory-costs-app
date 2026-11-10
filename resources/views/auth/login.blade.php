@@ -235,7 +235,7 @@
                 </button>
             </form>
 
-            <a href="{{ route('portal.login') }}" class="btn btn-outline-secondary w-100 mb-3">دخول عملاء الجملة والمعارض</a>
+            <a href="{{ \App\Http\Middleware\RestrictCustomerPortalAccess::portalUrl(request(), 'portal.login') }}" data-open-in-chrome class="btn btn-outline-secondary w-100 mb-3">دخول عملاء الجملة والمعارض</a>
 
             <!-- Quick Demo Accounts (Development & Testing Helper) -->
             @env(['local', 'testing'])

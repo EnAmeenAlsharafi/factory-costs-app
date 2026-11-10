@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CompanySetting;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -74,7 +75,7 @@ class WebAppController extends Controller
     {
         $version = $this->iconVersion();
         $icon = fn (int $size, string $purpose) => [
-            'src' => route('webapp.icon', ['size' => $size, 'purpose' => $purpose, 'v' => $version]),
+            'src' => route('webapp.icon', ['size' => $size, 'purpose' => $purpose, 'v' => $version] + ($app['id'] === '/portal' ? ['app' => 'portal'] : [])),
             'sizes' => "{$size}x{$size}",
             'type' => 'image/png',
             'purpose' => $purpose,
@@ -120,18 +121,23 @@ class WebAppController extends Controller
         ]);
     }
 
-    public function icon(int $size, string $purpose = 'any'): BinaryFileResponse
+    /**
+     * Home-screen icon. ?app=portal draws the customer portal's own icon (the mark on a white card
+     * framed in the portal's navy) so the two apps never look identical side by side on one phone.
+     */
+    public function icon(Request $request, int $size, string $purpose = 'any'): BinaryFileResponse
     {
         abort_unless(in_array($size, self::ICON_SIZES, true) && in_array($purpose, ['any', 'maskable'], true), 404);
+        $portal = $request->query('app') === 'portal';
 
         $company = CompanySetting::current();
         $logo = $this->iconSource();
         $dir = storage_path('app/app-icons');
         File::ensureDirectoryExists($dir);
-        $path = $dir.'/'.$this->iconVersion()."-{$size}-{$purpose}.png";
+        $path = $dir.'/'.$this->iconVersion()."-{$size}-{$purpose}".($portal ? '-portal' : '').'.png';
 
         if (! is_file($path)) {
-            $this->drawIcon($path, $size, $purpose === 'maskable', $logo, $company->primary_color ?: '#1d4ed8');
+            $this->drawIcon($path, $size, $purpose === 'maskable', $logo, $company->primary_color ?: '#1d4ed8', $portal);
         }
 
         return response()->file($path, ['Content-Type' => 'image/png', 'Cache-Control' => 'public, max-age=604800']);
@@ -141,7 +147,7 @@ class WebAppController extends Controller
      * White square with the logo centred; a maskable icon keeps the logo inside the 80% safe zone.
      * Without a logo, a brand-coloured square with the factory's initial.
      */
-    private function drawIcon(string $path, int $size, bool $maskable, ?string $logo, string $primary): void
+    private function drawIcon(string $path, int $size, bool $maskable, ?string $logo, string $primary, bool $portal = false): void
     {
         $canvas = imagecreatetruecolor($size, $size);
         [$r, $g, $b] = sscanf($primary, '#%02x%02x%02x');
@@ -161,6 +167,13 @@ class WebAppController extends Controller
             }
             imagefill($canvas, 0, 0, imagecolorallocate($canvas, $background['red'], $background['green'], $background['blue']));
             $box = (int) round($size * ($maskable ? 0.66 : 0.84));
+            if ($portal) {
+                // Navy frame with a white rounded card; the card stays inside the maskable safe zone.
+                imagefill($canvas, 0, 0, imagecolorallocate($canvas, 0x14, 0x2D, 0x43));
+                $inset = (int) round($size * ($maskable ? 0.17 : 0.09));
+                $this->roundedRectangle($canvas, $inset, $inset, $size - $inset, $size - $inset, (int) round($size * 0.12), imagecolorallocate($canvas, $background['red'], $background['green'], $background['blue']));
+                $box = (int) round(($size - 2 * $inset) * 0.8);
+            }
             $ratio = min($box / imagesx($source), $box / imagesy($source));
             $width = (int) round(imagesx($source) * $ratio);
             $height = (int) round(imagesy($source) * $ratio);
@@ -178,6 +191,15 @@ class WebAppController extends Controller
 
         imagepng($canvas, $path);
         imagedestroy($canvas);
+    }
+
+    private function roundedRectangle(\GdImage $canvas, int $x1, int $y1, int $x2, int $y2, int $radius, int $color): void
+    {
+        imagefilledrectangle($canvas, $x1 + $radius, $y1, $x2 - $radius, $y2, $color);
+        imagefilledrectangle($canvas, $x1, $y1 + $radius, $x2, $y2 - $radius, $color);
+        foreach ([[$x1 + $radius, $y1 + $radius], [$x2 - $radius, $y1 + $radius], [$x1 + $radius, $y2 - $radius], [$x2 - $radius, $y2 - $radius]] as [$cx, $cy]) {
+            imagefilledellipse($canvas, $cx, $cy, 2 * $radius, 2 * $radius, $color);
+        }
     }
 
     private function lastWord(string $name): string

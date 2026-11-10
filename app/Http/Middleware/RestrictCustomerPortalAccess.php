@@ -41,6 +41,21 @@ class RestrictCustomerPortalAccess
         return str_ends_with(mb_strtolower($portalDomain), '.'.$staffDomain);
     }
 
+    /**
+     * The portal page's address on the portal's own domain when the staff site links to it, so the
+     * link leaves the installed staff app instead of opening the portal inside it.
+     */
+    public static function portalUrl(Request $request, string $routeName): string
+    {
+        $portalDomain = config('app.customer_portal_domain');
+        $path = route($routeName, [], false);
+        $staffDomain = preg_replace('/^www\./', '', mb_strtolower($request->getHost()));
+
+        return filled($portalDomain) && str_ends_with(mb_strtolower($portalDomain), '.'.$staffDomain)
+            ? $request->getScheme().'://'.$portalDomain.$path
+            : route($routeName);
+    }
+
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();

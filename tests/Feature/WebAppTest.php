@@ -42,6 +42,20 @@ class WebAppTest extends TestCase
         $this->get('http://localhost/portal/login')->assertOk();
     }
 
+    public function test_portal_app_has_its_own_icon_and_the_staff_login_links_to_the_portal_domain(): void
+    {
+        config(['app.customer_portal_domain' => 'mr.sadirfactory.com']);
+
+        $portalIcon = $this->get(route('webapp.icon', ['size' => 192, 'app' => 'portal']))->assertOk()->streamedContent();
+        $staffIcon = $this->get(route('webapp.icon', ['size' => 192]))->assertOk()->streamedContent();
+        $this->assertNotSame(md5($staffIcon), md5($portalIcon), 'the two apps must not share one home-screen icon');
+        $this->assertStringContainsString('app=portal', $this->get(route('webapp.portal-manifest'))->json('icons.0.src'));
+        $this->assertStringNotContainsString('app=portal', $this->get(route('webapp.manifest'))->json('icons.0.src'));
+
+        $this->get('https://sadirfactory.com/login')->assertOk()
+            ->assertSee('href="https://mr.sadirfactory.com/portal/login" data-open-in-chrome', false);
+    }
+
     public function test_manifest_describes_an_installable_arabic_app_from_company_settings(): void
     {
         CompanySetting::current()->update(['name_ar' => 'مصنع مفروشات سدير', 'primary_color' => '#0f766e']);
@@ -73,7 +87,7 @@ class WebAppTest extends TestCase
             'scope' => '/portal',
             'display' => 'standalone',
         ]);
-        $this->assertSame($this->get(route('webapp.manifest'))->json('icons.0.src'), $response->json('icons.0.src'));
+        $this->assertNotSame($this->get(route('webapp.manifest'))->json('icons.0.src'), $response->json('icons.0.src'));
 
         $this->get(route('portal.login'))->assertOk()
             ->assertSee(route('webapp.portal-manifest'), false)
