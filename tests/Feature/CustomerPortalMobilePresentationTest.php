@@ -164,11 +164,11 @@ class CustomerPortalMobilePresentationTest extends TestCase
             'requested_width_cm' => 160, 'requested_length_cm' => 200, 'quantity' => 1,
         ]], ['customer_order_id' => $order->id, 'status' => 'CONFIRMED']);
         CustomerOrderLine::factory()->create(['customer_order_id' => $order->id, 'product_model_id' => $model->id]);
-        CustomerOrderLine::factory()->create([
+        $designLine = CustomerOrderLine::factory()->create([
             'customer_order_id' => $order->id, 'custom_design' => true, 'custom_design_name' => 'تصميم العميل',
             'custom_design_image_path' => 'customer-order-designs/client.png',
         ]);
-        $designUrl = route('portal.requests.design-image', [$submission, '5f6f1f3e-7d9e-4f3a-9d0a-0d6a2f1b7c11']);
+        $designUrl = route('portal.orders.design-image', [$order, $designLine]);
 
         foreach ([route('portal.orders.index'), route('portal.orders.show', $order)] as $url) {
             $this->actingAs($user)->get($url)->assertOk()

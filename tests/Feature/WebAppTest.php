@@ -31,6 +31,17 @@ class WebAppTest extends TestCase
         $this->get("{$portal}/production/pipeline")->assertNotFound();
     }
 
+    public function test_portal_opened_on_the_staff_domain_moves_to_its_own_domain(): void
+    {
+        config(['app.customer_portal_domain' => 'mr.sadirfactory.com']);
+
+        $this->get('https://sadirfactory.com/portal/login')->assertRedirect('https://mr.sadirfactory.com/portal/login');
+        $this->get('https://www.sadirfactory.com/portal/requests?status=OFFERED')->assertRedirect('https://mr.sadirfactory.com/portal/requests?status=OFFERED');
+        $this->get('https://sadirfactory.com/portal/manifest.webmanifest')->assertRedirect('https://mr.sadirfactory.com/portal/manifest.webmanifest');
+        $this->get('https://sadirfactory.com/manifest.webmanifest')->assertOk()->assertJsonPath('scope', '/');
+        $this->get('http://localhost/portal/login')->assertOk();
+    }
+
     public function test_manifest_describes_an_installable_arabic_app_from_company_settings(): void
     {
         CompanySetting::current()->update(['name_ar' => 'مصنع مفروشات سدير', 'primary_color' => '#0f766e']);

@@ -26,11 +26,29 @@ class RestrictCustomerPortalAccess
      *
      * @param  Closure(Request): (Response)  $next
      */
+    /**
+     * Portal pages opened on the staff system's domain (e.g. sadirfactory.com/portal) move to the
+     * portal's own subdomain. Sharing the staff app's origin puts the portal inside that installed
+     * app's scope, so phones open portal links in the staff app and never offer to install the portal.
+     */
+    private function portalBelongsOnItsOwnDomain(Request $request, ?string $portalDomain, bool $onPortalDomain): bool
+    {
+        if ($onPortalDomain || blank($portalDomain) || ! $request->isMethod('GET') || ! $request->routeIs('portal.*', 'webapp.portal-manifest')) {
+            return false;
+        }
+        $staffDomain = preg_replace('/^www\./', '', mb_strtolower($request->getHost()));
+
+        return str_ends_with(mb_strtolower($portalDomain), '.'.$staffDomain);
+    }
+
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();
         $portalDomain = config('app.customer_portal_domain');
         $onPortalDomain = filled($portalDomain) && mb_strtolower($request->getHost()) === mb_strtolower($portalDomain);
+        if ($this->portalBelongsOnItsOwnDomain($request, $portalDomain, $onPortalDomain)) {
+            return redirect()->away($request->getScheme().'://'.$portalDomain.$request->getRequestUri());
+        }
         if ($onPortalDomain) {
             if ($request->isMethod('GET') && $request->routeIs('home', 'dashboard', 'login')) {
                 return redirect()->route($user?->isCustomerAccount() ? 'portal.home' : 'portal.login');
