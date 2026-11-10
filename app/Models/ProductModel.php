@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Http\Controllers\PublicFileController;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProductModel extends Model
@@ -20,6 +21,7 @@ class ProductModel extends Model
         'design_notes',
         'is_custom_template',
         'requires_fabric_selection',
+        'point_category_id',
         'is_active',
     ];
 
@@ -28,6 +30,14 @@ class ProductModel extends Model
         'requires_fabric_selection' => 'boolean',
         'is_active' => 'boolean',
     ];
+
+    /**
+     * Points category used to reward the workers who make this model.
+     */
+    public function pointCategory(): BelongsTo
+    {
+        return $this->belongsTo(ProductionPointCategory::class, 'point_category_id');
+    }
 
     public function configurations(): HasMany
     {

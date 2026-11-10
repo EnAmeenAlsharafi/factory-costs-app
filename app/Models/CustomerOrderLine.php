@@ -20,6 +20,7 @@ class CustomerOrderLine extends Model
         'line_type',
         'product_model_id',
         'product_configuration_id',
+        'point_category_id',
         'approved_recipe_version_id',
         'material_id',
         'parent_line_id',
@@ -72,6 +73,14 @@ class CustomerOrderLine extends Model
     public function customerOrder(): BelongsTo
     {
         return $this->belongsTo(CustomerOrder::class);
+    }
+
+    /**
+     * Points category set for this line (a custom or showroom design); overrides the model's own.
+     */
+    public function pointCategory(): BelongsTo
+    {
+        return $this->belongsTo(ProductionPointCategory::class, 'point_category_id');
     }
 
     public function productModel(): BelongsTo

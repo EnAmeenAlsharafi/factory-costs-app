@@ -224,6 +224,7 @@
                                     @endif
                                 </div>
                             @endif
+                            @include('production.orders.partials.point-category')
                         </div>
                     </div>
                 </div>

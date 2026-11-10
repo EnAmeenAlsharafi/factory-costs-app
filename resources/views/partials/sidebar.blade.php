@@ -407,6 +407,22 @@
                             </a>
                         </li>
                         @endcan
+                        @can('reports.production')
+                        <li class="nav-item">
+                            <a href="{{ route('reports.workers.index') }}" class="sidebar-nav-link {{ request()->routeIs('reports.workers.*') ? 'active' : '' }}" title="أداء الموظفين والنقاط">
+                                <span class="sidebar-icon"><i class="fas fa-ranking-star"></i></span>
+                                <span class="sidebar-text">أداء الموظفين والنقاط</span>
+                            </a>
+                        </li>
+                        @endcan
+                        @can('production.manage_routing')
+                        <li class="nav-item">
+                            <a href="{{ route('production.points.index') }}" class="sidebar-nav-link {{ request()->routeIs('production.points.*') ? 'active' : '' }}" title="نقاط الإنتاج والمكافآت">
+                                <span class="sidebar-icon"><i class="fas fa-medal"></i></span>
+                                <span class="sidebar-text">نقاط الإنتاج والمكافآت</span>
+                            </a>
+                        </li>
+                        @endcan
                     </ul>
                 </div>
             @endif

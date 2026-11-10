@@ -19,6 +19,10 @@ class ProductionOperationProgress extends Model
         'previous_completed_quantity',
         'new_completed_quantity',
         'user_id',
+        'worker_user_id',
+        'point_category_id',
+        'points_per_unit',
+        'points',
         'notes',
         'occurred_at',
     ];
@@ -28,7 +32,22 @@ class ProductionOperationProgress extends Model
         'previous_completed_quantity' => 'integer',
         'new_completed_quantity' => 'integer',
         'occurred_at' => 'datetime',
+        'points_per_unit' => 'decimal:2',
+        'points' => 'decimal:2',
     ];
+
+    /**
+     * The employee credited with the work (and its points).
+     */
+    public function worker(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'worker_user_id');
+    }
+
+    public function pointCategory(): BelongsTo
+    {
+        return $this->belongsTo(ProductionPointCategory::class, 'point_category_id');
+    }
 
     public function operation(): BelongsTo
     {

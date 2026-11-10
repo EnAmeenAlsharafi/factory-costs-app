@@ -275,6 +275,9 @@ class CustomerOrderService
                         'reference_width_cm' => $dims['reference_width_cm'] ?? $line->reference_width_cm,
                         'reference_length_cm' => $dims['reference_length_cm'] ?? $line->reference_length_cm,
                         'production_notes' => $dims['production_notes'] ?? $line->production_notes,
+                        'point_category_id' => array_key_exists('point_category_id', $dims)
+                            ? ($dims['point_category_id'] ?: null)
+                            : $line->point_category_id,
                         'approved_recipe_version_id' => array_key_exists('recipe_version_id', $dims)
                             ? ($dims['recipe_version_id'] ?: null)
                             : $line->approved_recipe_version_id,

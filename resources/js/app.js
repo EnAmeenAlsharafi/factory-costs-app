@@ -761,6 +761,7 @@ document.addEventListener('DOMContentLoaded', () => {
  * Arabic-friendly matching: ignore diacritics and tatweel, and treat spelling variants alike
  * (أ/إ/آ → ا، ة → ه، ى/ی → ي، ڤ → ف، پ → ب، گ → ك) so «افالون» finds «أڤالون».
  */
+window.normalizeArabic = (text) => normalizeArabic(text);
 const normalizeArabic = (text) => String(text ?? '')
     .toLowerCase()
     .replace(/[ً-ٰٟ]/g, '')

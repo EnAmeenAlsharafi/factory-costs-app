@@ -18,6 +18,7 @@ class Department extends Model
         'description',
         'sort_order',
         'is_production_department',
+        'awards_points',
         'is_active',
     ];
 
@@ -25,6 +26,7 @@ class Department extends Model
     {
         return [
             'is_production_department' => 'boolean',
+            'awards_points' => 'boolean',
             'is_active' => 'boolean',
             'sort_order' => 'integer',
         ];

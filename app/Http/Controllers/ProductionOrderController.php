@@ -224,6 +224,22 @@ class ProductionOrderController extends Controller
             ->with('success', "تم ربط الوصفة «{$version->recipe?->name}» بأمر الإنتاج، وحُسبت خاماته ({$order->materialRequirements->count()} خامة).");
     }
 
+    /**
+     * Points category for the bed this order makes (custom and showroom designs, or a model without one).
+     * Saved on the customer order line, so every production order of that line earns the same points.
+     */
+    public function setPointCategory(Request $request, ProductionOrder $order): RedirectResponse
+    {
+        abort_if(! $request->user()->can('production.release'), 403);
+        $data = $request->validate(['point_category_id' => ['nullable', 'exists:production_point_categories,id']]);
+        abort_unless($order->customerOrderLine, 422, 'أمر الإنتاج غير مرتبط ببند طلب عميل.');
+
+        $order->customerOrderLine->update(['point_category_id' => $data['point_category_id'] ?? null]);
+
+        return redirect()->route('production.orders.show', $order)
+            ->with('success', 'تم تحديث تصنيف النقاط. يُحتسب على الإنجاز المسجل من الآن؛ ولما سُجّل سابقاً استخدم «احتساب أعمال بلا تصنيف» في إعدادات النقاط.');
+    }
+
     public function releaseForm(Request $request, ProductionOrder $order): View
     {
         abort_if(! $request->user()->can('production.release'), 403);

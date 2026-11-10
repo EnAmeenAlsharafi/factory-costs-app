@@ -83,6 +83,10 @@ class ReportsCenterController extends Controller
                 ['title' => 'الهدر وإعادة العمل والجودة', 'purpose' => 'الهدر حسب المادة/الموديل/القسم/السبب، إعادة العمل، وحوادث الجودة.', 'icon' => 'fa-recycle', 'route' => 'reports.production.quality', 'any' => ['reports.production', 'reports.quality']],
                 ['title' => 'أداء الأقسام والاختناقات', 'purpose' => 'العمليات المفتوحة والمنجزة، طوابير مراكز العمل، ومدة الإنتاج.', 'icon' => 'fa-diagram-project', 'route' => 'reports.production.departments', 'any' => ['reports.production']],
             ]],
+            ['title' => 'الموظفون والمكافآت', 'icon' => 'fa-users-gear', 'reports' => [
+                ['title' => 'أداء الموظفين ونقاط المكافآت', 'purpose' => 'إنجاز كل موظف في الشهر ونقاطه حسب تصنيف السرير، مع كشف نقاط للرواتب.', 'icon' => 'fa-ranking-star', 'route' => 'reports.workers.index', 'any' => ['reports.production']],
+                ['title' => 'إعدادات نقاط الإنتاج', 'purpose' => 'تصنيفات الأسرة ونقاطها، الأقسام التي تُحتسب فيها، وتصنيف الموديلات.', 'icon' => 'fa-sliders', 'route' => 'production.points.index', 'any' => ['production.manage_routing']],
+            ]],
             ['title' => 'المواد والمخزون', 'icon' => 'fa-warehouse', 'reports' => [
                 ['title' => 'المخزون والأقمشة والنواقص', 'purpose' => 'الأرصدة والواردة، القيمة التشغيلية، الأقمشة حسب المورد واللون، بطيئة الحركة، والنواقص.', 'icon' => 'fa-boxes-stacked', 'route' => 'reports.inventory', 'any' => ['reports.inventory']],
             ]],

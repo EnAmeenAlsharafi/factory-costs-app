@@ -340,7 +340,7 @@ class ProductionOrderService
                 'user_id' => $user->id,
                 'notes' => $notes,
                 'occurred_at' => now(),
-            ]);
+            ] + app(WorkerPointsService::class)->creditFor($lockedOp, $addedQty, $lockedOp->assigned_user_id ?? $user->id));
 
             // Execution/timeline audit (append-only).
             if ($wasNotStarted) {
@@ -417,7 +417,7 @@ class ProductionOrderService
                 'user_id' => $user->id,
                 'notes' => "تصحيح كمية الإنجاز: {$notes}",
                 'occurred_at' => now(),
-            ]);
+            ] + app(WorkerPointsService::class)->creditFor($op, $newTotalQty - $prevCompleted, $op->assigned_user_id ?? $user->id));
 
             $this->events->record($op, 'PROGRESS_RECORDED', [
                 'from' => $prevStatus,

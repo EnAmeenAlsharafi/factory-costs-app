@@ -19,6 +19,7 @@ class ProductionReviewRequest extends FormRequest
             'lines.*.reference_width_cm' => 'nullable|numeric|gt:0',
             'lines.*.reference_length_cm' => 'nullable|numeric|gt:0',
             'lines.*.production_notes' => 'nullable|string',
+            'lines.*.point_category_id' => ['nullable', 'integer', 'exists:production_point_categories,id'],
             'lines.*.recipe_version_id' => ['nullable', 'integer', Rule::exists('manufacturing_recipe_versions', 'id')->where('status', 'APPROVED')],
             'production_notes' => 'nullable|string',
         ];

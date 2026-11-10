@@ -126,6 +126,19 @@
                         @endforeach
                     </select>
 
+                    {{-- 5. Worker points: a custom or showroom design gets its category here; a catalogue model inherits its own. --}}
+                    @if ($line->line_type === 'MANUFACTURED')
+                    @php $modelPointCategory = $line->productModel?->pointCategory; @endphp
+                    <label for="points-{{ $line->id }}" class="form-label fs-8 mb-1 mt-2">تصنيف النقاط للعمال</label>
+                    <select id="points-{{ $line->id }}" name="lines[{{ $line->id }}][point_category_id]" class="form-select" aria-describedby="points-help-{{ $line->id }}">
+                        <option value="">{{ $modelPointCategory ? 'حسب الموديل: '.$modelPointCategory->label : '— بلا تصنيف —' }}</option>
+                        @foreach ($pointCategories as $pointCategory)
+                            <option value="{{ $pointCategory->id }}" @selected((string) old('lines.'.$line->id.'.point_category_id', $line->point_category_id) === (string) $pointCategory->id)>{{ $pointCategory->label }}</option>
+                        @endforeach
+                    </select>
+                    <small id="points-help-{{ $line->id }}" class="d-block fs-8 {{ ! $modelPointCategory && ! $line->point_category_id ? 'text-warning-emphasis' : 'text-muted' }}">{{ $modelPointCategory ? 'اتركه حسب الموديل، أو اختر تصنيفاً مختلفاً لهذا الطلب.' : 'طلب خاص أو موديل غير مصنف: حدد التصنيف ليكسب العامل نقاطه.' }}</small>
+                    @endif
+
                     @if ($line->notes)
                         <div class="fs-7 text-muted mt-2"><i class="fas fa-circle-info" aria-hidden="true"></i> {{ $line->notes }}</div>
                     @endif

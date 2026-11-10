@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ProductionReviewRequest;
 use App\Models\CustomerOrder;
 use App\Models\ManufacturingRecipeVersion;
+use App\Models\ProductionPointCategory;
 use App\Services\CustomerOrderService;
 use App\Services\OrderPaymentEligibilityService;
 use Exception;
@@ -42,7 +43,9 @@ class ProductionReviewController extends Controller
             'detail' => $request->user()->can('receivables.view') ? $eligibility['reason'] : null,
         ];
 
-        return view('sales.orders.review', compact('order', 'recipeVersions', 'productionGate'));
+        $pointCategories = ProductionPointCategory::active()->ordered()->get();
+
+        return view('sales.orders.review', compact('order', 'recipeVersions', 'productionGate', 'pointCategories'));
     }
 
     public function approveForProduction(ProductionReviewRequest $request, CustomerOrder $order): RedirectResponse

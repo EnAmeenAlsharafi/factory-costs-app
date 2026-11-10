@@ -126,6 +126,8 @@
                             </div>
                         </div>
 
+                        @include('products.models.partials.point-category', ['selected' => $model->point_category_id])
+
                         <div class="form-check form-switch mb-3">
                             <input class="form-check-input" type="checkbox" name="is_custom_template" id="is_custom_template" value="1" {{ old('is_custom_template', $model->is_custom_template) ? 'checked' : '' }}>
                             <label class="form-check-input-label fw-semibold ms-2" for="is_custom_template">قالب تصميم خاص</label>

@@ -43,6 +43,7 @@ use App\Http\Controllers\ProductionMyTasksController;
 use App\Http\Controllers\ProductionOperationController;
 use App\Http\Controllers\ProductionOrderController;
 use App\Http\Controllers\ProductionPipelineController;
+use App\Http\Controllers\ProductionPointCategoryController;
 use App\Http\Controllers\ProductionReportController;
 use App\Http\Controllers\ProductionReviewController;
 use App\Http\Controllers\ProductionReworkController;
@@ -63,6 +64,7 @@ use App\Http\Controllers\Reports\ProcurementReportController;
 use App\Http\Controllers\Reports\ProfitabilityReportController;
 use App\Http\Controllers\Reports\ReceivablesManagementReportController;
 use App\Http\Controllers\Reports\ReportsCenterController;
+use App\Http\Controllers\Reports\WorkerPerformanceReportController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\Sales\IncompleteImportedOrderController;
 use App\Http\Controllers\Sales\ReadyStockProductController;
@@ -256,6 +258,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/orders/{order}/release', [ProductionOrderController::class, 'releaseForm'])->name('orders.release.form');
         Route::post('/orders/{order}/release', [ProductionOrderController::class, 'release'])->name('orders.release');
         Route::post('/orders/{order}/recipe', [ProductionOrderController::class, 'linkRecipe'])->name('orders.link-recipe');
+        Route::put('/orders/{order}/point-category', [ProductionOrderController::class, 'setPointCategory'])->name('orders.point-category');
         Route::post('/orders/{order}/hold', [ProductionOrderController::class, 'hold'])->name('orders.hold');
         Route::post('/orders/{order}/resume', [ProductionOrderController::class, 'resume'])->name('orders.resume');
         Route::post('/orders/{order}/cancel', [ProductionOrderController::class, 'cancel'])->name('orders.cancel');
@@ -310,6 +313,14 @@ Route::middleware('auth')->group(function () {
         Route::get('/waste/create', [ProductionWasteController::class, 'create'])->name('waste.create');
         Route::post('/waste', [ProductionWasteController::class, 'store'])->name('waste.store');
         Route::post('/waste/{waste}/approve', [ProductionWasteController::class, 'approve'])->name('waste.approve');
+
+        // Worker points: bed categories and rates, departments that award points.
+        Route::get('/points', [ProductionPointCategoryController::class, 'index'])->name('points.index');
+        Route::post('/points', [ProductionPointCategoryController::class, 'store'])->name('points.store');
+        Route::put('/points/departments', [ProductionPointCategoryController::class, 'updateDepartments'])->name('points.departments');
+        Route::put('/points/models', [ProductionPointCategoryController::class, 'classifyModels'])->name('points.models');
+        Route::post('/points/credit-unclassified', [ProductionPointCategoryController::class, 'creditUnclassified'])->name('points.credit-unclassified');
+        Route::put('/points/{category}', [ProductionPointCategoryController::class, 'update'])->name('points.update');
 
         Route::get('/reports', [ProductionReportController::class, 'index'])->name('reports.index');
         Route::get('/reports/cost', [ProductionReportController::class, 'actualVsPlannedCost'])->name('reports.cost');
@@ -570,6 +581,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/production/cost-structure', [ManufacturingReportController::class, 'costStructure'])->name('production.cost-structure');
         Route::get('/production/quality', [ManufacturingReportController::class, 'quality'])->name('production.quality');
         Route::get('/production/departments', [ManufacturingReportController::class, 'departments'])->name('production.departments');
+
+        Route::get('/workers', [WorkerPerformanceReportController::class, 'index'])->name('workers.index');
+        Route::get('/workers/export', [WorkerPerformanceReportController::class, 'export'])->name('workers.export');
+        Route::get('/workers/{worker}', [WorkerPerformanceReportController::class, 'show'])->name('workers.show');
 
         Route::get('/inventory', [InventoryReportController::class, 'index'])->name('inventory');
         Route::get('/procurement', [ProcurementReportController::class, 'index'])->name('procurement');

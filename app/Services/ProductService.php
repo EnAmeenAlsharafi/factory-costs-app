@@ -34,6 +34,7 @@ class ProductService
                 'reference_image_path' => $imagePath,
                 'design_notes' => $data['design_notes'] ?? null,
                 'is_custom_template' => $data['is_custom_template'] ?? false,
+                'point_category_id' => $data['point_category_id'] ?? null,
                 'is_active' => $data['is_active'] ?? true,
             ]);
         });

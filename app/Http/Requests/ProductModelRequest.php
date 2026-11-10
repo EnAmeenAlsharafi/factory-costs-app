@@ -24,6 +24,7 @@ class ProductModelRequest extends FormRequest
             'reference_image_url' => ['nullable', 'url', 'max:1000'],
             'design_notes' => ['nullable', 'string', 'max:2000'],
             'is_custom_template' => ['nullable', 'boolean'],
+            'point_category_id' => ['nullable', 'exists:production_point_categories,id'],
             'is_active' => ['nullable', 'boolean'],
         ];
     }
