@@ -7,12 +7,17 @@ use App\Models\ProductionOrderOperation;
 use App\Models\ProductionReworkAction;
 use App\Models\QualityIncident;
 use App\Models\User;
+use App\Notifications\NotificationService;
+use App\Notifications\NotificationType;
 use Exception;
 use Illuminate\Support\Facades\DB;
 
 class QualityIncidentService
 {
-    public function __construct(protected ProductionEventService $events) {}
+    public function __construct(
+        protected ProductionEventService $events,
+        protected NotificationService $notifications,
+    ) {}
 
     /**
      * Create a new quality incident for a production order.
@@ -47,6 +52,16 @@ class QualityIncidentService
                 'status' => 'OPEN',
                 'detected_by_user_id' => $user->id,
                 'notes' => $data['notes'] ?? null,
+            ]);
+
+            $this->notifications->raise(NotificationType::QualityIncidentOpened, [
+                'title' => 'بلاغ جودة جديد يخص قسمك',
+                'body' => "{$incident->incident_number} — أمر الإنتاج {$productionOrder->production_order_number}: {$incident->description}",
+                'url' => route('production.quality-incidents.show', $incident->id),
+                'subject' => $incident,
+                // The department that caused it is told, not the one that spotted it.
+                'department_id' => $incident->responsible_department_id ?? $incident->detected_department_id,
+                'actor' => $user,
             ]);
 
             if (! empty($data['disposition'])) {
@@ -134,6 +149,15 @@ class QualityIncidentService
 
             $incident->update(['status' => 'ACTION_REQUIRED']);
 
+            $this->notifications->raise(NotificationType::ReworkCreated, [
+                'title' => 'إعادة عمل مطلوبة من قسمك',
+                'body' => "{$rework->rework_number} — أمر الإنتاج {$incident->productionOrder?->production_order_number} — الكمية {$rework->quantity}",
+                'url' => route('production.rework.index'),
+                'subject' => $rework,
+                'department_id' => $rework->assigned_department_id,
+                'actor' => $user,
+            ]);
+
             if ($rework->source_operation_id) {
                 $sourceOp = ProductionOrderOperation::find($rework->source_operation_id);
                 if ($sourceOp) {
@@ -191,6 +215,14 @@ class QualityIncidentService
                 ]);
                 $this->releaseProductionOrderAfterResolution($incident, $user);
             }
+
+            $this->notifications->raise(NotificationType::ReworkCompleted, [
+                'title' => 'اكتملت إعادة عمل',
+                'body' => "{$rework->rework_number} — أمر الإنتاج {$incident->productionOrder?->production_order_number}",
+                'url' => route('production.rework.index'),
+                'subject' => $rework,
+                'actor' => $user,
+            ]);
 
             return $rework;
         });

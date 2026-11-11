@@ -13,6 +13,8 @@ use App\Models\Material;
 use App\Models\ProductConfiguration;
 use App\Models\ProductModel;
 use App\Models\User;
+use App\Notifications\NotificationService;
+use App\Notifications\NotificationType;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -173,6 +175,13 @@ class CustomerPortalService
             $submission->update(['status' => 'SUBMITTED', 'submitted_at' => now()]);
             $this->record($submission, $user, 'SUBMITTED');
 
+            app(NotificationService::class)->raise(NotificationType::PortalRequestSubmitted, [
+                'title' => 'طلب جديد من بوابة العملاء',
+                'body' => "{$submission->customer?->name} — ".count($submission->lines ?? []).' بند',
+                'url' => route('sales.portal-requests.show', $submission->id),
+                'subject' => $submission,
+            ]);
+
             return $submission;
         });
     }
@@ -256,6 +265,13 @@ class CustomerPortalService
             $submission->update(['change_note' => $message, 'status' => $confirmed ? 'CONFIRMED' : 'CHANGES_REQUESTED']);
             $this->record($submission, $user, $confirmed ? 'AMENDMENT_REQUESTED' : 'CHANGES_REQUESTED', $message);
 
+            app(NotificationService::class)->raise(NotificationType::PortalChangesRequested, [
+                'title' => 'العميل طلب تعديلاً على العرض',
+                'body' => "{$submission->customer?->name}: {$message}",
+                'url' => route('sales.portal-requests.show', $submission->id),
+                'subject' => $submission,
+            ]);
+
             return $submission;
         });
     }
@@ -303,6 +319,13 @@ class CustomerPortalService
             }
             $this->orders->submitForProductionReview($order);
             $submission->update(['customer_order_id' => $order->id, 'status' => 'CONFIRMED', 'confirmed_at' => now(), 'change_note' => null]);
+
+            app(NotificationService::class)->raise(NotificationType::PortalOfferConfirmed, [
+                'title' => 'العميل أكّد العرض',
+                'body' => "{$submission->customer?->name} — طلب العميل {$order->order_number}",
+                'url' => route('sales.orders.show', $order->id),
+                'subject' => $order,
+            ]);
             $this->record($submission, $user, 'CONFIRMED', snapshot: true);
 
             return $order;

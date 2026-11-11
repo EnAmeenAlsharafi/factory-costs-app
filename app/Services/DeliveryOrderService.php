@@ -12,6 +12,8 @@ use App\Models\Material;
 use App\Models\ProductionOrder;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Notifications\NotificationService;
+use App\Notifications\NotificationType;
 use Exception;
 use Illuminate\Support\Facades\DB;
 
@@ -36,7 +38,8 @@ class DeliveryOrderService
     public function __construct(
         protected FinishedGoodsService $finishedGoodsService,
         protected InventoryService $inventoryService,
-        protected QualityIncidentService $qualityIncidentService
+        protected QualityIncidentService $qualityIncidentService,
+        protected NotificationService $notifications,
     ) {}
 
     /**
@@ -254,6 +257,16 @@ class DeliveryOrderService
 
             $this->recordEvent($delivery, 'ASSIGNED', $oldStatus, 'ASSIGNED', $assigner, "تعيين مسؤول التوصيل: {$assignedDriver->name}");
 
+            $this->notifications->raise(NotificationType::DeliveryAssigned, [
+                'title' => 'أُسند إليك أمر توصيل',
+                'body' => "{$delivery->delivery_number} — {$delivery->customer_name_snapshot} — {$delivery->city_snapshot}"
+                    .($delivery->scheduled_delivery_date ? " — بتاريخ {$delivery->scheduled_delivery_date->format('Y-m-d')}" : ''),
+                'url' => route('delivery.orders.show', $delivery->id),
+                'subject' => $delivery,
+                'users' => [$assignedDriver->id],
+                'actor' => $assigner,
+            ]);
+
             return $delivery;
         });
     }
@@ -339,6 +352,15 @@ class DeliveryOrderService
             }
             $this->recordEvent($delivery, 'DELIVERED', $oldStatus, 'DELIVERED', $user, $summary);
 
+            $this->notifications->raise(NotificationType::DeliveryCompleted, [
+                'title' => 'تم تسليم الطلب للعميل',
+                'body' => "{$delivery->delivery_number} — {$delivery->customer_name_snapshot}"
+                    .($delivery->installation_required ? ' — بانتظار التركيب' : ''),
+                'url' => route('delivery.orders.show', $delivery->id),
+                'subject' => $delivery,
+                'actor' => $user,
+            ]);
+
             return $delivery;
         });
     }
@@ -364,6 +386,14 @@ class DeliveryOrderService
             ]);
 
             $this->recordEvent($delivery, 'INSTALLED', $oldStatus, 'INSTALLATION_COMPLETED', $user, $notes ?? 'تم التركيب والمعاينة النهائية بنجاح');
+
+            $this->notifications->raise(NotificationType::InstallationCompleted, [
+                'title' => 'اكتمل التركيب — الطلب مكتمل تشغيلياً',
+                'body' => "{$delivery->delivery_number} — {$delivery->customer_name_snapshot}",
+                'url' => route('delivery.orders.show', $delivery->id),
+                'subject' => $delivery,
+                'actor' => $user,
+            ]);
 
             return $delivery;
         });
@@ -417,6 +447,15 @@ class DeliveryOrderService
             if (in_array($reasonCode, DeliveryOrder::QUALITY_REASONS, true)) {
                 $this->openQualityIncidents($delivery, $user, $reasonCode, $reasonText);
             }
+
+            $this->notifications->raise(NotificationType::DeliveryFailed, [
+                'title' => $newStatus === 'RESCHEDULED' ? 'أُجّل توصيل' : 'تعثّر توصيل',
+                'body' => "{$delivery->delivery_number} — {$delivery->customer_name_snapshot} — {$reasonText}"
+                    .($goodsLocation === 'WITH_DRIVER' ? ' — البضاعة ما زالت مع فريق التوصيل' : ''),
+                'url' => route('delivery.orders.show', $delivery->id),
+                'subject' => $delivery,
+                'actor' => $user,
+            ]);
 
             return $delivery;
         });
@@ -512,6 +551,14 @@ class DeliveryOrderService
         $eligibility = app(OrderPaymentEligibilityService::class)->checkDeliveryEligibility($delivery->customerOrder);
 
         if (! $eligibility['eligible']) {
+            $this->notifications->raise(NotificationType::OrderBlockedByPayment, [
+                'title' => 'طلب موقوف مالياً عند محاولة الخروج للتوصيل',
+                'body' => "طلب العميل {$delivery->customerOrder->order_number} — أمر التوصيل {$delivery->delivery_number}",
+                'url' => route('sales.orders.show', $delivery->customer_order_id),
+                'subject' => $delivery->customerOrder,
+                'dedupe_key' => 'ORDER_BLOCKED_BY_PAYMENT_DELIVERY:'.$delivery->id.':'.now()->toDateString(),
+            ]);
+
             throw new Exception('التسليم موقوف: لم تُستوفَ شروط السداد أو الائتمان لطلب العميل. راجع قسم التحصيل أو سجّل استثناءً إدارياً معتمداً قبل خروج الشحنة.');
         }
     }

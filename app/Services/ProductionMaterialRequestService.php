@@ -10,6 +10,8 @@ use App\Models\ProductionMaterialRequestLine;
 use App\Models\ProductionMaterialRequirement;
 use App\Models\ProductionOrder;
 use App\Models\User;
+use App\Notifications\NotificationService;
+use App\Notifications\NotificationType;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -17,7 +19,8 @@ use Illuminate\Validation\ValidationException;
 class ProductionMaterialRequestService
 {
     public function __construct(
-        protected InventoryService $inventoryService
+        protected InventoryService $inventoryService,
+        protected NotificationService $notifications,
     ) {}
 
     /**
@@ -183,6 +186,14 @@ class ProductionMaterialRequestService
 
         $request->update(['status' => 'SUBMITTED']);
 
+        $this->notifications->raise(NotificationType::MaterialRequestSubmitted, [
+            'title' => 'طلب خامات بانتظار الصرف',
+            'body' => "{$request->request_number} — أمر الإنتاج {$request->productionOrder?->production_order_number} — {$request->lines()->count()} بند",
+            'url' => route('production.material-requests.show', $request->id),
+            'subject' => $request,
+            'actor' => auth()->user(),
+        ]);
+
         return $request;
     }
 
@@ -319,6 +330,19 @@ class ProductionMaterialRequestService
                     break;
                 }
             }
+
+            $this->notifications->raise(
+                $allLinesFulfilled ? NotificationType::MaterialRequestFulfilled : NotificationType::MaterialRequestPartiallyFulfilled,
+                [
+                    'title' => $allLinesFulfilled ? 'صُرفت خامات طلبك كاملة' : 'صُرفت خامات طلبك جزئياً',
+                    'body' => "{$lockedRequest->request_number} — أمر الإنتاج {$lockedRequest->productionOrder?->production_order_number} — سند الصرف {$issue->issue_number}",
+                    'url' => route('production.material-requests.show', $lockedRequest->id),
+                    'subject' => $lockedRequest,
+                    'department_id' => $lockedRequest->requested_from_department_id,
+                    'users' => array_filter([$lockedRequest->requested_by_user_id]),
+                    'actor' => $issuer,
+                ]
+            );
 
             $lockedRequest->update([
                 'status' => $allLinesFulfilled ? 'FULFILLED' : 'PARTIALLY_FULFILLED',

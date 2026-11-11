@@ -13,6 +13,8 @@ use App\Models\SupplierQuotation;
 use App\Models\SupplierQuotationLine;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Notifications\NotificationService;
+use App\Notifications\NotificationType;
 use Exception;
 use Illuminate\Support\Facades\DB;
 
@@ -162,6 +164,14 @@ class PurchaseOrderService
             'status' => 'APPROVED',
             'approved_by_user_id' => $approver->id,
             'approved_at' => now(),
+        ]);
+
+        app(NotificationService::class)->raise(NotificationType::PurchaseOrderApproved, [
+            'title' => 'اعتُمد أمر شراء',
+            'body' => "{$order->purchase_order_number} — المورد {$order->supplier?->name}",
+            'url' => route('purchasing.orders.show', $order->id),
+            'subject' => $order,
+            'actor' => $approver,
         ]);
 
         return $order;

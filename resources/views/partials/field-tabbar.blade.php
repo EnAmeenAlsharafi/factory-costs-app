@@ -26,6 +26,17 @@
             ['route' => 'delivery.orders.my-tasks', 'params' => ['filter' => 'today'], 'active' => null, 'icon' => 'fa-calendar-day', 'label' => 'اليوم', 'exactFilter' => 'today'],
         ];
     }
+
+    // Field staff live in this bar: their unread notifications belong here too.
+    if ($fieldTabs !== [] && $fieldUser->can('notifications.view')) {
+        $fieldTabs[] = [
+            'route' => 'notifications.index',
+            'active' => 'notifications.*',
+            'icon' => 'fa-bell',
+            'label' => 'الإشعارات',
+            'badge' => \App\Models\NotificationRecipient::forUser($fieldUser)->unread()->count(),
+        ];
+    }
 @endphp
 @if ($fieldTabs !== [])
     <nav class="portal-tabbar field-tabbar" aria-label="التنقل السريع">

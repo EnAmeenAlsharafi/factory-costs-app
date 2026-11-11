@@ -241,6 +241,11 @@ class RoleAndPermissionSeeder extends Seeder
             ['name' => 'receivables.credit.view', 'display_name' => 'عرض حد وملف الائتمان للعملاء', 'module' => 'receivables'],
             ['name' => 'receivables.credit.manage', 'display_name' => 'إدارة وتحديث حدود الائتمان للعملاء', 'module' => 'receivables'],
             ['name' => 'receivables.override_payment_control', 'display_name' => 'اعتماد وتجاوز قيود السداد والائتمان للإنتاج والتسليم', 'module' => 'receivables'],
+
+            // Notifications
+            ['name' => 'notifications.view', 'display_name' => 'عرض الإشعارات الخاصة بالمستخدم', 'module' => 'notifications'],
+            ['name' => 'notifications.send', 'display_name' => 'إرسال إعلان لقسم أو لموظفين محددين', 'module' => 'notifications'],
+            ['name' => 'notifications.manage', 'display_name' => 'ضبط مصفوفة الإشعارات وعرض إشعارات النظام كاملة', 'module' => 'notifications'],
         ];
 
         $permissions = [];
@@ -467,5 +472,11 @@ class RoleAndPermissionSeeder extends Seeder
 
         // System Administrator inherits all permissions in database and via Gate::before
         $roles['admin']->permissions()->syncWithoutDetaching(collect($permissions)->pluck('id')->toArray());
+
+        // Everyone who works in the system reads their own notifications, department roles included.
+        Role::where('name', '!=', 'customer_portal')->get()
+            ->each(fn (Role $role) => $role->permissions()->syncWithoutDetaching([$permissions['notifications.view']->id]));
+
+        $roles['production_manager']->permissions()->syncWithoutDetaching([$permissions['notifications.send']->id]);
     }
 }

@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\ProductionOrderOperation;
 use App\Models\User;
+use App\Notifications\NotificationService;
+use App\Notifications\NotificationType;
 use App\Services\Concerns\AuthorizesOperationExecution;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -18,7 +20,10 @@ class ProductionAssignmentService
 {
     use AuthorizesOperationExecution;
 
-    public function __construct(protected ProductionEventService $events) {}
+    public function __construct(
+        protected ProductionEventService $events,
+        protected NotificationService $notifications,
+    ) {}
 
     private const ASSIGNABLE_STATUSES = ['READY', 'ASSIGNED', 'IN_PROGRESS', 'PARTIALLY_COMPLETED'];
 
@@ -72,6 +77,16 @@ class ProductionAssignmentService
                     'assigned_to_name' => $employee->name,
                     'previous_user_id' => $isReassignment ? $previousUser : null,
                 ]),
+            ]);
+
+            $this->notifications->raise($isReassignment ? NotificationType::TaskReassigned : NotificationType::TaskAssigned, [
+                'title' => $isReassignment ? 'أُعيد إسناد مهمة' : 'أُسندت إليك مهمة جديدة',
+                'body' => "{$locked->operation_name_snapshot} — أمر الإنتاج {$locked->productionOrder->production_order_number}",
+                'url' => route('production.my-tasks'),
+                'subject' => $locked,
+                'department_id' => $locked->workCenter?->department_id,
+                'users' => array_filter([$employee->id, $isReassignment ? $previousUser : null]),
+                'actor' => $actor,
             ]);
 
             return $locked->fresh(['assignedUser', 'assignedByUser']);

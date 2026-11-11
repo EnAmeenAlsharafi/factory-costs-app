@@ -36,6 +36,8 @@ class Role extends Model
         'departments.view',
         'recipes.view',
         'semi_finished_components.view',
+        // Everyone reads their own notifications; what each one may see is decided when it is raised.
+        'notifications.view',
     ];
 
     protected $fillable = [

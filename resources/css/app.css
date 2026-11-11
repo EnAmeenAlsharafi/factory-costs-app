@@ -1303,3 +1303,13 @@ a.metric-tile:hover { color: var(--factory-text); border-color: #94a3b8; }
 .driver-contact-btn.is-disabled { color: #64748b; background: #f8fafc; }
 .driver-contact-btn:focus-visible { outline: 3px solid var(--tone-primary); outline-offset: 2px; }
 .driver-details-link { display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: .25rem .1rem; color: var(--tone-primary); font-size: .85rem; font-weight: 600; text-decoration: none; border-top: 1px solid #eef2f7; }
+
+/* ── Notifications ──────────────────────────────────────────────────────────
+   The bell's dropdown is a reading surface, not a menu: it has to hold a few
+   lines of Arabic per item without growing past the viewport on a phone. */
+.notification-bell-menu { width: min(22rem, calc(100vw - 1.5rem)); }
+.notification-bell-list { max-height: min(24rem, 60vh); overflow-y: auto; overscroll-behavior: contain; }
+.notification-bell-list .dropdown-item { white-space: normal; }
+.notification-bell-list .dropdown-item:focus-visible { outline: 3px solid var(--tone-primary); outline-offset: -3px; }
+.notification-bell .badge { font-size: .65rem; padding: .2rem .35rem; }
+.notification-icon { font-size: .9rem; }

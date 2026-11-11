@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\CustomerOrder;
 use App\Models\PaymentControlOverride;
+use App\Notifications\NotificationService;
+use App\Notifications\NotificationType;
 use Exception;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,7 +25,7 @@ class PaymentControlOverrideController extends Controller
         try {
             $order = CustomerOrder::with('customer')->findOrFail($validated['customer_order_id']);
 
-            PaymentControlOverride::create([
+            $override = PaymentControlOverride::create([
                 'customer_order_id' => $order->id,
                 'customer_id' => $order->customer_id,
                 'override_stage' => $validated['override_stage'],
@@ -32,6 +34,14 @@ class PaymentControlOverrideController extends Controller
                 'current_exposure' => $order->customer ? $order->customer->current_credit_exposure : 0,
                 'reason' => $validated['reason'],
                 'created_by_user_id' => $request->user()->id,
+            ]);
+
+            app(NotificationService::class)->raise(NotificationType::PaymentControlOverridden, [
+                'title' => 'سُجّل استثناء إداري على قيد السداد',
+                'body' => "طلب العميل {$order->order_number} — {$order->customer?->name} — المرحلة: {$override->override_stage} — السبب: {$override->reason}",
+                'url' => route('sales.orders.show', $order->id),
+                'subject' => $order,
+                'actor' => $request->user(),
             ]);
 
             return back()->with('success', 'تم اعتماد وتسجيل الاستثناء الإداري بنجاح للطلب رقم '.$order->order_number.'.');

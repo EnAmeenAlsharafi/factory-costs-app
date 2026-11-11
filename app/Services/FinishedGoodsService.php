@@ -7,6 +7,8 @@ use App\Models\FinishedGoodsReceipt;
 use App\Models\ProductionOrder;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Notifications\NotificationService;
+use App\Notifications\NotificationType;
 use Exception;
 use Illuminate\Support\Facades\DB;
 
@@ -206,6 +208,14 @@ class FinishedGoodsService
                 'status' => 'POSTED',
                 'posted_at' => now(),
                 'received_by_user_id' => $user->id,
+            ]);
+
+            app(NotificationService::class)->raise(NotificationType::OrderReadyForDelivery, [
+                'title' => 'منتجات جاهزة في المستودع — يمكن إنشاء أمر توصيل',
+                'body' => "طلب العميل {$po->customerOrder?->order_number} — أمر الإنتاج {$po->production_order_number} — الكمية {$receipt->quantity}",
+                'url' => route('delivery.orders.create', ['customer_order_id' => $po->customer_order_id]),
+                'subject' => $po->customerOrder,
+                'actor' => $user,
             ]);
 
             return $receipt;

@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\ProductionOperationBlock;
 use App\Models\ProductionOrderOperation;
 use App\Models\User;
+use App\Notifications\NotificationService;
+use App\Notifications\NotificationType;
 use App\Services\Concerns\AuthorizesOperationExecution;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -25,6 +27,7 @@ class ProductionExecutionService
         protected ProductionOrderService $orders,
         protected ProductionEventService $events,
         protected ProductionAssignmentService $assignments,
+        protected NotificationService $notifications,
     ) {}
 
     /**
@@ -156,6 +159,16 @@ class ProductionExecutionService
                 'meta' => ['reason_code' => $reasonCode, 'block_id' => $block->id],
             ]);
 
+            $this->notifications->raise(NotificationType::StageBlocked, [
+                'title' => 'توقفت مرحلة بعائق',
+                'body' => "{$locked->operation_name_snapshot} — أمر الإنتاج {$locked->productionOrder->production_order_number}: "
+                    .$block->reason_arabic.($note ? " — {$note}" : ''),
+                'url' => route('production.orders.show', $locked->production_order_id),
+                'subject' => $locked,
+                'department_id' => $locked->workCenter?->department_id,
+                'actor' => $employee,
+            ]);
+
             return $block;
         });
     }
@@ -201,6 +214,17 @@ class ProductionExecutionService
                 'note' => $resolutionNote,
                 'user' => $actor,
                 'meta' => ['block_id' => $block->id],
+            ]);
+
+            $this->notifications->raise(NotificationType::StageBlockResolved, [
+                'title' => 'حُلّ العائق — استأنف العمل',
+                'body' => "{$locked->operation_name_snapshot} — أمر الإنتاج {$locked->productionOrder->production_order_number}"
+                    .($resolutionNote ? ": {$resolutionNote}" : ''),
+                'url' => route('production.my-tasks'),
+                'subject' => $locked,
+                'department_id' => $locked->workCenter?->department_id,
+                'users' => array_filter([$locked->assigned_user_id]),
+                'actor' => $actor,
             ]);
 
             // Predecessors may have finished while this operation was blocked: promote it now, otherwise

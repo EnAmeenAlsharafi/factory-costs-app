@@ -9,6 +9,8 @@ use App\Models\PurchaseRequest;
 use App\Models\PurchaseRequestLine;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Notifications\NotificationService;
+use App\Notifications\NotificationType;
 use Exception;
 use Illuminate\Support\Facades\DB;
 
@@ -93,6 +95,14 @@ class PurchaseRequestService
         $request->update([
             'status' => 'SUBMITTED',
             'submitted_at' => now(),
+        ]);
+
+        app(NotificationService::class)->raise(NotificationType::PurchaseRequestPendingReview, [
+            'title' => 'طلب شراء بانتظار المراجعة',
+            'body' => "{$request->request_number} — {$request->lines()->count()} بند",
+            'url' => route('purchasing.requests.show', $request->id),
+            'subject' => $request,
+            'actor' => $user,
         ]);
 
         return $request;

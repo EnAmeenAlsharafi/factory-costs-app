@@ -13,6 +13,8 @@ use App\Models\ProductionWasteReason;
 use App\Models\ProductionWasteRecord;
 use App\Models\QualityIncident;
 use App\Models\UnitOfMeasure;
+use App\Notifications\NotificationService;
+use App\Notifications\NotificationType;
 use App\Services\DocumentNumberService;
 use Exception;
 use Illuminate\Http\RedirectResponse;
@@ -134,6 +136,15 @@ class ProductionWasteController extends Controller
                     'recorded_by_user_id' => $request->user()->id,
                     'notes' => $data['notes'] ?? null,
                     'occurred_at' => $data['occurred_at'],
+                ]);
+
+                app(NotificationService::class)->raise(NotificationType::WastePendingApproval, [
+                    'title' => 'هدر مسجّل بانتظار الاعتماد',
+                    'body' => "{$waste->waste_number} — {$material->name_ar} — الكمية {$quantity}",
+                    'url' => route('production.waste.index'),
+                    'subject' => $waste,
+                    'department_id' => $waste->responsible_department_id ?? $waste->detected_department_id,
+                    'actor' => $request->user(),
                 ]);
 
                 if ($lot) {

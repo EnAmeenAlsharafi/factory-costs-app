@@ -33,6 +33,8 @@ use App\Http\Controllers\MaterialReturnController;
 use App\Http\Controllers\MaterialSupplierController;
 use App\Http\Controllers\MaterialUnitConversionController;
 use App\Http\Controllers\MattressSupplyController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\NotificationSettingController;
 use App\Http\Controllers\PaymentAllocationController;
 use App\Http\Controllers\PaymentControlOverrideController;
 use App\Http\Controllers\ProcurementPlanningController;
@@ -635,6 +637,18 @@ Route::middleware('auth')->group(function () {
         // Payment Control Overrides
         Route::post('/overrides', [PaymentControlOverrideController::class, 'store'])->name('overrides.store');
     });
+
+    // Notifications: the bell, the list, announcements and the settings matrix
+    Route::prefix('notifications')->name('notifications.')->group(function () {
+        Route::get('/', [NotificationController::class, 'index'])->name('index');
+        Route::get('/unread-count', [NotificationController::class, 'unreadCount'])->name('unread-count');
+        Route::get('/announce', [NotificationController::class, 'createAnnouncement'])->name('announce.create');
+        Route::post('/announce', [NotificationController::class, 'storeAnnouncement'])->name('announce.store');
+        Route::post('/read-all', [NotificationController::class, 'readAll'])->name('read-all');
+        Route::post('/{recipient}/read', [NotificationController::class, 'read'])->name('read');
+    });
+    Route::get('/settings/notifications', [NotificationSettingController::class, 'edit'])->name('settings.notifications.edit');
+    Route::put('/settings/notifications', [NotificationSettingController::class, 'update'])->name('settings.notifications.update');
 
     // Search API Endpoints (Typeahead Selectors)
     Route::prefix('api/search')->name('api.search.')->group(function () {

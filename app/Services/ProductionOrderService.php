@@ -10,6 +10,8 @@ use App\Models\ProductionOrderOperation;
 use App\Models\ProductionRouting;
 use App\Models\QualityIncident;
 use App\Models\User;
+use App\Notifications\NotificationService;
+use App\Notifications\NotificationType;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -18,6 +20,7 @@ class ProductionOrderService
     public function __construct(
         protected ProductionDependencyService $dependencies,
         protected ProductionEventService $events,
+        protected NotificationService $notifications,
     ) {}
 
     /**
@@ -235,6 +238,17 @@ class ProductionOrderService
                     $this->events->record($poOp, 'READY', ['to' => 'READY', 'user' => $user]);
                 }
             }
+
+            $firstStage = $po->operations()->with('workCenter')->where('status', 'READY')->orderBy('sequence_number')->first();
+            $this->notifications->raise(NotificationType::ProductionOrderReleased, [
+                'title' => 'أمر إنتاج جديد في قسمك',
+                'body' => "{$po->production_order_number} — الكمية {$po->released_quantity}"
+                    .($firstStage ? " — المرحلة: {$firstStage->operation_name_snapshot}" : ''),
+                'url' => route('production.orders.show', $po->id),
+                'subject' => $po,
+                'department_id' => $firstStage?->workCenter?->department_id,
+                'actor' => $user,
+            ]);
 
             return $po->fresh('operations.workCenter');
         });
@@ -487,6 +501,7 @@ class ProductionOrderService
             $po->hold_reason = $reason;
             $po->save();
             $this->recordOrderDecision($po, 'ORDER_HELD', $reason, $user);
+            $this->notifyOpenDepartments($po, NotificationType::ProductionOrderHeld, 'عُلّق أمر إنتاج — أوقف العمل عليه', $reason, $user);
 
             return $po;
         });
@@ -556,6 +571,7 @@ class ProductionOrderService
             $po->status = 'CANCELLED';
             $po->cancellation_reason = $reason;
             $po->save();
+            $this->notifyOpenDepartments($po, NotificationType::ProductionOrderCancelled, 'أُلغي أمر إنتاج — أوقف العمل عليه', $reason, $user);
 
             return $po;
         });
@@ -591,6 +607,14 @@ class ProductionOrderService
         $eligibility = app(OrderPaymentEligibilityService::class)->checkProductionEligibility($po->customerOrder);
 
         if (! $eligibility['eligible']) {
+            $this->notifications->raise(NotificationType::OrderBlockedByPayment, [
+                'title' => 'طلب موقوف مالياً عند محاولة إطلاق الإنتاج',
+                'body' => "طلب العميل {$po->customerOrder->order_number} — أمر الإنتاج {$po->production_order_number}",
+                'url' => route('sales.orders.show', $po->customer_order_id),
+                'subject' => $po->customerOrder,
+                'dedupe_key' => 'ORDER_BLOCKED_BY_PAYMENT:'.$po->customer_order_id.':'.now()->toDateString(),
+            ]);
+
             throw ValidationException::withMessages([
                 'production_order' => 'لا يمكن إطلاق أمر الإنتاج: لم تُستوفَ شروط السداد أو الائتمان لطلب العميل. راجع قسم التحصيل أو سجّل استثناءً إدارياً معتمداً.',
             ]);
@@ -634,6 +658,23 @@ class ProductionOrderService
     }
 
     /**
+     * Tell every department that still has open work on the order that it stopped.
+     */
+    protected function notifyOpenDepartments(ProductionOrder $po, NotificationType $type, string $title, ?string $reason, User $actor): void
+    {
+        $po->operations()->with('workCenter')->whereNotIn('status', ['COMPLETED', 'SKIPPED'])->get()
+            ->pluck('workCenter.department_id')->filter()->unique()
+            ->each(fn (int $departmentId) => $this->notifications->raise($type, [
+                'title' => $title,
+                'body' => "{$po->production_order_number}".($reason ? " — السبب: {$reason}" : ''),
+                'url' => route('production.orders.show', $po->id),
+                'subject' => $po,
+                'department_id' => $departmentId,
+                'actor' => $actor,
+            ]));
+    }
+
+    /**
      * Record who held, resumed or cancelled the order on the timeline (against its first open operation).
      */
     protected function recordOrderDecision(ProductionOrder $po, string $eventType, ?string $note, ?User $user): void
@@ -671,6 +712,15 @@ class ProductionOrderService
     {
         foreach ($this->dependencies->evaluateReadiness($po) as $readyOp) {
             $this->events->record($readyOp, 'READY', ['to' => 'READY', 'user' => $user]);
+            $readyOp->loadMissing('workCenter');
+            $this->notifications->raise(NotificationType::StageReady, [
+                'title' => 'مرحلة جاهزة في قسمك',
+                'body' => "{$readyOp->operation_name_snapshot} — أمر الإنتاج {$po->production_order_number} — الكمية {$readyOp->required_quantity}",
+                'url' => route('production.queue.index'),
+                'subject' => $readyOp,
+                'department_id' => $readyOp->workCenter?->department_id,
+                'actor' => $user,
+            ]);
         }
     }
 
@@ -693,6 +743,8 @@ class ProductionOrderService
             ->whereNotIn('status', ['RESOLVED', 'CANCELLED'])
             ->exists();
 
+        $wasCompleted = $po->status === 'COMPLETED';
+
         if ($po->completed_quantity >= $po->released_quantity && ! $hasOpenQualityIncidents) {
             $po->status = 'COMPLETED';
             $po->completed_at = now();
@@ -703,5 +755,14 @@ class ProductionOrderService
         }
 
         $po->save();
+
+        if (! $wasCompleted && $po->status === 'COMPLETED') {
+            $this->notifications->raise(NotificationType::ProductionOrderCompleted, [
+                'title' => 'اكتمل أمر إنتاج — جاهز للاستلام في المنتجات الجاهزة',
+                'body' => "{$po->production_order_number} — الكمية المنجزة {$po->completed_quantity}",
+                'url' => route('production.orders.show', $po->id),
+                'subject' => $po,
+            ]);
+        }
     }
 }

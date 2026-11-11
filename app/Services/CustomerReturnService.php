@@ -8,6 +8,8 @@ use App\Models\FinishedGoodsMovement;
 use App\Models\ProductionOrder;
 use App\Models\QualityIncident;
 use App\Models\User;
+use App\Notifications\NotificationService;
+use App\Notifications\NotificationType;
 use Exception;
 use Illuminate\Support\Facades\DB;
 
@@ -59,7 +61,7 @@ class CustomerReturnService
             ? DeliveryOrder::find($data['delivery_order_id'])
             : null;
 
-        return CustomerReturn::create([
+        $return = CustomerReturn::create([
             'return_number' => DocumentNumberService::generateCustomerReturnNumber(),
             'customer_order_id' => $productionOrder->customer_order_id,
             'delivery_order_id' => $deliveryOrder?->id,
@@ -74,6 +76,16 @@ class CustomerReturnService
             'quality_incident_id' => $data['quality_incident_id'] ?? null,
             'notes' => $data['notes'] ?? $data['description'] ?? null,
         ]);
+
+        app(NotificationService::class)->raise(NotificationType::CustomerReturnOpened, [
+            'title' => 'مرتجع عميل جديد',
+            'body' => "{$return->return_number} — أمر الإنتاج {$productionOrder->production_order_number} — الكمية {$qty}",
+            'url' => route('customer-returns.show', $return->id),
+            'subject' => $return,
+            'actor' => $reporter,
+        ]);
+
+        return $return;
     }
 
     /**

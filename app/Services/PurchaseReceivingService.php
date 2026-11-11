@@ -6,6 +6,8 @@ use App\Models\MaterialReceipt;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderLine;
 use App\Models\User;
+use App\Notifications\NotificationService;
+use App\Notifications\NotificationType;
 use Exception;
 use Illuminate\Support\Facades\DB;
 
@@ -179,6 +181,14 @@ class PurchaseReceivingService
                         $po->update(['status' => 'RECEIVED']);
                     } elseif ($anyReceived) {
                         $po->update(['status' => 'PARTIALLY_RECEIVED']);
+
+                        app(NotificationService::class)->raise(NotificationType::PurchaseReceivedPartially, [
+                            'title' => 'استلام جزئي لأمر شراء',
+                            'body' => "{$po->purchase_order_number} — المورد {$po->supplier?->name} — سند الاستلام {$postedReceipt->receipt_number}",
+                            'url' => route('purchasing.orders.show', $po->id),
+                            'subject' => $po,
+                            'actor' => $user,
+                        ]);
                     }
 
                     // Supplier-made ready products (mattresses) delivered out of the stock the supplier holds for us.

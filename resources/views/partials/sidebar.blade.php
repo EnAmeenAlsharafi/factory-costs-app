@@ -66,6 +66,14 @@
                     <ul class="nav flex-column gap-1 sidebar-sub-menu ps-0"
                         x-show="sidebarCollapsed || isSectionOpen('reports', {{ $isReportsActive ? 'true' : 'false' }})"
                         x-transition>
+                        @can('notifications.view')
+                            <li class="nav-item">
+                                <a href="{{ route('notifications.index') }}" class="sidebar-nav-link {{ request()->routeIs('notifications.*') ? 'active' : '' }}" title="الإشعارات">
+                                    <span class="sidebar-icon"><i class="fas fa-bell"></i></span>
+                                    <span class="sidebar-text">الإشعارات</span>
+                                </a>
+                            </li>
+                        @endcan
                         <li class="nav-item">
                             <a href="{{ route('reports.index') }}" class="sidebar-nav-link {{ $isReportsActive ? 'active' : '' }}" title="مركز التقارير">
                                 <span class="sidebar-icon"><i class="fas fa-chart-pie"></i></span>

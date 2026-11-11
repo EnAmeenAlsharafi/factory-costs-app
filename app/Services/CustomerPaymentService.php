@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\CustomerPayment;
 use App\Models\CustomerPaymentEvent;
 use App\Models\User;
+use App\Notifications\NotificationService;
+use App\Notifications\NotificationType;
 use Exception;
 use Illuminate\Support\Facades\DB;
 
@@ -42,6 +44,14 @@ class CustomerPaymentService
                 ],
             ]);
 
+            app(NotificationService::class)->raise(NotificationType::PaymentPendingConfirmation, [
+                'title' => 'دفعة جديدة بانتظار التأكيد',
+                'body' => "{$payment->payment_number} — {$payment->customer?->name} — المبلغ ".number_format((float) $payment->amount, 2).' ر.س',
+                'url' => route('receivables.payments.show', $payment->id),
+                'subject' => $payment,
+                'actor' => $user,
+            ]);
+
             return $payment;
         });
     }
@@ -77,6 +87,16 @@ class CustomerPaymentService
                 'event_type' => 'CONFIRMED',
                 'user_id' => $user->id,
                 'notes' => 'تم تأكيد الدفعة واعتمادها في حسابات التحصيل.',
+            ]);
+
+            app(NotificationService::class)->raise(NotificationType::PaymentConfirmed, [
+                'title' => 'تم تأكيد دفعة عميل',
+                'body' => "{$payment->payment_number} — {$payment->customer?->name} — المبلغ ".number_format((float) $payment->amount, 2).' ر.س',
+                'url' => route('receivables.payments.show', $payment->id),
+                'subject' => $payment,
+                'users' => $payment->customer?->orders()->whereNotNull('created_by_user_id')
+                    ->distinct()->pluck('created_by_user_id')->all() ?? [],
+                'actor' => $user,
             ]);
 
             return $payment;

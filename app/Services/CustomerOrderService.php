@@ -9,13 +9,18 @@ use App\Models\FabricColor;
 use App\Models\Material;
 use App\Models\ProductionOrder;
 use App\Models\User;
+use App\Notifications\NotificationService;
+use App\Notifications\NotificationType;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class CustomerOrderService
 {
-    public function __construct(protected DocumentNumberService $documentNumberService) {}
+    public function __construct(
+        protected DocumentNumberService $documentNumberService,
+        protected NotificationService $notifications,
+    ) {}
 
     /**
      * Create a new customer order.
@@ -238,6 +243,14 @@ class CustomerOrderService
                     'status' => 'PENDING_PRODUCTION_REVIEW',
                     'production_notes' => trim(($order->production_notes ?? '').' [تم تعديل الطلب بعد اعتماد التصنيع وتتطلب إعادة المراجعة والاعتماد]'),
                 ]);
+
+                $this->notifications->raise(NotificationType::OrderChangedAfterApproval, [
+                    'title' => 'عُدّل طلب بعد اعتماده للتصنيع — يحتاج إعادة مراجعة',
+                    'body' => "طلب العميل {$order->order_number} — {$order->customer?->name}",
+                    'url' => route('sales.orders.review', $order->id),
+                    'subject' => $order,
+                    'actor' => $updater,
+                ]);
             }
 
             return $order;
@@ -267,6 +280,14 @@ class CustomerOrderService
 
             $order->update([
                 'status' => 'PENDING_PRODUCTION_REVIEW',
+            ]);
+
+            $this->notifications->raise(NotificationType::OrderSubmittedForReview, [
+                'title' => 'طلب بانتظار مراجعة الإنتاج',
+                'body' => "طلب العميل {$order->order_number} — {$order->customer?->name}",
+                'url' => route('sales.orders.review', $order->id),
+                'subject' => $order,
+                'actor' => auth()->user(),
             ]);
 
             return $order;
@@ -299,6 +320,14 @@ class CustomerOrderService
             $order->update([
                 'status' => 'CANCELLED',
                 'commercial_notes' => trim(($order->commercial_notes ?? '').' [تم إلغاء الطلب: '.($reason ?: 'بدون سبب مذكور').']'),
+            ]);
+
+            $this->notifications->raise(NotificationType::OrderCancelled, [
+                'title' => 'أُلغي طلب عميل',
+                'body' => "طلب العميل {$order->order_number} — {$order->customer?->name}".($reason ? " — السبب: {$reason}" : ''),
+                'url' => route('sales.orders.show', $order->id),
+                'subject' => $order,
+                'actor' => $user,
             ]);
 
             app(PaymentAllocationService::class)->handleOrderCancellation($order, $user);
@@ -355,6 +384,15 @@ class CustomerOrderService
                         $line->update(['approved_recipe_version_id' => $version->id]);
                     }
                 });
+
+            $this->notifications->raise(NotificationType::OrderApprovedForProduction, [
+                'title' => 'اعتُمد طلبك للتصنيع',
+                'body' => "طلب العميل {$order->order_number} — {$order->customer?->name}",
+                'url' => route('sales.orders.show', $order->id),
+                'subject' => $order,
+                'users' => array_filter([$order->created_by_user_id]),
+                'actor' => $approver,
+            ]);
 
             $order->update([
                 'status' => 'APPROVED_FOR_PRODUCTION',

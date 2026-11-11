@@ -33,6 +33,9 @@
             <span>{{ now()->locale('ar')->translatedFormat('l، d F Y') }}</span>
         </div>
 
+        <!-- Notifications -->
+        @include('partials.notification-bell')
+
         <!-- User Profile Dropdown -->
         @auth
             <div class="dropdown">
