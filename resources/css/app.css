@@ -1214,7 +1214,8 @@ a.metric-tile:hover { color: var(--factory-text); border-color: #94a3b8; }
 .order-journey-next.is-success { background: var(--tone-success-bg); }
 .order-journey-next.is-warning { background: var(--tone-warning-bg); }
 .order-journey-next.is-info { background: var(--tone-info-bg); }
-.order-journey-next.is-secondary, .order-journey-next.is-danger { background: var(--tone-secondary-bg); }
+.order-journey-next.is-secondary { background: var(--tone-secondary-bg); }
+.order-journey-next.is-danger { background: var(--tone-danger-bg); }
 .op-assign-form { display: flex; gap: .4rem; align-items: center; max-width: 420px; }
 @media (max-width: 767.98px) {
     .order-journey-steps { grid-template-columns: 1fr 1fr; row-gap: .8rem; }

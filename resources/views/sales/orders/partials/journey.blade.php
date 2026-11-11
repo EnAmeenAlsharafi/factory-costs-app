@@ -24,7 +24,7 @@
                 </span>
                 <span class="order-journey-text">
                     <span class="order-journey-label">{{ $step['label'] }}</span>
-                    @if ($step['detail'])<span class="order-journey-detail">{{ $step['detail'] }}</span>@endif
+                    @if ($step['detail'])<span @class(['order-journey-detail', 'text-danger fw-semibold' => $step['late'] ?? false])>@if ($step['late'] ?? false)<i class="fas fa-hourglass-end me-1" aria-hidden="true"></i>@endif{{ $step['detail'] }}</span>@endif
                 </span>
                 <span class="visually-hidden">{{ $stateLabels[$step['state']] }}</span>
             </li>

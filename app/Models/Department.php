@@ -19,6 +19,8 @@ class Department extends Model
         'sort_order',
         'is_production_department',
         'awards_points',
+        'target_days',
+        'warning_percent',
         'is_active',
     ];
 
@@ -27,6 +29,8 @@ class Department extends Model
         return [
             'is_production_department' => 'boolean',
             'awards_points' => 'boolean',
+            'target_days' => 'integer',
+            'warning_percent' => 'integer',
             'is_active' => 'boolean',
             'sort_order' => 'integer',
         ];

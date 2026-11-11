@@ -256,6 +256,7 @@
                                                     <span class="rework-flag"><i class="fas fa-rotate" aria-hidden="true"></i> إعادة عمل</span>
                                                 @endif
                                                 <span class="badge {{ $op->status_badge_class }}">{{ $op->status_arabic }}</span>
+                                                @include('production.partials.deadline-chip', ['operation' => $op])
                                             </div>
                                         </div>
 

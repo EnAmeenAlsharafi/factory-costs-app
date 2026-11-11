@@ -49,6 +49,7 @@
                             <x-status-badge domain="operation" :status="$op->status" />
                         </div>
                         <div class="d-flex flex-wrap gap-2">
+                            @include('production.partials.deadline-chip', ['operation' => $op])
                             @if ($isRework)
                                 <span class="rework-flag"><i class="fas fa-rotate" aria-hidden="true"></i> إعادة عمل</span>
                             @endif
@@ -114,6 +115,7 @@
                                 </div>
                                 <x-status-badge domain="operation" :status="$op->status" />
                             </div>
+                            @include('production.partials.deadline-chip', ['operation' => $op])
                             @if (in_array($po->priority, ['URGENT', 'VIP'], true))
                                 <span class="status-chip status-chip-danger"><i class="fas fa-bolt" aria-hidden="true"></i> {{ $priorityLabels[$po->priority] }}</span>
                             @endif

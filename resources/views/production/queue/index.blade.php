@@ -106,6 +106,7 @@
                         <x-status-badge domain="operation" :status="$op->status" />
                     </div>
                     <div class="d-flex flex-wrap gap-2">
+                        @include('production.partials.deadline-chip', ['operation' => $op])
                         @if ($isRework)
                             <span class="rework-flag"><i class="fas fa-rotate" aria-hidden="true"></i> إعادة عمل</span>
                         @endif
@@ -194,7 +195,7 @@
                                         <div class="progress-bar bg-success" style="width: {{ $donePct }}%"></div>
                                     </div>
                                 </td>
-                                <td><x-status-badge domain="operation" :status="$op->status" /></td>
+                                <td><x-status-badge domain="operation" :status="$op->status" /><div class="mt-1">@include('production.partials.deadline-chip', ['operation' => $op])</div></td>
                                 <td class="text-end">
                                     <button type="button" class="btn btn-sm btn-outline-primary text-nowrap" data-bs-toggle="modal" data-bs-target="#task-sheet-{{ $op->id }}">
                                         <i class="fas fa-folder-open" aria-hidden="true"></i> فتح

@@ -130,6 +130,7 @@ class ProductionOrderController extends Controller
             'operations.progressLogs.user',
             'operations.assignedUser',
             'operations.activeBlock',
+            'operations.blocks',
             'operations.targetReworkActions' => fn ($r) => $r->whereNotIn('status', ['COMPLETED', 'CANCELLED']),
             'materialRequirements.material.baseUnit',
             'materialRequests.lines.material.baseUnit',

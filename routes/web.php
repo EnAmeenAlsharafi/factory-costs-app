@@ -18,6 +18,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeliveryOrderController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\DepartmentQueueController;
+use App\Http\Controllers\DepartmentTargetTimeController;
 use App\Http\Controllers\FabricColorController;
 use App\Http\Controllers\FabricOrderController;
 use App\Http\Controllers\FinishedGoodsController;
@@ -64,6 +65,7 @@ use App\Http\Controllers\Reports\ProcurementReportController;
 use App\Http\Controllers\Reports\ProfitabilityReportController;
 use App\Http\Controllers\Reports\ReceivablesManagementReportController;
 use App\Http\Controllers\Reports\ReportsCenterController;
+use App\Http\Controllers\Reports\StageDelayReportController;
 use App\Http\Controllers\Reports\WorkerPerformanceReportController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\Sales\IncompleteImportedOrderController;
@@ -313,6 +315,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/waste/create', [ProductionWasteController::class, 'create'])->name('waste.create');
         Route::post('/waste', [ProductionWasteController::class, 'store'])->name('waste.store');
         Route::post('/waste/{waste}/approve', [ProductionWasteController::class, 'approve'])->name('waste.approve');
+
+        // Department target times: working days an order may spend in each department.
+        Route::get('/department-times', [DepartmentTargetTimeController::class, 'index'])->name('department-times.index');
+        Route::put('/department-times', [DepartmentTargetTimeController::class, 'update'])->name('department-times.update');
 
         // Worker points: bed categories and rates, departments that award points.
         Route::get('/points', [ProductionPointCategoryController::class, 'index'])->name('points.index');
@@ -582,6 +588,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/production/cost-structure', [ManufacturingReportController::class, 'costStructure'])->name('production.cost-structure');
         Route::get('/production/quality', [ManufacturingReportController::class, 'quality'])->name('production.quality');
         Route::get('/production/departments', [ManufacturingReportController::class, 'departments'])->name('production.departments');
+        Route::get('/production/delays', StageDelayReportController::class)->name('production.delays');
 
         Route::get('/workers', [WorkerPerformanceReportController::class, 'index'])->name('workers.index');
         Route::get('/workers/export', [WorkerPerformanceReportController::class, 'export'])->name('workers.export');

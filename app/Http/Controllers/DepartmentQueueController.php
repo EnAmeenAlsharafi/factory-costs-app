@@ -55,9 +55,12 @@ class DepartmentQueueController extends Controller
                 'workCenter.department',
                 'assignedUser',
                 'activeBlock',
+                'blocks',
                 'targetReworkActions' => fn ($r) => $r->whereNotIn('status', ['COMPLETED', 'CANCELLED'])->with('qualityIncident'),
             ])
             ->orderByRaw("CASE (SELECT priority FROM production_orders WHERE production_orders.id = production_order_operations.production_order_id) WHEN 'VIP' THEN 0 WHEN 'URGENT' THEN 1 ELSE 2 END")
+            ->orderByRaw('due_at IS NULL')
+            ->orderBy('due_at')
             ->orderBy('sequence_number')
             ->latest()
             ->paginate(20)

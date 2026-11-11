@@ -187,6 +187,7 @@ class OperationalDashboardService
             'tiles' => [
                 $this->tile('طلبات بانتظار مراجعة الإنتاج', CustomerOrder::where('status', 'PENDING_PRODUCTION_REVIEW')->count(), 'fa-clipboard-check', 'warning', route('sales.orders.index', ['status' => 'PENDING_PRODUCTION_REVIEW'])),
                 $this->tile('أوامر إنتاج متأخرة', ProductionOrder::whereIn('status', $activeStatuses)->whereNotNull('planned_completion_date')->whereDate('planned_completion_date', '<', today())->count(), 'fa-clock', 'danger', route('production.orders.index')),
+                $this->tile('مراحل متأخرة في الأقسام', $this->overdueStageCount(), 'fa-hourglass-end', 'danger', (auth()->user()?->can('reports.production') ? route('reports.production.delays') : route('production.queue.index'))),
                 $this->tile('أوامر إنتاج متوقفة', ProductionOrder::where('status', 'ON_HOLD')->count(), 'fa-circle-pause', 'secondary', route('production.orders.index', ['status' => 'ON_HOLD'])),
                 $this->tile('نواقص بانتظار الشراء', PurchaseRequest::where('source_type', 'PRODUCTION_SHORTAGE')->whereIn('status', ['DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED'])->count(), 'fa-cart-flatbed', 'warning', route('purchasing.planning.index')),
                 $this->tile('حوادث جودة مفتوحة', QualityIncident::whereNotIn('status', ['RESOLVED', 'CANCELLED', 'CLOSED'])->count(), 'fa-triangle-exclamation', 'danger', route('production.quality-incidents.index')),
@@ -254,6 +255,23 @@ class OperationalDashboardService
     /**
      * @return array{label: string, value: int|float, display: string, icon: string, tone: string, url: string, attention: bool}
      */
+    /**
+     * Stages past their department deadline right now (the deadline moves back by blocked time).
+     */
+    private function overdueStageCount(): int
+    {
+        $deadlines = app(StageDeadlineService::class);
+
+        return ProductionOrderOperation::query()
+            ->where('due_at', '<', now())
+            ->whereNotIn('status', ['COMPLETED', 'SKIPPED'])
+            ->whereHas('productionOrder', fn ($query) => $query->whereNotIn('status', ['CANCELLED', 'COMPLETED', 'ON_HOLD']))
+            ->with('workCenter.department', 'blocks')
+            ->get()
+            ->filter(fn (ProductionOrderOperation $operation) => $deadlines->status($operation)['state'] === 'overdue')
+            ->count();
+    }
+
     private function tile(string $label, int $value, string $icon, string $tone, string $url, bool $highlightWhenNonZero = true): array
     {
         return [

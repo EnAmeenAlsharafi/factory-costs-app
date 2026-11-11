@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Services\StageDeadlineService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Carbon;
 
 class ProductionOrderOperation extends Model
 {
@@ -27,6 +29,8 @@ class ProductionOrderOperation extends Model
         'rejected_quantity',
         'status',
         'ready_at',
+        'target_days',
+        'due_at',
         'started_at',
         'completed_at',
         'assigned_user_id',
@@ -42,10 +46,30 @@ class ProductionOrderOperation extends Model
         'completed_quantity' => 'integer',
         'rejected_quantity' => 'integer',
         'ready_at' => 'datetime',
+        'target_days' => 'integer',
+        'due_at' => 'datetime',
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
         'assigned_at' => 'datetime',
     ];
+
+    /**
+     * A stage takes its department's target time (and deadline) the moment it reaches the department.
+     */
+    protected static function booted(): void
+    {
+        static::saving(fn (self $operation) => app(StageDeadlineService::class)->stamp($operation));
+    }
+
+    /**
+     * Where this stage stands against its department deadline.
+     *
+     * @return array{state: string, label: string, tone: string, due_at: ?Carbon, days: int, blocked: bool}
+     */
+    public function deadlineStatus(): array
+    {
+        return app(StageDeadlineService::class)->status($this);
+    }
 
     public function productionOrder(): BelongsTo
     {

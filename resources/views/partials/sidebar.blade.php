@@ -417,6 +417,12 @@
                         @endcan
                         @can('production.manage_routing')
                         <li class="nav-item">
+                            <a href="{{ route('production.department-times.index') }}" class="sidebar-nav-link {{ request()->routeIs('production.department-times.*') ? 'active' : '' }}" title="مدد الأقسام">
+                                <span class="sidebar-icon"><i class="fas fa-stopwatch"></i></span>
+                                <span class="sidebar-text">مدد الأقسام</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a href="{{ route('production.points.index') }}" class="sidebar-nav-link {{ request()->routeIs('production.points.*') ? 'active' : '' }}" title="نقاط الإنتاج والمكافآت">
                                 <span class="sidebar-icon"><i class="fas fa-medal"></i></span>
                                 <span class="sidebar-text">نقاط الإنتاج والمكافآت</span>

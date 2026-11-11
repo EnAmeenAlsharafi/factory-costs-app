@@ -81,6 +81,7 @@ class ReportsCenterController extends Controller
                 ['title' => 'دقة وصفات التصنيع', 'purpose' => 'الكميات المخططة مقابل المستهلكة لكل نسخة وصفة، ومقارنة النسخ.', 'icon' => 'fa-scroll', 'route' => 'reports.production.recipes', 'any' => ['reports.production']],
                 ['title' => 'هيكل التكلفة والأقمشة', 'purpose' => 'تكلفة المواد حسب الفئة، تركيبة تكلفة المنتج، وتحليل استهلاك الأقمشة.', 'icon' => 'fa-layer-group', 'route' => 'reports.production.cost-structure', 'any' => ['reports.production']],
                 ['title' => 'الهدر وإعادة العمل والجودة', 'purpose' => 'الهدر حسب المادة/الموديل/القسم/السبب، إعادة العمل، وحوادث الجودة.', 'icon' => 'fa-recycle', 'route' => 'reports.production.quality', 'any' => ['reports.production', 'reports.quality']],
+                ['title' => 'التأخير حسب القسم', 'purpose' => 'الطلبات المتأخرة الآن في كل قسم ونسبة الإنجاز ضمن المدة، لمعرفة القسم الذي يؤخر الطلبات.', 'icon' => 'fa-hourglass-half', 'route' => 'reports.production.delays', 'any' => ['reports.production']],
                 ['title' => 'أداء الأقسام والاختناقات', 'purpose' => 'العمليات المفتوحة والمنجزة، طوابير مراكز العمل، ومدة الإنتاج.', 'icon' => 'fa-diagram-project', 'route' => 'reports.production.departments', 'any' => ['reports.production']],
             ]],
             ['title' => 'الموظفون والمكافآت', 'icon' => 'fa-users-gear', 'reports' => [

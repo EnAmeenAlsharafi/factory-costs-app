@@ -135,7 +135,13 @@ class OrderTrackingService
         $unreleasedQuantity = $manufacturedLines->sum(fn ($line) => max(0, (int) $line->quantity - (int) $line->productionOrders->where('status', '!=', 'CANCELLED')->sum('released_quantity')));
         $draftOrders = $productionOrders->whereIn('status', ['DRAFT', 'READY_FOR_RELEASE']);
         $released = $productionOrders->diff($draftOrders);
-        $operations = ProductionOrderOperation::whereIn('production_order_id', $released->pluck('id'))->where('status', '!=', 'SKIPPED')->get();
+        $operations = ProductionOrderOperation::whereIn('production_order_id', $released->pluck('id'))->where('status', '!=', 'SKIPPED')->with('workCenter.department', 'blocks')->get();
+        $deadlines = app(StageDeadlineService::class);
+        $lateStage = $operations->map(fn ($operation) => ['operation' => $operation, 'deadline' => $deadlines->status($operation)])
+            ->filter(fn ($row) => $row['deadline']['state'] === 'overdue')
+            ->sortByDesc(fn ($row) => $row['deadline']['days'])
+            ->first();
+        $lateText = $lateStage ? 'متأخر في '.($lateStage['operation']->workCenter?->department?->name_ar ?? $lateStage['operation']->operation_name_snapshot).' ('.$deadlines->days($lateStage['deadline']['days']).')' : null;
         $unassigned = $operations->where('status', 'READY')->whereNull('assigned_user_id')->count();
         $withoutMaterials = $released->where('status', 'RELEASED')->where('material_requests_count', 0);
         $releaseDone = $approved && $unreleasedQuantity === 0 && $draftOrders->isEmpty();
@@ -153,7 +159,7 @@ class OrderTrackingService
             ['key' => 'release', 'label' => 'إطلاق الإنتاج', 'state' => $needsProduction ? $state($releaseDone, $approved) : 'skipped',
                 'detail' => $needsProduction ? ($releaseDone ? $productionOrders->count().' أمر إنتاج' : ($approved ? $unreleasedQuantity.' قطعة بانتظار الإطلاق' : null)) : 'منتجات جاهزة'],
             ['key' => 'production', 'label' => 'التصنيع في الأقسام', 'state' => $needsProduction ? $state($productionDone, $releaseDone || $released->isNotEmpty()) : 'skipped',
-                'detail' => $needsProduction ? ($operations->isNotEmpty() ? $operations->where('status', 'COMPLETED')->count().' من '.$operations->count().' مراحل' : null) : 'لا يحتاج تصنيعاً'],
+                'detail' => $needsProduction ? ($lateText ?? ($operations->isNotEmpty() ? $operations->where('status', 'COMPLETED')->count().' من '.$operations->count().' مراحل' : null)) : 'لا يحتاج تصنيعاً', 'late' => $lateText !== null],
             ['key' => 'delivery', 'label' => 'التوصيل والتركيب', 'state' => $state($deliveryDone, $deliverable > 0 || $deliveries->isNotEmpty()),
                 'detail' => $deliveries->isNotEmpty() ? $deliveries->count().' أمر توصيل' : ($deliverable > 0 ? 'جاهز للتوصيل' : null)],
         ];
@@ -167,7 +173,7 @@ class OrderTrackingService
             $needsProduction && ! $releaseDone => ['title' => 'أطلق أوامر الإنتاج', 'text' => "الطلب معتمد لكن لم يدخل الإنتاج بعد: {$unreleasedQuantity} قطعة بانتظار الإطلاق مع اختيار مسار التصنيع.", 'action' => $link('إطلاق للإنتاج', route('production.pipeline.index', ['stage' => 'release'] + $search), 'fa-rocket', 'production.release'), 'tone' => 'primary'],
             $withoutMaterials->isNotEmpty() => ['title' => 'اطلب مواد الإنتاج', 'text' => 'أُطلق أمر الإنتاج ولم تُطلب مواده من المستودع بعد.', 'action' => $link('طلب المواد', route('production.pipeline.index', ['stage' => 'materials'] + $search), 'fa-boxes-packing', 'production.material_requests'), 'tone' => 'primary'],
             $unassigned > 0 => ['title' => 'أسند المراحل للأقسام', 'text' => "{$unassigned} مرحلة جاهزة للعمل ولم تُسند لموظف في القسم المختص.", 'action' => $link('إسناد للأقسام', route('production.pipeline.index', ['stage' => 'assign'] + $search), 'fa-people-arrows', 'production.assignment.manage'), 'tone' => 'primary'],
-            $needsProduction && ! $productionDone => ['title' => 'قيد التصنيع في الأقسام', 'text' => 'المراحل تسير حسب مسار التصنيع؛ يُتاح التوصيل بعد اكتمال الإنتاج واستلام المنتج الجاهز.', 'action' => $released->first() ? $link('متابعة أمر الإنتاج', route('production.orders.show', $released->first()), 'fa-industry', 'production.view') : null, 'tone' => 'info'],
+            $needsProduction && ! $productionDone => ['title' => $lateText ? 'الطلب '.$lateText : 'قيد التصنيع في الأقسام', 'text' => $lateText ? 'تجاوز الطلب مدة القسم. تابع مع مشرف القسم سبب التأخير؛ يُتاح التوصيل بعد اكتمال الإنتاج.' : 'المراحل تسير حسب مسار التصنيع؛ يُتاح التوصيل بعد اكتمال الإنتاج واستلام المنتج الجاهز.', 'action' => $released->first() ? $link('متابعة أمر الإنتاج', route('production.orders.show', $released->first()), 'fa-industry', 'production.view') : null, 'tone' => $lateText ? 'danger' : 'info'],
             $deliverable > 0 => ['title' => 'جاهز للتوصيل والتركيب', 'text' => 'المنتجات جاهزة في المستودع. أنشئ أمر التوصيل وحدد الموعد والسائق.', 'action' => $link('إنشاء أمر توصيل وتركيب', route('delivery.orders.create', ['customer_order_id' => $order->id]), 'fa-truck-ramp-box', 'delivery.create'), 'tone' => 'success'],
             $deliveries->isNotEmpty() && ! $deliveryDone => ['title' => 'قيد التوصيل', 'text' => 'تابع أمر التوصيل حتى التسليم والتركيب.', 'action' => $link('متابعة أمر التوصيل', route('delivery.orders.show', $deliveries->first()), 'fa-truck-fast', 'delivery.view'), 'tone' => 'info'],
             $deliveryDone => ['title' => 'اكتمل الطلب', 'text' => 'تم الإنتاج والتسليم لجميع البنود.', 'action' => null, 'tone' => 'success'],

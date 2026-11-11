@@ -35,9 +35,12 @@ class ProductionMyTasksController extends Controller
                 'productionOrder.productModel',
                 'workCenter.department',
                 'activeBlock',
+                'blocks',
                 'targetReworkActions' => fn ($r) => $r->whereNotIn('status', ['COMPLETED', 'CANCELLED']),
             ])
             ->orderByRaw($priorityOrder)
+            ->orderByRaw('due_at IS NULL')
+            ->orderBy('due_at')
             ->orderBy('sequence_number')
             ->get();
 
@@ -45,8 +48,10 @@ class ProductionMyTasksController extends Controller
             ? $this->dashboardService->operationsQueryFor($user)
                 ->where('status', 'READY')
                 ->whereNull('assigned_user_id')
-                ->with(['productionOrder.customerOrder.customer', 'productionOrder.productModel', 'workCenter.department'])
+                ->with(['productionOrder.customerOrder.customer', 'productionOrder.productModel', 'workCenter.department', 'blocks'])
                 ->orderByRaw($priorityOrder)
+                ->orderByRaw('due_at IS NULL')
+                ->orderBy('due_at')
                 ->orderBy('sequence_number')
                 ->get()
             : collect();
