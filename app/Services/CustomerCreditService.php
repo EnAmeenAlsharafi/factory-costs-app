@@ -110,20 +110,22 @@ class CustomerCreditService
             ];
         }
 
-        if (! $enabled) {
-            return [
-                'eligible' => false,
-                'status' => 'CREDIT_DISABLED',
-                'reason' => 'الائتمان غير مفعّل لحساب هذا العميل.',
-                'exposure' => $exposureData,
-            ];
-        }
-
-        if ($currentExposure > $limit && $holdWhenExceeded) {
+        // A credit (آجل) order moves through production and delivery without any payment. The only
+        // hold is a credit limit the management has actually set for the customer and that is exceeded.
+        if ($limit > 0 && $currentExposure > $limit && $holdWhenExceeded) {
             return [
                 'eligible' => false,
                 'status' => 'EXCEEDED',
                 'reason' => sprintf('تم تجاوز حد الائتمان للعميل. التعرض الحالي (%.2f ر.س) يتجاوز الحد المسموح (%.2f ر.س).', $currentExposure, $limit),
+                'exposure' => $exposureData,
+            ];
+        }
+
+        if (! $enabled || $limit <= 0) {
+            return [
+                'eligible' => true,
+                'status' => 'OK',
+                'reason' => 'بيع آجل بلا حد ائتمان محدد للعميل — مسموح.',
                 'exposure' => $exposureData,
             ];
         }

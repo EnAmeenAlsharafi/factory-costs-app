@@ -158,6 +158,28 @@ class AuditStabilizationTest extends TestCase
         $this->assertSame('RELEASED', $this->production->releaseProductionOrder($po->fresh(), $this->routing, $this->admin)->status);
     }
 
+    public function test_credit_order_reaches_the_shop_floor_and_leaves_for_delivery_without_any_payment(): void
+    {
+        config(['app.enforce_payment_gates' => true]);
+        $this->order->update(['payment_terms_type' => 'CREDIT']);
+
+        $po = $this->releasedOrder();
+        $this->assertSame('RELEASED', $po->status);
+
+        $this->completeAllOperations($po);
+        $finishedGoods = app(FinishedGoodsService::class);
+        $finishedGoods->postReceipt($finishedGoods->createReceipt($po->fresh(), $this->admin, ['quantity' => 2]), $this->admin);
+        $deliveries = app(DeliveryOrderService::class);
+        $driver = User::factory()->create(['role_id' => Role::where('name', 'delivery_user')->value('id'), 'is_active' => true]);
+        $delivery = $deliveries->createDeliveryOrder($this->order->fresh(), $this->admin, ['lines' => [['production_order_id' => $po->id, 'quantity' => 2]]]);
+        $deliveries->markReady($delivery, $this->admin);
+        $deliveries->assignDriver($delivery, $driver, $this->admin);
+        $deliveries->dispatchDelivery($delivery, $driver);
+
+        $this->assertSame('OUT_FOR_DELIVERY', $delivery->fresh()->status);
+        $this->assertSame(200.0, $this->order->fresh()->outstanding_balance);
+    }
+
     public function test_complete_order_journey_reaches_operational_fulfilment_and_enforces_the_delivery_payment_gate(): void
     {
         config(['app.enforce_payment_gates' => true]);
