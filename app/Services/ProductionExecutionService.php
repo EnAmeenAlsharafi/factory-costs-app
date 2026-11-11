@@ -203,6 +203,10 @@ class ProductionExecutionService
                 'meta' => ['block_id' => $block->id],
             ]);
 
+            // Predecessors may have finished while this operation was blocked: promote it now, otherwise
+            // an operation restored to PENDING would wait forever for a progress event that never comes.
+            $this->orders->reevaluate($locked->productionOrder, $actor);
+
             return $locked->fresh();
         });
     }

@@ -263,6 +263,18 @@ class ProductionMaterialRequestService
                     throw new Exception('لون اللوت المحدد لا يطابق لون بند الطلب.');
                 }
 
+                // The order's fabric is a supplier + material + colour triple: a lot of the same fabric
+                // bought from another supplier is a different catalogue and must not be issued instead.
+                $order = $lockedRequest->productionOrder;
+                if ($order && $order->fabric_supplier_id && (int) $reqLine->material_id === (int) $order->fabric_material_id) {
+                    if ($lot->supplier_id !== null && (int) $lot->supplier_id !== (int) $order->fabric_supplier_id) {
+                        throw new Exception('مورد اللوت المحدد لا يطابق مورد القماش المعتمد في طلب العميل.');
+                    }
+                    if (! empty($reqColor) && empty($lotColor)) {
+                        throw new Exception('اللوت المحدد بلا رقم لون، ولا يمكن صرفه لقماش محدد اللون.');
+                    }
+                }
+
                 $targetQty = (float) ($reqLine->approved_quantity ?? $reqLine->requested_quantity);
                 $remainingRequestedQty = max(0, $targetQty - (float) $reqLine->issued_quantity);
 

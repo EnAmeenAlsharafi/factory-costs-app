@@ -274,7 +274,7 @@ class ProductionOrderController extends Controller
             'hold_reason' => ['required', 'string', 'max:500'],
         ]);
 
-        $this->productionOrderService->holdOrder($order, $request->hold_reason);
+        $this->productionOrderService->holdOrder($order, $request->hold_reason, $request->user());
 
         return redirect()->back()->with('success', 'تم تعليق أمر الإنتاج بنجاح.');
     }
@@ -283,7 +283,7 @@ class ProductionOrderController extends Controller
     {
         abort_if(! $request->user()->can('production.hold'), 403);
 
-        $this->productionOrderService->resumeOrder($order);
+        $this->productionOrderService->resumeOrder($order, $request->user());
 
         return redirect()->back()->with('success', 'تم استئناف أمر الإنتاج بنجاح.');
     }

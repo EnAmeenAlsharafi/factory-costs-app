@@ -249,6 +249,9 @@ class SearchApiController extends Controller
      */
     public function readyProducts(Request $request, InventoryService $inventoryService): JsonResponse
     {
+        // Returns sales prices and stock availability: only for staff who enter or edit customer orders.
+        abort_unless($request->user()->can('orders.create') || $request->user()->can('orders.update'), 403);
+
         $request->validate(['parent_id' => ['nullable', 'integer', 'min:1']]);
         $parentId = $request->integer('parent_id');
         if ($parentId) {

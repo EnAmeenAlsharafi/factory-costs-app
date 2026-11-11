@@ -100,6 +100,6 @@ class InventoryLot extends Model
 
     public function getReceiptAttribute(): ?MaterialReceipt
     {
-        return $this->receiptLine?->materialReceipt;
+        return $this->receiptLine?->receipt;
     }
 }

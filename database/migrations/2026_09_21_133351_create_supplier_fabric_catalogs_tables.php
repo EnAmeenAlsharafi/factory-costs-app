@@ -78,8 +78,11 @@ return new class extends Migration
         Schema::dropIfExists('supplier_fabric_catalog_colors');
         Schema::dropIfExists('supplier_fabric_catalogs');
 
-        Schema::table('fabric_colors', function (Blueprint $table) {
-            $table->dropUnique('fabric_colors_material_code_unique');
-        });
+        // A later migration's rollback may already have removed this index.
+        if (Schema::hasIndex('fabric_colors', 'fabric_colors_material_code_unique')) {
+            Schema::table('fabric_colors', function (Blueprint $table) {
+                $table->dropUnique('fabric_colors_material_code_unique');
+            });
+        }
     }
 };

@@ -192,7 +192,7 @@ class ManagementReportingService
         }
 
         if ($user->can('reports.receivables')) {
-            $orders = CustomerOrder::with('customer')->whereIn('status', ['PENDING_PRODUCTION_REVIEW', 'APPROVED_FOR_PRODUCTION'])->latest('id')->limit(200)->get();
+            $orders = CustomerOrder::with('customer.creditProfile', 'paymentOverrides')->withPaymentTotals()->whereIn('status', ['PENDING_PRODUCTION_REVIEW', 'APPROVED_FOR_PRODUCTION'])->latest('id')->limit(200)->get();
             $eligibility = app(OrderPaymentEligibilityService::class);
             $blocked = $orders->map(fn (CustomerOrder $order) => ['order' => $order, 'check' => $eligibility->checkProductionEligibility($order)])
                 ->reject(fn ($item) => $item['check']['eligible']);

@@ -13,10 +13,7 @@ class OrderPaymentEligibilityService
 
     public function checkProductionEligibility(CustomerOrder $order): array
     {
-        $override = PaymentControlOverride::where('customer_order_id', $order->id)
-            ->where('override_stage', 'PRODUCTION_RELEASE')
-            ->latest()
-            ->first();
+        $override = $this->latestOverride($order, 'PRODUCTION_RELEASE');
 
         if ($override) {
             return [
@@ -94,10 +91,7 @@ class OrderPaymentEligibilityService
 
     public function checkDeliveryEligibility(CustomerOrder $order): array
     {
-        $override = PaymentControlOverride::where('customer_order_id', $order->id)
-            ->where('override_stage', 'DELIVERY_DISPATCH')
-            ->latest()
-            ->first();
+        $override = $this->latestOverride($order, 'DELIVERY_DISPATCH');
 
         if ($override) {
             return [
@@ -164,5 +158,21 @@ class OrderPaymentEligibilityService
             'paid_amount' => $paid,
             'outstanding' => $outstanding,
         ];
+    }
+
+    /**
+     * Latest management override of the order for a stage; reads the eager-loaded relation when a
+     * report already loaded it, so checking many orders does not query once per order.
+     */
+    public function latestOverride(CustomerOrder $order, string $stage): ?PaymentControlOverride
+    {
+        if ($order->relationLoaded('paymentOverrides')) {
+            return $order->paymentOverrides->where('override_stage', $stage)->sortByDesc('id')->first();
+        }
+
+        return PaymentControlOverride::where('customer_order_id', $order->id)
+            ->where('override_stage', $stage)
+            ->latest()
+            ->first();
     }
 }

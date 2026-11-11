@@ -84,7 +84,18 @@ class CustomerOrderService
         }
 
         return DB::transaction(function () use ($order, $data, $linesData, $updater) {
+            CustomerOrder::whereKey($order->id)->lockForUpdate()->firstOrFail();
+            $order->refresh();
+            if ($order->status === 'CANCELLED') {
+                throw new Exception('لا يمكن تعديل طلب عميل ملغى.');
+            }
             $wasApproved = $order->status === 'APPROVED_FOR_PRODUCTION';
+
+            // The customer is the anchor of payments, production and delivery: it cannot change once any exist.
+            if (isset($data['customer_id']) && (int) $data['customer_id'] !== (int) $order->customer_id
+                && ($order->allocations()->exists() || $order->productionOrders()->exists() || $order->deliveryOrders()->exists())) {
+                throw new Exception('لا يمكن تغيير عميل طلب عليه دفعات مخصصة أو أوامر إنتاج أو توصيل.');
+            }
 
             // Log header changes if any
             if (isset($data['priority']) && $data['priority'] !== $order->priority) {
@@ -129,6 +140,14 @@ class CustomerOrderService
             foreach ($linesData as $line) {
                 $existingLine = (! empty($line['id']) && $oldLines->has($line['id'])) ? $oldLines->get($line['id']) : null;
                 $qty = (float) ($line['quantity'] ?? 1);
+
+                if ($existingLine) {
+                    $released = (float) ProductionOrder::where('customer_order_line_id', $existingLine->id)
+                        ->where('status', '!=', 'CANCELLED')->sum('released_quantity');
+                    if ($qty < $released) {
+                        throw new Exception("لا يمكن تخفيض كمية البند #{$existingLine->id} إلى أقل من الكمية المُطلقة للإنتاج ({$released}).");
+                    }
+                }
                 $unitPrice = (float) ($line['unit_price'] ?? 0);
                 $discount = (float) ($line['discount_amount'] ?? $existingLine?->discount_amount ?? 0);
                 $lineTotal = max(0, ($qty * $unitPrice) - $discount);
@@ -231,26 +250,58 @@ class CustomerOrderService
     public function submitForProductionReview(CustomerOrder $order): CustomerOrder
     {
         $order->assertImportCompletion();
-        if ($order->status === 'CANCELLED') {
-            throw new Exception('لا يمكن إرسال طلب ملغى للمراجعة.');
-        }
 
-        $order->update([
-            'status' => 'PENDING_PRODUCTION_REVIEW',
-        ]);
+        return DB::transaction(function () use ($order) {
+            CustomerOrder::whereKey($order->id)->lockForUpdate()->firstOrFail();
+            $order->refresh();
 
-        return $order;
+            if ($order->status === 'PENDING_PRODUCTION_REVIEW') {
+                return $order; // Already waiting for review (double submit / portal re-confirmation).
+            }
+            if (! in_array($order->status, ['DRAFT', 'NEEDS_CHANGES'], true)) {
+                throw new Exception('يمكن إرسال الطلب للمراجعة من حالة المسودة أو «يحتاج تعديل» فقط.');
+            }
+            if (! $order->lines()->exists()) {
+                throw new Exception('لا يمكن إرسال طلب لا يحتوي على بنود للمراجعة.');
+            }
+
+            $order->update([
+                'status' => 'PENDING_PRODUCTION_REVIEW',
+            ]);
+
+            return $order;
+        });
     }
 
     public function cancelOrder(CustomerOrder $order, ?User $user = null, ?string $reason = null): CustomerOrder
     {
         return DB::transaction(function () use ($order, $user, $reason) {
+            CustomerOrder::whereKey($order->id)->lockForUpdate()->firstOrFail();
+            $order->refresh();
+            $user ??= auth()->user() ?? $order->createdBy;
+
+            if ($order->status === 'CANCELLED') {
+                throw new Exception('الطلب ملغى مسبقاً.');
+            }
+            // Cancelling the commercial order must never leave live factory work or shipments behind it.
+            if ($order->productionOrders()->where('status', '!=', 'CANCELLED')->exists()) {
+                throw new Exception('لا يمكن إلغاء الطلب: توجد أوامر إنتاج قائمة عليه. ألغِ أوامر الإنتاج أولاً من مدير الإنتاج.');
+            }
+            if ($order->deliveryOrders()->where('status', '!=', 'CANCELLED')->exists()) {
+                throw new Exception('لا يمكن إلغاء الطلب: توجد أوامر توصيل قائمة أو منفذة عليه.');
+            }
+
+            if ($user) {
+                $this->recordOrderChange($order, null, 'status', $order->status, 'CANCELLED', $user,
+                    $order->status === 'APPROVED_FOR_PRODUCTION', 'إلغاء الطلب: '.($reason ?: 'بدون سبب مذكور'));
+            }
+
             $order->update([
                 'status' => 'CANCELLED',
                 'commercial_notes' => trim(($order->commercial_notes ?? '').' [تم إلغاء الطلب: '.($reason ?: 'بدون سبب مذكور').']'),
             ]);
 
-            app(PaymentAllocationService::class)->handleOrderCancellation($order, $user ?? auth()->user() ?? $order->createdBy);
+            app(PaymentAllocationService::class)->handleOrderCancellation($order, $user);
 
             return $order;
         });
@@ -266,6 +317,15 @@ class CustomerOrderService
         }
 
         return DB::transaction(function () use ($order, $approver, $lineReferenceDimensions) {
+            CustomerOrder::whereKey($order->id)->lockForUpdate()->firstOrFail();
+            $order->refresh();
+            if ($order->status === 'CANCELLED') {
+                throw new Exception('لا يمكن اعتماد طلب ملغى للتصنيع.');
+            }
+            if (! $order->lines()->exists()) {
+                throw new Exception('لا يمكن اعتماد طلب لا يحتوي على بنود للتصنيع.');
+            }
+
             $order->assertCustomerConfirmation(true);
             // Update line reference dimensions if provided during review
             foreach ($lineReferenceDimensions as $lineId => $dims) {

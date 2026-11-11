@@ -58,6 +58,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Payment / Credit Gates
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, a production order cannot be released and a delivery cannot be
+    | dispatched while the customer order's payment or credit terms are not met,
+    | unless a management override is recorded (PaymentControlOverride).
+    |
+    */
+
+    'enforce_payment_gates' => (bool) env('ENFORCE_PAYMENT_GATES', true),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

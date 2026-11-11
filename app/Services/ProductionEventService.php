@@ -17,6 +17,7 @@ class ProductionEventService
     public const TYPES = [
         'READY', 'ASSIGNED', 'CLAIMED', 'REASSIGNED', 'STARTED', 'PROGRESS_RECORDED',
         'BLOCKED', 'BLOCK_RESOLVED', 'COMPLETED', 'CANCELLED', 'REWORK_CREATED', 'REWORK_COMPLETED',
+        'ORDER_HELD', 'ORDER_RESUMED', 'ORDER_CANCELLED',
     ];
 
     /**

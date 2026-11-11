@@ -101,7 +101,7 @@ class StockBalanceController extends Controller
     {
         abort_if(! request()->user()->can('inventory.view'), 403, 'غير مصرح لك بعرض تفاصيل اللوت.');
 
-        $lot->load(['material.baseUnit', 'warehouse', 'supplier', 'receiptLine.materialReceipt', 'movements.baseUnit']);
+        $lot->load(['material.baseUnit', 'warehouse', 'supplier', 'receiptLine.receipt', 'movements.unit']);
 
         return view('inventory.balances.show_lot', compact('lot'));
     }

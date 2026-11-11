@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Customer;
 use App\Models\CustomerCreditProfile;
 use App\Models\CustomerOrder;
-use App\Models\PaymentControlOverride;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
@@ -99,10 +98,7 @@ class CustomerCreditService
         $holdWhenExceeded = $exposureData['hold_when_exceeded'];
 
         // Check for active override
-        $override = PaymentControlOverride::where('customer_order_id', $order->id)
-            ->where('override_stage', 'CREDIT_LIMIT')
-            ->latest()
-            ->first();
+        $override = app(OrderPaymentEligibilityService::class)->latestOverride($order, 'CREDIT_LIMIT');
 
         if ($override) {
             return [

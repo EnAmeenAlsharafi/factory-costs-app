@@ -73,6 +73,9 @@ class ProductionOperationEvent extends Model
             'CANCELLED' => 'تم إلغاء العملية',
             'REWORK_CREATED' => 'تم إنشاء إعادة عمل',
             'REWORK_COMPLETED' => 'اكتملت إعادة العمل',
+            'ORDER_HELD' => 'تم تعليق أمر الإنتاج',
+            'ORDER_RESUMED' => 'تم استئناف أمر الإنتاج',
+            'ORDER_CANCELLED' => 'تم إلغاء أمر الإنتاج',
             default => $this->event_type,
         };
     }

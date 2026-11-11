@@ -145,6 +145,13 @@ class InventoryService
         }
 
         return DB::transaction(function () use ($issue, $userObj) {
+            // Lock the document and re-check: a double submit must never post the same issue twice.
+            MaterialIssue::whereKey($issue->id)->lockForUpdate()->firstOrFail();
+            $issue->refresh();
+            if (! $issue->isDraft()) {
+                throw new Exception('لا يمكن اعتماد سند صرف غير مسودة.');
+            }
+
             foreach ($issue->lines as $line) {
                 // Lock lot row to prevent concurrent race conditions
                 $lot = InventoryLot::where('id', $line->inventory_lot_id)
@@ -214,6 +221,12 @@ class InventoryService
         }
 
         return DB::transaction(function () use ($return, $userObj) {
+            MaterialReturn::whereKey($return->id)->lockForUpdate()->firstOrFail();
+            $return->refresh();
+            if (! $return->isDraft()) {
+                throw new Exception('لا يمكن اعتماد سند مرتجع غير مسودة.');
+            }
+
             foreach ($return->lines as $line) {
                 $lot = InventoryLot::where('id', $line->inventory_lot_id)
                     ->lockForUpdate()
@@ -289,6 +302,12 @@ class InventoryService
         }
 
         return DB::transaction(function () use ($adjustment, $userObj) {
+            InventoryAdjustment::whereKey($adjustment->id)->lockForUpdate()->firstOrFail();
+            $adjustment->refresh();
+            if (! $adjustment->isDraft()) {
+                throw new Exception('لا يمكن اعتماد سند تسوية غير مسودة.');
+            }
+
             $reasonCode = $adjustment->reason->code ?? 'ADJUSTMENT';
 
             foreach ($adjustment->lines as $line) {

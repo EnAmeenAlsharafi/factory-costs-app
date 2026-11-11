@@ -204,7 +204,7 @@ class ProfitabilityReportingService
             return $rows;
         }
 
-        $orders = CustomerOrder::whereIn('id', $rows->pluck('id'))->get()->keyBy('id');
+        $orders = CustomerOrder::withPaymentTotals()->whereIn('id', $rows->pluck('id'))->get()->keyBy('id');
         $labels = [
             'PAID' => ['label' => 'مسدد', 'tone' => 'success'],
             'OVERDUE' => ['label' => 'متأخر السداد', 'tone' => 'danger'],

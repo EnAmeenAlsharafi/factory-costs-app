@@ -193,6 +193,8 @@ class ProductionPipelineController extends Controller
             ->with('customer')
             ->withCount('lines')
             ->withSum('lines', 'quantity')
+            ->withPaymentTotals()
+            ->with('paymentOverrides', 'customer.creditProfile')
             ->when($search !== '', fn (Builder $q) => $q->where(fn (Builder $w) => $w
                 ->where('order_number', 'like', "%{$search}%")
                 ->orWhereHas('customer', fn (Builder $c) => $c->where('name', 'like', "%{$search}%"))))

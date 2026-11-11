@@ -70,6 +70,14 @@ return new class extends Migration
 
     public function down(): void
     {
+        // MySQL/MariaDB lets the sales_channel_id foreign key lean on the composite unique index,
+        // so the unique index cannot be dropped until the foreign key has an index of its own.
+        if (! Schema::hasIndex('customer_orders', 'customer_orders_sales_channel_id_index')) {
+            Schema::table('customer_orders', function (Blueprint $table) {
+                $table->index('sales_channel_id', 'customer_orders_sales_channel_id_index');
+            });
+        }
+
         Schema::table('customer_orders', function (Blueprint $table) {
             $table->dropUnique('customer_orders_channel_external_ref_unique');
             $table->dropConstrainedForeignId('import_batch_id');

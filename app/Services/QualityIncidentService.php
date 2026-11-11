@@ -80,6 +80,10 @@ class QualityIncidentService
                 'notes' => $notes ? trim(($incident->notes ?? '')."\n".$notes) : $incident->notes,
             ]);
 
+            if ($incident->status === 'RESOLVED') {
+                $this->releaseProductionOrderAfterResolution($incident, $user);
+            }
+
             // If disposition requires rework or repair, create automatic rework action if none exists
             if (in_array($disposition, ['REPAIR', 'REWORK', 'REMANUFACTURE'], true)) {
                 if ($incident->reworkActions()->count() === 0) {
@@ -185,9 +189,21 @@ class QualityIncidentService
                     'status' => 'RESOLVED',
                     'resolved_at' => now(),
                 ]);
+                $this->releaseProductionOrderAfterResolution($incident, $user);
             }
 
             return $rework;
         });
+    }
+
+    /**
+     * An open incident keeps its production order short of COMPLETED. Once resolved, re-evaluate the
+     * order so a fully packaged order does not stay stuck in production.
+     */
+    protected function releaseProductionOrderAfterResolution(QualityIncident $incident, User $user): void
+    {
+        if ($incident->productionOrder) {
+            app(ProductionOrderService::class)->reevaluate($incident->productionOrder, $user);
+        }
     }
 }

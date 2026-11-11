@@ -23,20 +23,28 @@ class ProcurementPlanningService
         $materials = $query->get();
         $results = [];
 
+        // One grouped query per figure instead of three queries per material.
+        $materialIds = $materials->modelKeys();
+        $stockByMaterial = InventoryLot::whereIn('material_id', $materialIds)->where('status', 'ACTIVE')
+            ->groupBy('material_id')->selectRaw('material_id, SUM(remaining_quantity) as total')->pluck('total', 'material_id');
+        $openPrByMaterial = PurchaseRequestLine::whereIn('material_id', $materialIds)
+            ->whereHas('purchaseRequest', fn ($q) => $q->whereIn('status', ['APPROVED', 'PARTIALLY_ORDERED']))
+            ->groupBy('material_id')->selectRaw('material_id, SUM(requested_quantity) as total')->pluck('total', 'material_id');
+        $incomingByMaterial = PurchaseOrderLine::whereIn('material_id', $materialIds)
+            ->whereHas('purchaseOrder', fn ($q) => $q->whereIn('status', ['APPROVED', 'SENT', 'PARTIALLY_RECEIVED']))
+            ->get()
+            ->groupBy('material_id')
+            ->map(fn ($lines) => $lines->sum(fn ($line) => $line->remaining_base_quantity));
+
         foreach ($materials as $material) {
             // 1. Current Physical Raw Stock Balance
-            $currentStock = (float) InventoryLot::where('material_id', $material->id)->where('status', 'ACTIVE')->sum('remaining_quantity');
+            $currentStock = (float) ($stockByMaterial[$material->id] ?? 0);
 
             // 2. Open Purchase Request Base Quantity (APPROVED or PARTIALLY_ORDERED)
-            $openPrQty = (float) PurchaseRequestLine::where('material_id', $material->id)
-                ->whereHas('purchaseRequest', fn ($q) => $q->whereIn('status', ['APPROVED', 'PARTIALLY_ORDERED']))
-                ->sum('requested_quantity');
+            $openPrQty = (float) ($openPrByMaterial[$material->id] ?? 0);
 
             // 3. Open Purchase Order Incoming Base Quantity (APPROVED, SENT, PARTIALLY_RECEIVED)
-            $openPoIncomingBase = (float) PurchaseOrderLine::where('material_id', $material->id)
-                ->whereHas('purchaseOrder', fn ($q) => $q->whereIn('status', ['APPROVED', 'SENT', 'PARTIALLY_RECEIVED']))
-                ->get()
-                ->sum(fn ($line) => $line->remaining_base_quantity);
+            $openPoIncomingBase = (float) ($incomingByMaterial[$material->id] ?? 0);
 
             $minStock = (float) ($material->min_stock_level ?? 0);
             $reorderLevel = (float) ($material->reorder_point ?? 0);

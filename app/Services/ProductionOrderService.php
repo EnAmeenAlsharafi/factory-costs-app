@@ -62,6 +62,17 @@ class ProductionOrderService
         return DB::transaction(function () use ($line, $order, $data, $requestedQty) {
             $order->assertCustomerConfirmation(true);
             $line = CustomerOrderLine::whereKey($line->id)->lockForUpdate()->firstOrFail();
+
+            // Re-check under the line lock: two concurrent releases must never exceed the ordered quantity.
+            $remainingToRelease = $line->quantity - ProductionOrder::where('customer_order_line_id', $line->id)
+                ->where('status', '!=', 'CANCELLED')
+                ->sum('released_quantity');
+            if ($requestedQty > $remainingToRelease) {
+                throw ValidationException::withMessages([
+                    'released_quantity' => "الكمية المطلوبة ({$requestedQty}) تتجاوز الكمية المتبقية للإطلاق ({$remainingToRelease}).",
+                ]);
+            }
+
             $poNumber = DocumentNumberService::generateProductionOrderNumber();
 
             $recipeVersionId = $line->approved_recipe_version_id
@@ -176,8 +187,20 @@ class ProductionOrderService
             ]);
         }
 
+        $this->assertPaymentAllowsProduction($po);
+
         return DB::transaction(function () use ($po, $routing, $routingOps, $user) {
             $po->customerOrder->assertCustomerConfirmation(true);
+
+            // Lock and re-check: a double submit must not release twice or duplicate the operations.
+            ProductionOrder::whereKey($po->id)->lockForUpdate()->firstOrFail();
+            $po->refresh();
+            if (! in_array($po->status, ['DRAFT', 'READY_FOR_RELEASE'], true)) {
+                throw ValidationException::withMessages([
+                    'production_order' => 'تم إطلاق أمر الإنتاج مسبقاً أو تغيّرت حالته.',
+                ]);
+            }
+
             // Remove previous draft operations if any
             $po->operations()->delete();
 
@@ -391,7 +414,15 @@ class ProductionOrderService
             ]);
         }
 
+        if ($po->status === 'CANCELLED') {
+            throw ValidationException::withMessages(['operation' => 'لا يمكن تصحيح إنجاز أمر إنتاج ملغى.']);
+        }
+
         return DB::transaction(function () use ($op, $po, $newTotalQty, $notes, $user) {
+            ProductionOrderOperation::whereKey($op->id)->lockForUpdate()->firstOrFail();
+            $op->refresh();
+            $this->assertCorrectionKeepsRouteConsistent($op, $newTotalQty);
+
             $prevCompleted = $op->completed_quantity;
             $prevStatus = $op->status;
             $op->completed_quantity = $newTotalQty;
@@ -399,11 +430,13 @@ class ProductionOrderService
 
             if ($op->completed_quantity >= $op->required_quantity) {
                 $op->status = 'COMPLETED';
-                $op->completed_at = now();
+                $op->completed_at = $op->completed_at ?? now();
             } elseif ($op->completed_quantity > 0) {
                 $op->status = 'PARTIALLY_COMPLETED';
+                $op->completed_at = null;
             } else {
                 $op->status = 'READY';
+                $op->completed_at = null;
             }
 
             $op->save();
@@ -438,61 +471,187 @@ class ProductionOrderService
     /**
      * Put a Production Order on hold.
      */
-    public function holdOrder(ProductionOrder $po, string $reason): ProductionOrder
+    public function holdOrder(ProductionOrder $po, string $reason, ?User $user = null): ProductionOrder
     {
-        if (in_array($po->status, ['COMPLETED', 'CANCELLED'])) {
-            throw ValidationException::withMessages([
-                'status' => 'لا يمكن تعليق أمر إنتاج مكتمل أو ملغى.',
-            ]);
-        }
+        return DB::transaction(function () use ($po, $reason, $user) {
+            ProductionOrder::whereKey($po->id)->lockForUpdate()->firstOrFail();
+            $po->refresh();
 
-        $po->status = 'ON_HOLD';
-        $po->hold_reason = $reason;
-        $po->save();
+            if (in_array($po->status, ['COMPLETED', 'CANCELLED', 'ON_HOLD'], true)) {
+                throw ValidationException::withMessages([
+                    'status' => 'لا يمكن تعليق أمر إنتاج مكتمل أو ملغى أو معلّق مسبقاً.',
+                ]);
+            }
 
-        return $po;
+            $po->status = 'ON_HOLD';
+            $po->hold_reason = $reason;
+            $po->save();
+            $this->recordOrderDecision($po, 'ORDER_HELD', $reason, $user);
+
+            return $po;
+        });
     }
 
     /**
-     * Resume a held Production Order.
+     * Resume a held Production Order to the state its operations are actually in.
      */
-    public function resumeOrder(ProductionOrder $po): ProductionOrder
+    public function resumeOrder(ProductionOrder $po, ?User $user = null): ProductionOrder
     {
-        if ($po->status !== 'ON_HOLD') {
-            throw ValidationException::withMessages([
-                'status' => 'أمر الإنتاج ليس في حالة تعليق.',
-            ]);
-        }
+        return DB::transaction(function () use ($po, $user) {
+            ProductionOrder::whereKey($po->id)->lockForUpdate()->firstOrFail();
+            $po->refresh();
 
-        $po->status = $po->completed_quantity > 0 ? 'PARTIALLY_COMPLETED' : 'IN_PROGRESS';
-        $po->hold_reason = null;
-        $po->save();
+            if ($po->status !== 'ON_HOLD') {
+                throw ValidationException::withMessages([
+                    'status' => 'أمر الإنتاج ليس في حالة تعليق.',
+                ]);
+            }
 
-        return $po;
+            $operations = $po->operations()->get();
+            $po->status = match (true) {
+                // Held before release: back to draft so it can still be released (no dead end).
+                $operations->isEmpty() => 'DRAFT',
+                $operations->contains(fn ($op) => $op->completed_quantity > 0) => 'PARTIALLY_COMPLETED',
+                $operations->contains(fn ($op) => $op->started_at !== null) => 'IN_PROGRESS',
+                default => 'RELEASED',
+            };
+            $po->hold_reason = null;
+            $po->save();
+            $this->recordOrderDecision($po, 'ORDER_RESUMED', null, $user);
+
+            return $po;
+        });
     }
 
     /**
-     * Cancel a Production Order.
+     * Cancel a Production Order. Issued materials are not reversed automatically
+     * (a usable return is an explicit warehouse document).
      */
     public function cancelOrder(ProductionOrder $po, string $reason, User $user): ProductionOrder
     {
-        if ($po->status === 'COMPLETED') {
+        return DB::transaction(function () use ($po, $reason, $user) {
+            ProductionOrder::whereKey($po->id)->lockForUpdate()->firstOrFail();
+            $po->refresh();
+
+            if (in_array($po->status, ['COMPLETED', 'CANCELLED'], true)) {
+                throw ValidationException::withMessages([
+                    'status' => 'لا يمكن إلغاء أمر إنتاج مكتمل أو ملغى مسبقاً.',
+                ]);
+            }
+
+            if ($po->completed_quantity > 0 && ! $user->isAdministrator() && ! $user->hasRole('production_manager')) {
+                throw ValidationException::withMessages([
+                    'status' => 'إلغاء أمر إنتاج تم البدء فيه يتطلب صلاحيات مدير الإنتاج أو مدير النظام.',
+                ]);
+            }
+
+            if (app(FinishedGoodsService::class)->getTotalReceivedQuantity($po) > 0) {
+                throw ValidationException::withMessages([
+                    'status' => 'لا يمكن إلغاء أمر إنتاج استُلمت منتجاته في مستودع المنتجات الجاهزة.',
+                ]);
+            }
+
+            $this->recordOrderDecision($po, 'ORDER_CANCELLED', $reason, $user);
+
+            $po->status = 'CANCELLED';
+            $po->cancellation_reason = $reason;
+            $po->save();
+
+            return $po;
+        });
+    }
+
+    /**
+     * Re-evaluate a production order after something outside the operations changed (a quality
+     * incident was resolved, a block was lifted), so it never stays stuck short of COMPLETED.
+     */
+    public function reevaluate(ProductionOrder $po, User $user): void
+    {
+        if (in_array($po->status, ['DRAFT', 'ON_HOLD', 'CANCELLED', 'COMPLETED'], true)) {
+            return;
+        }
+
+        $this->promoteReadyOperations($po, $user);
+
+        if ($po->operations()->whereNotNull('started_at')->exists()) {
+            $this->evaluateProductionOrderCompletion($po);
+        }
+    }
+
+    /**
+     * Payment / credit terms must allow production before an order reaches the shop floor.
+     * The only way around is a recorded management override (PaymentControlOverride).
+     */
+    protected function assertPaymentAllowsProduction(ProductionOrder $po): void
+    {
+        if (! config('app.enforce_payment_gates', true)) {
+            return;
+        }
+
+        $eligibility = app(OrderPaymentEligibilityService::class)->checkProductionEligibility($po->customerOrder);
+
+        if (! $eligibility['eligible']) {
             throw ValidationException::withMessages([
-                'status' => 'لا يمكن إلغاء أمر إنتاج مكتمل.',
+                'production_order' => 'لا يمكن إطلاق أمر الإنتاج: لم تُستوفَ شروط السداد أو الائتمان لطلب العميل. راجع قسم التحصيل أو سجّل استثناءً إدارياً معتمداً.',
+            ]);
+        }
+    }
+
+    /**
+     * A correction may not break the route: an operation cannot exceed what its predecessors finished,
+     * drop below what its successors already finished, or (final operation) below goods already received.
+     */
+    protected function assertCorrectionKeepsRouteConsistent(ProductionOrderOperation $op, int $newTotalQty): void
+    {
+        $maxEligible = $this->dependencies->maxEligibleQuantity($op);
+        if ($newTotalQty > $maxEligible) {
+            throw ValidationException::withMessages([
+                'quantity' => "لا يمكن أن يتجاوز الإنجاز ما اكتمل في المراحل السابقة (الحد الأقصى: {$maxEligible}).",
             ]);
         }
 
-        if ($po->completed_quantity > 0 && ! $user->isAdministrator() && ! $user->hasRole('production_manager')) {
-            throw ValidationException::withMessages([
-                'status' => 'إلغاء أمر إنتاج تم البدء فيه يتطلب صلاحيات مدير الإنتاج أو مدير النظام.',
-            ]);
+        if ($op->routing_operation_id) {
+            $downstreamCompleted = (int) ProductionOrderOperation::where('production_order_id', $op->production_order_id)
+                ->whereIn('routing_operation_id', DB::table('production_routing_dependencies')
+                    ->where('depends_on_operation_id', $op->routing_operation_id)
+                    ->select('operation_id'))
+                ->max('completed_quantity');
+            if ($newTotalQty < $downstreamCompleted) {
+                throw ValidationException::withMessages([
+                    'quantity' => "لا يمكن تخفيض الإنجاز دون ما أنجزته المراحل اللاحقة ({$downstreamCompleted}).",
+                ]);
+            }
         }
 
-        $po->status = 'CANCELLED';
-        $po->cancellation_reason = $reason;
-        $po->save();
+        $isFinalOperation = ! ProductionOrderOperation::where('production_order_id', $op->production_order_id)
+            ->where('sequence_number', '>', $op->sequence_number)->exists();
+        $received = app(FinishedGoodsService::class)->getTotalReceivedQuantity($op->productionOrder);
+        if ($isFinalOperation && $newTotalQty < $received) {
+            throw ValidationException::withMessages([
+                'quantity' => "لا يمكن تخفيض الإنجاز دون الكمية المستلمة في المنتجات الجاهزة ({$received}).",
+            ]);
+        }
+    }
 
-        return $po;
+    /**
+     * Record who held, resumed or cancelled the order on the timeline (against its first open operation).
+     */
+    protected function recordOrderDecision(ProductionOrder $po, string $eventType, ?string $note, ?User $user): void
+    {
+        $user ??= auth()->user();
+        if (! $user) {
+            return;
+        }
+
+        $operation = $po->operations()->whereNotIn('status', ['COMPLETED', 'SKIPPED'])->orderBy('sequence_number')->first();
+        if ($operation) {
+            $this->events->record($operation, $eventType, [
+                'from' => $operation->status,
+                'to' => $operation->status,
+                'note' => $note,
+                'user' => $user,
+            ]);
+        }
     }
 
     /**
@@ -520,7 +679,7 @@ class ProductionOrderService
      */
     protected function evaluateProductionOrderCompletion(ProductionOrder $po): void
     {
-        $ops = $po->operations;
+        $ops = $po->operations()->get();
         if ($ops->isEmpty()) {
             return;
         }

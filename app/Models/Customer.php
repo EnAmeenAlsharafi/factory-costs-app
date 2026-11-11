@@ -75,6 +75,7 @@ class Customer extends Model
     {
         return (float) $this->payments()
             ->where('status', 'CONFIRMED')
+            ->withSum('allocations', 'allocated_amount')
             ->get()
             ->sum('unallocated_amount');
     }
@@ -83,6 +84,7 @@ class Customer extends Model
     {
         return (float) $this->orders()
             ->whereNotIn('status', ['CANCELLED', 'REJECTED'])
+            ->withPaymentTotals()
             ->get()
             ->sum('outstanding_balance');
     }

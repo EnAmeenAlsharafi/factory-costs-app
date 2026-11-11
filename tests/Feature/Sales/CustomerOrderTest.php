@@ -155,6 +155,7 @@ class CustomerOrderTest extends TestCase
             'sales_channel_id' => $this->salesChannel->id,
             'status' => 'DRAFT',
         ]);
+        CustomerOrderLine::factory()->create(['customer_order_id' => $order->id]);
 
         $response = $this->actingAs($this->user)->post(route('sales.orders.submit-review', $order));
 

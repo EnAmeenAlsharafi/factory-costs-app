@@ -57,6 +57,15 @@ class CustomerPaymentService
         }
 
         return DB::transaction(function () use ($payment, $user) {
+            CustomerPayment::whereKey($payment->id)->lockForUpdate()->firstOrFail();
+            $payment->refresh();
+            if ($payment->status === 'CONFIRMED') {
+                return $payment; // Confirmed by a concurrent request: one confirmation, one event.
+            }
+            if (in_array($payment->status, ['REVERSED', 'CANCELLED'], true)) {
+                throw new Exception('لا يمكن تأكيد دفعة ملغاة أو معكوسة.');
+            }
+
             $payment->update([
                 'status' => 'CONFIRMED',
                 'confirmed_by_user_id' => $user->id,
@@ -85,6 +94,15 @@ class CustomerPaymentService
         }
 
         return DB::transaction(function () use ($payment, $user, $notes) {
+            CustomerPayment::whereKey($payment->id)->lockForUpdate()->firstOrFail();
+            $payment->refresh();
+            if ($payment->status === 'CONFIRMED') {
+                throw new Exception('لا يمكن إلغاء دفعة مؤكدة. يجب استخدام عكس الدفعة بدلاً من الإلغاء.');
+            }
+            if (in_array($payment->status, ['REVERSED', 'CANCELLED'], true)) {
+                return $payment;
+            }
+
             $payment->update([
                 'status' => 'CANCELLED',
             ]);
@@ -111,6 +129,12 @@ class CustomerPaymentService
         }
 
         return DB::transaction(function () use ($payment, $user, $reason) {
+            CustomerPayment::whereKey($payment->id)->lockForUpdate()->firstOrFail();
+            $payment->refresh();
+            if ($payment->status !== 'CONFIRMED') {
+                throw new Exception('يمكن فقط عكس الدفعات المؤكدة.');
+            }
+
             $payment->update([
                 'status' => 'REVERSED',
                 'reversed_by_user_id' => $user->id,

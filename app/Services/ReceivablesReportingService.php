@@ -12,7 +12,8 @@ class ReceivablesReportingService
 {
     public function getDashboardSummary(): array
     {
-        $openOrders = CustomerOrder::whereNotIn('status', ['CANCELLED', 'REJECTED'])->get();
+        $openOrders = CustomerOrder::with('customer.creditProfile', 'paymentOverrides')->withPaymentTotals()
+            ->whereNotIn('status', ['CANCELLED', 'REJECTED'])->get();
 
         $totalOutstanding = $openOrders->sum('outstanding_balance');
         $overdueOutstanding = $openOrders->filter(fn ($o) => $o->payment_status === 'OVERDUE')->sum('outstanding_balance');
@@ -22,10 +23,10 @@ class ReceivablesReportingService
         $unconfirmedCount = $unconfirmedPayments->count();
         $unconfirmedAmount = (float) $unconfirmedPayments->sum('amount');
 
-        $confirmedPayments = CustomerPayment::where('status', 'CONFIRMED')->get();
+        $confirmedPayments = CustomerPayment::where('status', 'CONFIRMED')->withSum('allocations', 'allocated_amount')->get();
         $unallocatedAmount = (float) $confirmedPayments->sum('unallocated_amount');
 
-        $creditCustomers = Customer::where('is_credit_customer', true)->get();
+        $creditCustomers = Customer::with('creditProfile')->where('is_credit_customer', true)->get();
         $exceededCreditCount = $creditCustomers->filter(function ($c) {
             $limit = (float) ($c->creditProfile ? $c->creditProfile->credit_limit : $c->credit_limit);
 
@@ -51,7 +52,7 @@ class ReceivablesReportingService
 
     public function getCustomerBalances(array $filters = [], int $perPage = 20): LengthAwarePaginator
     {
-        $query = Customer::with(['creditProfile', 'orders' => fn ($q) => $q->whereNotIn('status', ['CANCELLED', 'REJECTED']), 'payments'])
+        $query = Customer::with(['creditProfile', 'orders' => fn ($q) => $q->whereNotIn('status', ['CANCELLED', 'REJECTED'])->withPaymentTotals()])
             ->active();
 
         if (! empty($filters['search'])) {
@@ -159,6 +160,7 @@ class ReceivablesReportingService
     public function getAgingReport(): Collection
     {
         $orders = CustomerOrder::with('customer')
+            ->withPaymentTotals()
             ->whereNotIn('status', ['CANCELLED', 'REJECTED'])
             ->get()
             ->filter(fn ($o) => $o->outstanding_balance > 0);

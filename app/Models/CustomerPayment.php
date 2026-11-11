@@ -85,6 +85,11 @@ class CustomerPayment extends Model
 
     public function getAllocatedAmountAttribute(): float
     {
+        // Preloaded by withSum('allocations', 'allocated_amount') on lists and reports.
+        if (array_key_exists('allocations_sum_allocated_amount', $this->attributes)) {
+            return (float) $this->attributes['allocations_sum_allocated_amount'];
+        }
+
         return (float) $this->allocations()->sum('allocated_amount');
     }
 

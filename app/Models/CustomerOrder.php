@@ -172,8 +172,23 @@ class CustomerOrder extends Model
         return $this->hasMany(PaymentControlOverride::class)->latest('id');
     }
 
+    /**
+     * Load each order's confirmed paid amount in the same query, so lists and reports that read
+     * paid / outstanding / payment status for many orders do not run one query per order.
+     */
+    public function scopeWithPaymentTotals(Builder $query): Builder
+    {
+        return $query->withSum([
+            'allocations as confirmed_paid_sum' => fn ($allocations) => $allocations->whereHas('payment', fn ($payment) => $payment->where('status', 'CONFIRMED')),
+        ], 'allocated_amount');
+    }
+
     public function getConfirmedPaidAmountAttribute(): float
     {
+        if (array_key_exists('confirmed_paid_sum', $this->attributes)) {
+            return (float) $this->attributes['confirmed_paid_sum'];
+        }
+
         return (float) $this->allocations()
             ->whereHas('payment', function ($q) {
                 $q->where('status', 'CONFIRMED');

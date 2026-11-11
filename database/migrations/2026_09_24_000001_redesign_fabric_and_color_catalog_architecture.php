@@ -118,6 +118,13 @@ return new class extends Migration
         });
 
         if ($this->indexExists('fabric_material_specs', 'fabric_specs_supplier_catalog_unique')) {
+            // The supplier_id foreign key may lean on the composite unique index; give it its own first.
+            if (! $this->indexExists('fabric_material_specs', 'fabric_material_specs_supplier_id_index')) {
+                Schema::table('fabric_material_specs', function (Blueprint $table) {
+                    $table->index('supplier_id', 'fabric_material_specs_supplier_id_index');
+                });
+            }
+
             Schema::table('fabric_material_specs', function (Blueprint $table) {
                 $table->dropUnique('fabric_specs_supplier_catalog_unique');
             });

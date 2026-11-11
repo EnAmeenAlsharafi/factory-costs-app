@@ -213,7 +213,7 @@ class CustomerOrderController extends Controller
         abort_if(! $request->user()->can('orders.cancel'), 403, 'غير مصرح لك بإلغاء الطلب.');
 
         try {
-            $this->customerOrderService->cancelOrder($order);
+            $this->customerOrderService->cancelOrder($order, $request->user(), $request->string('reason')->trim()->value() ?: null);
 
             return redirect()->route('sales.orders.show', $order)
                 ->with('success', 'تم إلغاء الطلب بنجاح.');

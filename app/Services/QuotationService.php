@@ -115,6 +115,12 @@ class QuotationService
         }
 
         return DB::transaction(function () use ($quotation, $converter, $overrides) {
+            // Lock and re-check so a double submit cannot create two customer orders from one quotation.
+            $quotation = Quotation::whereKey($quotation->id)->lockForUpdate()->firstOrFail();
+            if ($quotation->status !== 'APPROVED') {
+                throw new Exception('تم تحويل عرض السعر مسبقاً أو لم يعد معتمداً.');
+            }
+
             $orderNumber = $this->documentNumberService->generateOrderNumber();
 
             $order = CustomerOrder::create([

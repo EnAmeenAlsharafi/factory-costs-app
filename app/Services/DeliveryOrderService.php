@@ -200,7 +200,12 @@ class DeliveryOrderService
             $delivery = DeliveryOrder::query()->whereKey($delivery->getKey())->lockForUpdate()->firstOrFail();
             $this->assertTransition($delivery->status, 'READY_FOR_DELIVERY');
 
-            foreach ($delivery->lines()->lockForUpdate()->get() as $line) {
+            $lines = $delivery->lines()->lockForUpdate()->get();
+            if ($lines->isEmpty()) {
+                throw new Exception('لا يمكن تجهيز أمر توصيل لا يحتوي على منتجات.');
+            }
+
+            foreach ($lines as $line) {
                 if ($line->line_type === 'READY_STOCK') {
                     $material = Material::query()->whereKey($line->material_id)->firstOrFail();
                     $onHand = $this->inventoryService->getReadyProductAvailability($material)['on_hand'];
@@ -235,6 +240,10 @@ class DeliveryOrderService
             $delivery = DeliveryOrder::query()->whereKey($delivery->getKey())->lockForUpdate()->firstOrFail();
             $this->assertTransition($delivery->status, 'ASSIGNED');
 
+            if (! $assignedDriver->is_active || ! $assignedDriver->hasPermission('delivery.view') || $assignedDriver->isCustomerAccount()) {
+                throw new Exception('لا يمكن إسناد التوصيل إلا لموظف مفعّل يملك صلاحية مهام التوصيل.');
+            }
+
             $oldStatus = $delivery->status;
             $delivery->update([
                 'assigned_user_id' => $assignedDriver->id,
@@ -261,6 +270,7 @@ class DeliveryOrderService
         return DB::transaction(function () use ($delivery, $dispatcher, $fgWarehouse) {
             $delivery = DeliveryOrder::query()->whereKey($delivery->getKey())->lockForUpdate()->firstOrFail();
             $this->assertTransition($delivery->status, 'OUT_FOR_DELIVERY');
+            $this->assertPaymentAllowsDelivery($delivery);
 
             foreach ($delivery->lines()->lockForUpdate()->get() as $line) {
                 if ($line->line_type === 'READY_STOCK') {
@@ -487,6 +497,23 @@ class DeliveryOrderService
 
             return $delivery;
         });
+    }
+
+    /**
+     * Payment / credit terms must allow delivery before goods leave the warehouse. The only way
+     * around is a recorded management override (PaymentControlOverride, DELIVERY_DISPATCH).
+     */
+    private function assertPaymentAllowsDelivery(DeliveryOrder $delivery): void
+    {
+        if (! config('app.enforce_payment_gates', true)) {
+            return;
+        }
+
+        $eligibility = app(OrderPaymentEligibilityService::class)->checkDeliveryEligibility($delivery->customerOrder);
+
+        if (! $eligibility['eligible']) {
+            throw new Exception('التسليم موقوف: لم تُستوفَ شروط السداد أو الائتمان لطلب العميل. راجع قسم التحصيل أو سجّل استثناءً إدارياً معتمداً قبل خروج الشحنة.');
+        }
     }
 
     private function assertDecisionPossible(DeliveryOrder $delivery): void
