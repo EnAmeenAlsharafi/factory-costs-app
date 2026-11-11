@@ -27,6 +27,12 @@ Schedule::command('notifications:scan')
     ->withoutOverlapping()
     ->runInBackground();
 
+// Wake installed phones for what was raised in the last minute (no queue worker on shared hosting).
+Schedule::command('notifications:push')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->runInBackground();
+
 Schedule::command('notifications:scan --prune')
     ->dailyAt('22:00')
     ->withoutOverlapping();

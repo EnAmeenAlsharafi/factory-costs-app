@@ -394,6 +394,15 @@ class CustomerOrderService
                 'actor' => $approver,
             ]);
 
+            $this->notifications->raise(NotificationType::PortalOrderApproved, [
+                'title' => 'اعتُمد طلبك ودخل جدول التصنيع',
+                'body' => "طلبك رقم {$order->order_number} اعتُمد وبدأ تجهيزه. تابع مراحل التنفيذ من صفحة متابعة التنفيذ.",
+                'url' => route('portal.orders.show', $order->id),
+                'subject' => $order,
+                'customer_id' => $order->customer_id,
+                'actor' => $approver,
+            ]);
+
             $order->update([
                 'status' => 'APPROVED_FOR_PRODUCTION',
                 'production_reviewed_by_user_id' => $approver->id,

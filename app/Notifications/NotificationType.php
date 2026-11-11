@@ -75,6 +75,14 @@ enum NotificationType: string
     case CreditLimitExceeded = 'CREDIT_LIMIT_EXCEEDED';
     case PaymentControlOverridden = 'PAYMENT_CONTROL_OVERRIDDEN';
 
+    // The customer's own portal
+    case PortalOfferReady = 'PORTAL_OFFER_READY';
+    case PortalRequestReturned = 'PORTAL_REQUEST_RETURNED';
+    case PortalOrderApproved = 'PORTAL_ORDER_APPROVED';
+    case PortalOrderReadyForDelivery = 'PORTAL_ORDER_READY_FOR_DELIVERY';
+    case PortalOrderDelivered = 'PORTAL_ORDER_DELIVERED';
+    case PortalOrderInstalled = 'PORTAL_ORDER_INSTALLED';
+
     // Management announcement
     case Announcement = 'ANNOUNCEMENT';
 
@@ -110,6 +118,11 @@ enum NotificationType: string
             self::ReworkCreated, self::WastePendingApproval, self::MaterialRequestPartiallyFulfilled,
             self::MaterialBelowMinimum, self::PurchaseOrderLate, self::FinishedGoodsIdle,
             self::CustomerReturnOpened, self::OrderBlockedByPayment, self::PaymentControlOverridden => 'warning',
+
+            self::PortalOfferReady, self::PortalOrderApproved, self::PortalOrderReadyForDelivery,
+            self::PortalOrderDelivered, self::PortalOrderInstalled => 'success',
+
+            self::PortalRequestReturned => 'warning',
 
             self::OrderApprovedForProduction, self::PortalOfferConfirmed, self::StageBlockResolved,
             self::ProductionOrderCompleted, self::ReworkCompleted, self::MaterialRequestFulfilled,
@@ -169,8 +182,20 @@ enum NotificationType: string
             self::PaymentOverdue, self::CreditLimitExceeded => ['permission:receivables.view'],
             self::PaymentControlOverridden => ['permission:receivables.view', 'role:admin'],
 
+            self::PortalOfferReady, self::PortalRequestReturned, self::PortalOrderApproved,
+            self::PortalOrderReadyForDelivery, self::PortalOrderDelivered,
+            self::PortalOrderInstalled => ['customer'],
+
             self::Announcement => ['user', 'department'],
         };
+    }
+
+    /**
+     * Addressed to the customer's portal rather than to anyone in the factory.
+     */
+    public function isForCustomer(): bool
+    {
+        return $this->audiences() === ['customer'];
     }
 
     public function label(): string
@@ -228,6 +253,13 @@ enum NotificationType: string
             self::CreditLimitExceeded => 'تجاوز حد ائتمان عميل',
             self::PaymentControlOverridden => 'استثناء إداري على قيد السداد',
 
+            self::PortalOfferReady => 'وصول عرض سعر للعميل',
+            self::PortalRequestReturned => 'إعادة الطلب للعميل للتعديل',
+            self::PortalOrderApproved => 'اعتماد طلب العميل للتصنيع',
+            self::PortalOrderReadyForDelivery => 'جاهزية طلب العميل للتوصيل',
+            self::PortalOrderDelivered => 'إبلاغ العميل بالتسليم',
+            self::PortalOrderInstalled => 'إبلاغ العميل باكتمال التركيب',
+
             self::Announcement => 'إعلان من الإدارة',
         };
     }
@@ -262,6 +294,10 @@ enum NotificationType: string
             self::PaymentPendingConfirmation, self::PaymentConfirmed, self::OrderBlockedByPayment,
             self::PaymentOverdue, self::CreditLimitExceeded, self::PaymentControlOverridden => 'التحصيل',
 
+            self::PortalOfferReady, self::PortalRequestReturned, self::PortalOrderApproved,
+            self::PortalOrderReadyForDelivery, self::PortalOrderDelivered,
+            self::PortalOrderInstalled => 'بوابة العملاء',
+
             self::Announcement => 'إعلانات',
         };
     }
@@ -276,6 +312,7 @@ enum NotificationType: string
             'المشتريات' => 'fa-cart-shopping',
             'المنتجات الجاهزة والتوصيل' => 'fa-truck-fast',
             'التحصيل' => 'fa-money-bill-wave',
+            'بوابة العملاء' => 'fa-store',
             default => 'fa-bullhorn',
         };
     }

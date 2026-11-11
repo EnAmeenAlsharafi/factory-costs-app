@@ -12,11 +12,12 @@
                 <i class="fas fa-bell text-warning" aria-hidden="true"></i>
                 {{ $showAll ? 'كل إشعارات النظام' : 'إشعاراتي' }}
             </h1>
-            <p class="page-header-subtitle text-muted mb-0 fs-7">
+            <p class="page-header-subtitle text-muted mb-2 fs-7">
                 {{ $showAll
                     ? 'كل ما أطلقه النظام، لمراجعة التغطية والضبط.'
                     : 'ما يخص مهامك وقسمك وصلاحياتك. الضغط على الإشعار يفتح الشاشة المعنية.' }}
             </p>
+            @include('partials.push-toggle')
         </div>
 
         <div class="d-flex flex-wrap gap-2">

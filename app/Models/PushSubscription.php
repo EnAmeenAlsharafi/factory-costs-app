@@ -1,0 +1,41 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+/**
+ * One installed browser that agreed to receive notifications for a person.
+ */
+class PushSubscription extends Model
+{
+    protected $fillable = [
+        'user_id',
+        'endpoint',
+        'p256dh',
+        'auth',
+        'user_agent',
+        'last_used_at',
+    ];
+
+    protected function casts(): array
+    {
+        return ['last_used_at' => 'datetime'];
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    /**
+     * The push service this subscription belongs to, used as the audience of the signed token.
+     */
+    public function audience(): string
+    {
+        $parts = parse_url($this->endpoint);
+
+        return ($parts['scheme'] ?? 'https').'://'.($parts['host'] ?? '');
+    }
+}

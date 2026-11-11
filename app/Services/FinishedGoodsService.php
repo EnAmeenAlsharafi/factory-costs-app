@@ -210,6 +210,15 @@ class FinishedGoodsService
                 'received_by_user_id' => $user->id,
             ]);
 
+            app(NotificationService::class)->raise(NotificationType::PortalOrderReadyForDelivery, [
+                'title' => 'طلبك جاهز للتوصيل',
+                'body' => "اكتمل تصنيع طلبك رقم {$po->customerOrder?->order_number}، وسنتواصل معك لتحديد موعد التوصيل.",
+                'url' => $po->customer_order_id ? route('portal.orders.show', $po->customer_order_id) : null,
+                'subject' => $po->customerOrder,
+                'customer_id' => $po->customerOrder?->customer_id,
+                'actor' => $user,
+            ]);
+
             app(NotificationService::class)->raise(NotificationType::OrderReadyForDelivery, [
                 'title' => 'منتجات جاهزة في المستودع — يمكن إنشاء أمر توصيل',
                 'body' => "طلب العميل {$po->customerOrder?->order_number} — أمر الإنتاج {$po->production_order_number} — الكمية {$receipt->quantity}",

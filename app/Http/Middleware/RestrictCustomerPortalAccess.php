@@ -19,6 +19,11 @@ class RestrictCustomerPortalAccess
         'webapp.offline',
         'company.logo',
         'public-file',
+        // Web Push is shared by both apps: the portal's service worker registers and reads through it.
+        'push.config',
+        'push.subscribe',
+        'push.unsubscribe',
+        'push.latest',
     ];
 
     /**

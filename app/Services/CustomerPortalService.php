@@ -220,6 +220,15 @@ class CustomerPortalService
             $submission->save();
             $this->record($submission, $user, 'OFFERED', $submission->public_response, true);
 
+            app(NotificationService::class)->raise(NotificationType::PortalOfferReady, [
+                'title' => 'وصلك عرض سعر جديد',
+                'body' => 'راجع العرض وأكّده لنبدأ التنفيذ، أو اطلب تعديلاً عليه.',
+                'url' => route('portal.requests.show', $submission->id),
+                'subject' => $submission,
+                'customer_id' => $submission->customer_id,
+                'actor' => $user,
+            ]);
+
             return $submission;
         });
     }
@@ -286,6 +295,15 @@ class CustomerPortalService
             $this->assertAmendable($submission);
             $submission->update(['status' => 'CHANGES_REQUESTED', 'public_response' => $message]);
             $this->record($submission, $user, 'CHANGES_REQUESTED', $message);
+
+            app(NotificationService::class)->raise(NotificationType::PortalRequestReturned, [
+                'title' => 'طلبك بحاجة إلى تعديل',
+                'body' => $message,
+                'url' => route('portal.requests.show', $submission->id),
+                'subject' => $submission,
+                'customer_id' => $submission->customer_id,
+                'actor' => $user,
+            ]);
         });
     }
 

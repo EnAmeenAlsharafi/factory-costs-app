@@ -989,6 +989,101 @@ if ('serviceWorker' in navigator) {
     });
 }
 
+/*
+ * Phone notifications (Web Push).
+ *
+ * Permission is only ever asked for after the person presses the button: a prompt nobody asked for
+ * is dismissed once and then blocked by the browser for good. On iPhone the browser offers push
+ * only to an app added to the home screen, so the button says so instead of failing silently.
+ */
+const urlBase64ToUint8Array = (base64) => {
+    const padded = (base64 + '='.repeat((4 - (base64.length % 4)) % 4)).replace(/-/g, '+').replace(/_/g, '/');
+    const raw = window.atob(padded);
+    return Uint8Array.from([...raw].map((char) => char.charCodeAt(0)));
+};
+
+const csrfToken = () => document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+
+Alpine.data('pushToggle', () => ({
+    state: 'checking', // checking | unsupported | needs-install | blocked | off | on | working | unavailable
+    message: '',
+
+    async init() {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+            // iOS offers push only to an installed app; elsewhere the browser simply cannot.
+            this.state = /iPhone|iPad|iPod/.test(navigator.userAgent) && !isStandalone() ? 'needs-install' : 'unsupported';
+            return;
+        }
+
+        if (Notification.permission === 'denied') {
+            this.state = 'blocked';
+            return;
+        }
+
+        try {
+            const config = await (await fetch('/push/config', { headers: { Accept: 'application/json' } })).json();
+            if (!config.enabled) {
+                this.state = 'unavailable';
+                return;
+            }
+            this.publicKey = config.public_key;
+
+            const registration = await navigator.serviceWorker.ready;
+            const existing = await registration.pushManager.getSubscription();
+            this.state = existing ? 'on' : 'off';
+        } catch (error) {
+            this.state = 'unsupported';
+        }
+    },
+
+    async enable() {
+        this.state = 'working';
+        try {
+            if ((await Notification.requestPermission()) !== 'granted') {
+                this.state = 'blocked';
+                return;
+            }
+
+            const registration = await navigator.serviceWorker.ready;
+            const subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(this.publicKey),
+            });
+
+            await fetch('/push/subscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken() },
+                body: JSON.stringify(subscription.toJSON()),
+            });
+
+            this.state = 'on';
+        } catch (error) {
+            this.state = 'off';
+            this.message = 'تعذّر تفعيل التنبيهات على هذا الجهاز.';
+        }
+    },
+
+    async disable() {
+        this.state = 'working';
+        try {
+            const registration = await navigator.serviceWorker.ready;
+            const subscription = await registration.pushManager.getSubscription();
+            if (subscription) {
+                await fetch('/push/unsubscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken() },
+                    body: JSON.stringify({ endpoint: subscription.endpoint }),
+                });
+                await subscription.unsubscribe();
+            }
+            this.state = 'off';
+        } catch (error) {
+            this.state = 'on';
+            this.message = 'تعذّر إيقاف التنبيهات على هذا الجهاز.';
+        }
+    },
+}));
+
 if (isStandalone()) {
     document.documentElement.classList.add('is-standalone-app');
 }

@@ -10,6 +10,7 @@ use App\Http\Controllers\CustomerOrderController;
 use App\Http\Controllers\CustomerOrderFabricController;
 use App\Http\Controllers\CustomerPaymentController;
 use App\Http\Controllers\CustomerPortalController;
+use App\Http\Controllers\CustomerPortalNotificationController;
 use App\Http\Controllers\CustomerPortalReviewController;
 use App\Http\Controllers\CustomerProductAliasController;
 use App\Http\Controllers\CustomerReturnController;
@@ -57,6 +58,7 @@ use App\Http\Controllers\PublicFileController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\PurchaseRequestController;
 use App\Http\Controllers\PurchaseRfqController;
+use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\QualityIncidentController;
 use App\Http\Controllers\QuotationController;
 use App\Http\Controllers\ReceivablesReportController;
@@ -139,6 +141,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/receipts', [CustomerPortalController::class, 'receipts'])->name('receipts');
         Route::get('/account', [CustomerPortalController::class, 'account'])->name('account');
         Route::get('/profile', [CustomerPortalController::class, 'profile'])->name('profile');
+        Route::get('/notifications', [CustomerPortalNotificationController::class, 'index'])->name('notifications.index');
+        Route::get('/notifications/unread-count', [CustomerPortalNotificationController::class, 'unreadCount'])->name('notifications.unread-count');
+        Route::post('/notifications/read-all', [CustomerPortalNotificationController::class, 'readAll'])->name('notifications.read-all');
+        Route::post('/notifications/{recipient}/read', [CustomerPortalNotificationController::class, 'read'])->name('notifications.read');
     });
     Route::prefix('sales/portal-requests')->name('sales.portal-requests.')->group(function () {
         Route::get('/', [CustomerPortalReviewController::class, 'index'])->name('index');
@@ -636,6 +642,14 @@ Route::middleware('auth')->group(function () {
 
         // Payment Control Overrides
         Route::post('/overrides', [PaymentControlOverrideController::class, 'store'])->name('overrides.store');
+    });
+
+    // Web Push: registering an installed browser, and what the service worker shows when woken.
+    Route::prefix('push')->name('push.')->group(function () {
+        Route::get('/config', [PushSubscriptionController::class, 'config'])->name('config');
+        Route::post('/subscribe', [PushSubscriptionController::class, 'store'])->name('subscribe');
+        Route::post('/unsubscribe', [PushSubscriptionController::class, 'destroy'])->name('unsubscribe');
+        Route::get('/latest', [PushSubscriptionController::class, 'latest'])->name('latest');
     });
 
     // Notifications: the bell, the list, announcements and the settings matrix

@@ -44,6 +44,19 @@
                 </span>
             </a>
 
+            {{-- Notifications: offers and delivery news reach the customer here. --}}
+            @php
+                $portalUnread = \App\Models\NotificationRecipient::forUser(auth()->user())->unread()->count();
+            @endphp
+            <a class="btn btn-light rounded-circle position-relative flex-shrink-0 ms-auto me-2"
+               href="{{ route('portal.notifications.index') }}"
+               aria-label="{{ $portalUnread > 0 ? 'التنبيهات، '.$portalUnread.' غير مقروء' : 'التنبيهات' }}">
+                <i class="fas fa-bell" aria-hidden="true"></i>
+                @if ($portalUnread > 0)
+                    <span class="position-absolute top-0 start-0 translate-middle badge rounded-pill bg-danger fs-8">{{ $portalUnread > 99 ? '99+' : $portalUnread }}</span>
+                @endif
+            </a>
+
             {{-- Account menu: keeps «تسجيل الخروج» out of the primary navigation. --}}
             <div class="dropdown flex-shrink-0">
                 <button class="btn btn-light rounded-circle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="true" aria-expanded="false" aria-label="حسابي والخروج" style="width:44px;height:44px;">

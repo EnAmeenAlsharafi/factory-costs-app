@@ -38,6 +38,7 @@ class AudienceResolver
             $ids = $ids->merge(match (true) {
                 $key === 'user' => $this->explicitUsers($context),
                 $key === 'department' => $this->department($context['department_id'] ?? null),
+                $key === 'customer' => $this->customerAccounts($context['customer_id'] ?? null),
                 str_starts_with($key, 'permission:') => $this->withPermission(substr($key, 11)),
                 str_starts_with($key, 'role:') => $this->withRole(substr($key, 5)),
                 default => [],
@@ -58,6 +59,25 @@ class AudienceResolver
             ->map(fn (User|int $user) => $user instanceof User ? $user->id : (int) $user)
             ->filter(fn (int $id) => $this->staff()->contains('id', $id))
             ->values()->all();
+    }
+
+    /**
+     * The customer's own portal accounts. They are not staff, so they are looked up separately and
+     * never appear in any other audience.
+     *
+     * @return list<int>
+     */
+    private function customerAccounts(?int $customerId): array
+    {
+        if (! $customerId) {
+            return [];
+        }
+
+        return User::query()
+            ->where('is_active', true)
+            ->where('customer_id', $customerId)
+            ->whereHas('customer', fn ($customer) => $customer->where('is_active', true))
+            ->pluck('id')->all();
     }
 
     /**

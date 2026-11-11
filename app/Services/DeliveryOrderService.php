@@ -352,6 +352,17 @@ class DeliveryOrderService
             }
             $this->recordEvent($delivery, 'DELIVERED', $oldStatus, 'DELIVERED', $user, $summary);
 
+            $this->notifications->raise(NotificationType::PortalOrderDelivered, [
+                'title' => 'تم تسليم طلبك',
+                'body' => $delivery->installation_required
+                    ? 'سلّمنا طلبك، وبقي التركيب والمعاينة النهائية.'
+                    : 'سلّمنا طلبك. شكراً لثقتك بمصنع مفروشات سدير.',
+                'url' => $delivery->customer_order_id ? route('portal.orders.show', $delivery->customer_order_id) : null,
+                'subject' => $delivery->customerOrder,
+                'customer_id' => $delivery->customer_id,
+                'actor' => $user,
+            ]);
+
             $this->notifications->raise(NotificationType::DeliveryCompleted, [
                 'title' => 'تم تسليم الطلب للعميل',
                 'body' => "{$delivery->delivery_number} — {$delivery->customer_name_snapshot}"
@@ -386,6 +397,15 @@ class DeliveryOrderService
             ]);
 
             $this->recordEvent($delivery, 'INSTALLED', $oldStatus, 'INSTALLATION_COMPLETED', $user, $notes ?? 'تم التركيب والمعاينة النهائية بنجاح');
+
+            $this->notifications->raise(NotificationType::PortalOrderInstalled, [
+                'title' => 'اكتمل تركيب طلبك',
+                'body' => 'تم التركيب والمعاينة النهائية. نسعد بملاحظاتك عبر خدمة العملاء.',
+                'url' => $delivery->customer_order_id ? route('portal.orders.show', $delivery->customer_order_id) : null,
+                'subject' => $delivery->customerOrder,
+                'customer_id' => $delivery->customer_id,
+                'actor' => $user,
+            ]);
 
             $this->notifications->raise(NotificationType::InstallationCompleted, [
                 'title' => 'اكتمل التركيب — الطلب مكتمل تشغيلياً',

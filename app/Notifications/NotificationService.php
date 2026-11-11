@@ -31,6 +31,7 @@ class NotificationService
      *     url?: ?string,
      *     subject?: ?Model,
      *     department_id?: ?int,
+     *     customer_id?: ?int,
      *     users?: iterable<User|int>,
      *     actor?: ?User,
      *     dedupe_key?: ?string,
@@ -65,6 +66,7 @@ class NotificationService
             $this->audience->resolve($this->enabledAudiences($type, $payload['audiences'] ?? null), [
                 'users' => $payload['users'] ?? [],
                 'department_id' => $departmentId,
+                'customer_id' => $payload['customer_id'] ?? null,
             ]),
             // Nobody is told about their own action.
             array_filter([$actor?->id]),
