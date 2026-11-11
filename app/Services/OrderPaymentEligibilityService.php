@@ -68,6 +68,18 @@ class OrderPaymentEligibilityService
                     'credit_check' => $creditCheck,
                 ];
             }
+
+            // Credit (آجل): the order runs through production with nothing paid; the customer's
+            // credit limit, when one is set, is the only control.
+            return [
+                'eligible' => true,
+                'status' => 'ALLOWED',
+                'reason' => 'بيع آجل - مسموح ببدء الإنتاج دون سداد. '.$creditCheck['reason'],
+                'required_amount' => 0.00,
+                'paid_amount' => $paid,
+                'outstanding' => $outstanding,
+                'credit_check' => $creditCheck,
+            ];
         } elseif ($terms === 'CASH_ON_DELIVERY') {
             return [
                 'eligible' => true,
