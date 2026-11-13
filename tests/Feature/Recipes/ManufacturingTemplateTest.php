@@ -224,4 +224,22 @@ class ManufacturingTemplateTest extends TestCase
             'name' => 'الوصفة الثانية المكررة',
         ]);
     }
+
+    public function test_incomplete_template_line_reports_which_line_and_field_in_plain_language(): void
+    {
+        $response = $this->actingAs($this->adminUser)
+            ->post(route('recipes.templates.store'), [
+                'name_ar' => 'قالب ببند ناقص',
+                'items' => [
+                    ['item_type' => 'MATERIAL', 'material_id' => $this->woodMaterial->id, 'quantity' => 2, 'unit_id' => $this->boardUnit->id],
+                    ['item_type' => 'MATERIAL', 'material_id' => '', 'quantity' => 0, 'unit_id' => $this->boardUnit->id],
+                ],
+            ]);
+
+        $response->assertSessionHasErrors([
+            'items.1.material_id' => 'البند 2: اختر المادة الخام.',
+            'items.1.quantity' => 'البند 2: الكمية يجب أن تكون أكبر من صفر.',
+        ]);
+        $this->assertDatabaseMissing('manufacturing_templates', ['name_ar' => 'قالب ببند ناقص']);
+    }
 }

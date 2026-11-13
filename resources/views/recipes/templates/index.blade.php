@@ -5,94 +5,97 @@
 @section('content')
 <div class="container-fluid px-4 py-4">
 
-    {{-- Page Header --}}
-    <div class="page-header-card d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
-        <div>
-            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">قوالب التصنيع</h1>
-            <p class="page-header-subtitle text-muted mb-0 fs-7">نماذج نمطية مسبقة الإعداد لتعبئة بنود الوصفات تلقائياً عند إنشاء وصفة جديدة</p>
-        </div>
-        <div>
-            @can('manufacturing_templates.manage')
-                <a href="{{ route('recipes.templates.create') }}" class="btn btn-factory-warning px-3 fw-semibold">
-                    <i class="fas fa-plus me-1"></i> إنشاء قالب جديد
-                </a>
-            @endcan
-        </div>
-    </div>
+    @include('partials.page-header', [
+        'title' => 'قوالب التصنيع',
+        'subtitle' => 'أنماط بنود جاهزة: اختر قالباً لتوليد مسودة وصفة ببنودها بدلاً من إدخالها من الصفر.',
+        'icon' => 'fas fa-layer-group',
+        'breadcrumbs' => [['title' => 'الوصفات والقوالب'], ['title' => 'قوالب التصنيع']],
+        'actionUrl' => route('recipes.templates.create'),
+        'actionText' => 'قالب جديد',
+        'actionPermission' => 'manufacturing_templates.manage',
+    ])
 
-    {{-- Alerts --}}
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-4">
-            <i class="fas fa-check-circle me-2"></i> {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    {{-- Flash messages are rendered once by the layout (partials.flash). --}}
+
+    <form method="GET" action="{{ route('recipes.templates.index') }}" role="search" class="d-flex gap-2 my-3">
+        <label for="templates-search" class="visually-hidden">بحث في القوالب</label>
+        <input type="search" id="templates-search" name="search" class="form-control" inputmode="search" enterkeyhint="search" autocomplete="off"
+               placeholder="ابحث باسم القالب أو الكود" value="{{ request('search') }}">
+        <button type="submit" class="btn btn-factory-primary flex-shrink-0"><i class="fas fa-magnifying-glass" aria-hidden="true"></i> بحث</button>
+    </form>
+
+    @if (request()->filled('search'))
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3 fs-7" aria-label="البحث النشط">
+            <span class="status-chip status-chip-secondary"><i class="fas fa-magnifying-glass" aria-hidden="true"></i> {{ request('search') }}</span>
+            <span class="text-muted">{{ $templates->total() }} نتيجة</span>
+            <a href="{{ route('recipes.templates.index') }}" class="link-secondary">مسح البحث</a>
         </div>
     @endif
 
-    {{-- Filter Card --}}
-    <div class="card border-0 shadow-sm mb-4 rounded-3">
-        <div class="card-body p-3">
-            <form method="GET" action="{{ route('recipes.templates.index') }}" class="row g-3">
-                <div class="col-md-6">
-                    <input type="text" name="search" class="form-control" placeholder="بحث باسم القالب أو الكود..." value="{{ request('search') }}">
-                </div>
-                <div class="col-md-2 d-flex gap-2">
-                    <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter me-1"></i> تصفية</button>
-                    <a href="{{ route('recipes.templates.index') }}" class="btn btn-outline-secondary" title="إعادة ضبط الفلاتر" aria-label="إعادة ضبط الفلاتر"><i class="fas fa-redo" aria-hidden="true"></i></a>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    {{-- Templates Table --}}
     <div class="card border-0 shadow-sm rounded-3">
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th class="ps-3">كود القالب</th>
-                            <th>اسم القالب</th>
-                            <th>الوصف</th>
-                            <th>عدد البنود</th>
+                            <th class="ps-3">القالب</th>
+                            <th>الكود</th>
+                            <th>البنود</th>
                             <th>الحالة</th>
                             <th class="pe-3 text-end">الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($templates as $tpl)
+                            @php
+                                $materialLines = $tpl->items->where('item_type', 'MATERIAL')->count();
+                                $componentLines = $tpl->items->count() - $materialLines;
+                            @endphp
                             <tr>
-                                <td class="ps-3 fw-bold font-monospace text-primary">{{ $tpl->template_code }}</td>
-                                <td class="fw-bold text-dark">{{ $tpl->name_ar }}</td>
-                                <td class="text-muted fs-7">{{ $tpl->description ?: '-' }}</td>
-                                <td><span class="badge bg-light text-dark border">{{ $tpl->items->count() }} بند</span></td>
-                                <td>
-                                    @if($tpl->is_active)
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle">نشط</span>
-                                    @else
-                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">معطل</span>
+                                <td class="ps-3">
+                                    <a href="{{ route('recipes.templates.show', $tpl) }}" class="fw-bold text-dark text-decoration-none">{{ $tpl->name_ar }}</a>
+                                    @if ($tpl->description)
+                                        <div class="text-muted fs-8 text-truncate" style="max-width: 28rem;">{{ $tpl->description }}</div>
                                     @endif
                                 </td>
+                                <td><span class="code-chip">{{ $tpl->template_code }}</span></td>
+                                <td class="fs-7">
+                                    <span class="fw-bold">{{ $tpl->items->count() }} بند</span>
+                                    <span class="text-muted">— {{ $materialLines }} مادة خام @if ($componentLines) · {{ $componentLines }} مكون @endif</span>
+                                </td>
+                                <td>@include('recipes.partials.active-chip', ['active' => $tpl->is_active])</td>
                                 <td class="pe-3 text-end">
-                                    <a href="{{ route('recipes.templates.show', $tpl) }}" class="btn btn-sm btn-outline-secondary me-1">
-                                        <i class="fas fa-eye me-1"></i> عرض البنود
-                                    </a>
-                                    @can('recipes.manage')
-                                        <a href="{{ route('recipes.templates.show', [$tpl, 'open_modal' => 1]) }}" class="btn btn-sm btn-warning me-1 fw-bold">
-                                            <i class="fas fa-magic me-1"></i> إنشاء وصفة
-                                        </a>
-                                    @endcan
-                                    @can('manufacturing_templates.manage')
-                                        <a href="{{ route('recipes.templates.edit', $tpl) }}" class="btn btn-sm btn-outline-warning me-1">
-                                            <i class="fas fa-edit me-1"></i> تعديل
-                                        </a>
-                                    @endcan
+                                    <div class="d-inline-flex flex-wrap justify-content-end gap-1">
+                                        @can('recipes.manage')
+                                            @if ($tpl->is_active && $tpl->items->isNotEmpty())
+                                                <a href="{{ route('recipes.templates.show', [$tpl, 'open_modal' => 1]) }}" class="btn btn-sm btn-warning fw-bold">
+                                                    <i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i> إنشاء وصفة
+                                                </a>
+                                            @endif
+                                        @endcan
+                                        <a href="{{ route('recipes.templates.show', $tpl) }}" class="btn btn-sm btn-outline-secondary">عرض</a>
+                                        @can('manufacturing_templates.manage')
+                                            <a href="{{ route('recipes.templates.edit', $tpl) }}" class="btn btn-sm btn-outline-secondary" aria-label="تعديل القالب {{ $tpl->name_ar }}" title="تعديل">
+                                                <i class="fas fa-pen" aria-hidden="true"></i>
+                                            </a>
+                                        @endcan
+                                    </div>
                                 </td>
                             </tr>
                         @empty
-                            <tr>
-                                <td colspan="6" class="text-center py-5 text-muted">
-                                    <i class="fas fa-layer-group fs-1 d-block mb-3 opacity-50"></i>
-                                    لا توجد قوالب تصنيع معرفة حالياً.
+                            <tr class="table-stack-empty">
+                                <td colspan="5" class="empty-state" role="status">
+                                    <i class="fas fa-layer-group fs-2 d-block mb-3 opacity-50" aria-hidden="true"></i>
+                                    @if (request()->filled('search'))
+                                        <p class="mb-0">لا توجد قوالب تطابق «{{ request('search') }}».</p>
+                                        <div class="empty-state-cta"><a href="{{ route('recipes.templates.index') }}" class="btn btn-outline-secondary">مسح البحث</a></div>
+                                    @else
+                                        <p class="fw-bold text-dark mb-1">لا توجد قوالب بعد</p>
+                                        <p class="mb-0">أنشئ قالباً للبنود المتكررة (مثل سرير قياسي) لتوفير الوقت عند إنشاء الوصفات.</p>
+                                        @can('manufacturing_templates.manage')
+                                            <div class="empty-state-cta"><a href="{{ route('recipes.templates.create') }}" class="btn btn-warning fw-bold"><i class="fas fa-plus" aria-hidden="true"></i> إنشاء أول قالب</a></div>
+                                        @endcan
+                                    @endif
                                 </td>
                             </tr>
                         @endforelse

@@ -3,154 +3,139 @@
 @section('title', 'وصفات التصنيع')
 
 @section('content')
+@php
+    $activeFilterCount = collect(['target_type', 'model_id'])->filter(fn (string $key): bool => request()->filled($key))->count();
+    $targetTypes = ['PRODUCT_CONFIGURATION' => 'منتج نهائي', 'SEMI_FINISHED_COMPONENT' => 'مكون نصف مصنع'];
+@endphp
 <div class="container-fluid px-4 py-4">
 
-    {{-- Page Header --}}
-    <div class="page-header-card d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
-        <div>
-            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">وصفات التصنيع</h1>
-            <p class="page-header-subtitle text-muted mb-0 fs-7">إدارة قائمة المواد المكونة وتوصيفات التصنيع وإصداراتها للموديلات والمكونات نصف المصنعة</p>
-        </div>
-        <div>
-            @can('recipes.manage')
-                <a href="{{ route('recipes.create') }}" class="btn btn-factory-warning px-3 fw-semibold">
-                    <i class="fas fa-plus me-1"></i> إضافة وصفة جديدة
-                </a>
-            @endcan
-        </div>
+    @include('partials.page-header', [
+        'title' => 'وصفات التصنيع',
+        'subtitle' => 'قائمة المواد لكل منتج أو مكون، بإصدارات تُعتمد قبل أن يستخدمها الإنتاج.',
+        'icon' => 'fas fa-scroll',
+        'breadcrumbs' => [['title' => 'الوصفات والقوالب'], ['title' => 'وصفات التصنيع']],
+        'actionUrl' => route('recipes.create'),
+        'actionText' => 'وصفة جديدة',
+        'actionPermission' => 'recipes.manage',
+    ])
+
+    {{-- Flash messages are rendered once by the layout (partials.flash). --}}
+
+    <div class="mt-3">
+        <x-filter-sheet id="recipes-filters" :action="route('recipes.index')" :active-count="$activeFilterCount" :reset-url="route('recipes.index', request()->only('search'))">
+            <x-slot:search>
+                <label for="recipes-search" class="visually-hidden">بحث في الوصفات</label>
+                <input type="search" id="recipes-search" name="search" class="form-control" inputmode="search" enterkeyhint="search" autocomplete="off"
+                       placeholder="ابحث بالكود أو اسم الوصفة أو الموديل أو المكون" value="{{ request('search') }}">
+            </x-slot:search>
+            <div class="col-12 col-md-4">
+                <label for="recipes-target" class="form-label fs-7">النوع</label>
+                <select name="target_type" id="recipes-target" class="form-select">
+                    <option value="">جميع الأنواع</option>
+                    @foreach ($targetTypes as $value => $label)
+                        <option value="{{ $value }}" @selected(request('target_type') === $value)>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-12 col-md-4">
+                <label for="recipes-model" class="form-label fs-7">الموديل</label>
+                <select name="model_id" id="recipes-model" class="form-select">
+                    <option value="">جميع الموديلات</option>
+                    @foreach($productModels as $model)
+                        <option value="{{ $model->id }}" @selected(request('model_id') == $model->id)>{{ $model->name_ar }}</option>
+                    @endforeach
+                </select>
+            </div>
+        </x-filter-sheet>
     </div>
 
-    {{-- Alerts --}}
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
-            <i class="fas fa-check-circle me-2"></i> {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
-    @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
-            <i class="fas fa-exclamation-triangle me-2"></i> {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    @if ($activeFilterCount > 0 || request()->filled('search'))
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3 fs-7" aria-label="الفلاتر النشطة">
+            @if (request()->filled('search'))<span class="status-chip status-chip-secondary"><i class="fas fa-magnifying-glass" aria-hidden="true"></i> {{ request('search') }}</span>@endif
+            @if (request()->filled('target_type'))<span class="status-chip status-chip-secondary">{{ $targetTypes[request('target_type')] ?? request('target_type') }}</span>@endif
+            @if (request()->filled('model_id'))<span class="status-chip status-chip-secondary">{{ $productModels->firstWhere('id', (int) request('model_id'))?->name_ar }}</span>@endif
+            <span class="text-muted">{{ $recipes->total() }} نتيجة</span>
+            <a href="{{ route('recipes.index') }}" class="link-secondary">مسح الكل</a>
         </div>
     @endif
 
-    {{-- Filter Card --}}
-    <div class="card border-0 shadow-sm mb-4 rounded-3">
-        <div class="card-body p-3">
-            <form method="GET" action="{{ route('recipes.index') }}" class="row g-3">
-                <div class="col-md-4">
-                    <input type="text" name="search" class="form-control" placeholder="بحث بكود الوصفة، الاسم، الموديل..." value="{{ request('search') }}">
-                </div>
-                <div class="col-md-3">
-                    <select name="target_type" class="form-select">
-                        <option value="">-- جميع الأنواع --</option>
-                        <option value="PRODUCT_CONFIGURATION" {{ request('target_type') === 'PRODUCT_CONFIGURATION' ? 'selected' : '' }}>تكوين منتج نهائي</option>
-                        <option value="SEMI_FINISHED_COMPONENT" {{ request('target_type') === 'SEMI_FINISHED_COMPONENT' ? 'selected' : '' }}>مكون نصف مصنع</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <select name="model_id" class="form-select">
-                        <option value="">-- جميع الموديلات --</option>
-                        @foreach($productModels as $model)
-                            <option value="{{ $model->id }}" {{ request('model_id') == $model->id ? 'selected' : '' }}>{{ $model->name_ar }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-2 d-flex gap-2">
-                    <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter me-1"></i> تصفية</button>
-                    <a href="{{ route('recipes.index') }}" class="btn btn-outline-secondary" title="إعادة ضبط الفلاتر" aria-label="إعادة ضبط الفلاتر"><i class="fas fa-redo" aria-hidden="true"></i></a>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    {{-- Recipes Table --}}
     <div class="card border-0 shadow-sm rounded-3">
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th class="ps-3">كود الوصفة</th>
-                            <th>الاسم / الهدف</th>
-                            <th>النوع Target</th>
-                            <th>الإصدار المعتمد الحالي</th>
-                            <th>إجمالي الإصدارات</th>
+                            <th class="ps-3">الوصفة</th>
+                            <th>النوع</th>
+                            <th>الإصدار المعتمد</th>
+                            <th>الإصدارات</th>
                             <th>الحالة</th>
-                            <th>تاريخ التحديث</th>
+                            <th>آخر تحديث</th>
                             <th class="pe-3 text-end">الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($recipes as $recipe)
+                            @php
+                                $configuration = $recipe->productConfiguration;
+                                $draftCount = $recipe->versions->where('status', 'DRAFT')->count();
+                            @endphp
                             <tr>
-                                <td class="ps-3 fw-bold font-monospace text-primary">{{ $recipe->recipe_code }}</td>
-                                <td>
-                                    <div class="fw-semibold text-dark">{{ $recipe->name }}</div>
-                                    @if($recipe->target_type === 'PRODUCT_CONFIGURATION' && $recipe->productConfiguration)
-                                        <small class="text-muted">
-                                            موديل: {{ $recipe->productConfiguration->productModel?->name_ar }}
-                                            ({{ $recipe->productConfiguration->width_cm }} × {{ $recipe->productConfiguration->length_cm }} سم)
-                                            @if($recipe->productConfiguration->has_storage)
-                                                <span class="badge bg-warning text-dark me-1">مع تخزين</span>
-                                            @endif
-                                        </small>
-                                    @elseif($recipe->target_type === 'SEMI_FINISHED_COMPONENT' && $recipe->semiFinishedComponent)
-                                        <small class="text-muted">مكون: {{ $recipe->semiFinishedComponent->name_ar }} ({{ $recipe->semiFinishedComponent->component_code }})</small>
-                                    @endif
+                                <td class="ps-3">
+                                    <a href="{{ route('recipes.show', $recipe) }}" class="fw-bold text-dark text-decoration-none">{{ $recipe->name }}</a>
+                                    <div class="d-flex flex-wrap align-items-center gap-2 fs-8 text-muted mt-1">
+                                        <span class="code-chip">{{ $recipe->recipe_code }}</span>
+                                        @if($recipe->target_type === 'PRODUCT_CONFIGURATION' && $configuration)
+                                            <span>{{ $configuration->productModel?->name_ar }} · <span class="qty">{{ (float) $configuration->width_cm }}×{{ (float) $configuration->length_cm }}</span> سم{{ $configuration->has_storage ? ' · مع تخزين' : '' }}</span>
+                                        @elseif($recipe->target_type === 'SEMI_FINISHED_COMPONENT' && $recipe->semiFinishedComponent)
+                                            <span>{{ $recipe->semiFinishedComponent->name_ar }}</span>
+                                        @endif
+                                    </div>
                                 </td>
-                                <td>
-                                    @if($recipe->target_type === 'PRODUCT_CONFIGURATION')
-                                        <span class="badge bg-info text-dark">منتج نهائي</span>
-                                    @else
-                                        <span class="badge bg-purple text-white" style="background-color: #6f42c1;">مكون نصف مصنع</span>
-                                    @endif
-                                </td>
+                                <td>@include('recipes.partials.kind-chip', ['type' => $recipe->target_type === 'PRODUCT_CONFIGURATION' ? 'PRODUCT' : 'SEMI_FINISHED_COMPONENT'])</td>
                                 <td>
                                     @if($recipe->currentApprovedVersion)
-                                        <span class="badge bg-success">
-                                            <i class="fas fa-check-circle me-1"></i> V{{ $recipe->currentApprovedVersion->version_number }} معتمد
-                                        </span>
+                                        <span class="status-chip status-chip-success"><i class="fas fa-circle-check" aria-hidden="true"></i> V{{ $recipe->currentApprovedVersion->version_number }} معتمد</span>
                                     @else
-                                        <span class="badge bg-secondary">لا يوجد إصدار معتمد</span>
+                                        <span class="status-chip status-chip-danger"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i> غير معتمدة</span>
                                     @endif
                                 </td>
-                                <td>
-                                    <span class="badge bg-light text-dark border">{{ $recipe->versions->count() }} إصدار</span>
-                                </td>
-                                <td>
-                                    @if($recipe->is_active)
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle">نشط</span>
-                                    @else
-                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">معطل</span>
+                                <td class="fs-7">
+                                    {{ $recipe->versions->count() }} إصدار
+                                    @if ($draftCount)
+                                        <div class="text-warning-emphasis fs-8 fw-semibold">{{ $draftCount }} مسودة قيد الإعداد</div>
                                     @endif
                                 </td>
-                                <td class="fs-7 text-muted">{{ $recipe->updated_at->format('Y-m-d H:i') }}</td>
+                                <td>@include('recipes.partials.active-chip', ['active' => $recipe->is_active])</td>
+                                <td class="fs-7 text-muted"><time datetime="{{ $recipe->updated_at->toIso8601String() }}" class="ltr-isolate">{{ $recipe->updated_at->format('Y-m-d') }}</time></td>
                                 <td class="pe-3 text-end">
                                     <div class="d-inline-flex gap-1">
-                                        <a href="{{ route('recipes.show', $recipe) }}" class="btn btn-sm btn-outline-primary" title="عرض التفاصيل والإصدارات">
-                                            <i class="fas fa-eye me-1"></i> عرض
-                                        </a>
+                                        <a href="{{ route('recipes.show', $recipe) }}" class="btn btn-sm btn-outline-primary">عرض</a>
                                         @can('recipes.manage')
-                                            <a href="{{ route('recipes.edit', $recipe) }}" class="btn btn-sm btn-outline-secondary" title="تعديل بيانات الوصفة">
-                                                <i class="fas fa-edit me-1"></i> تعديل
+                                            <a href="{{ route('recipes.edit', $recipe) }}" class="btn btn-sm btn-outline-secondary" aria-label="تعديل بيانات الوصفة {{ $recipe->recipe_code }}" title="تعديل البيانات">
+                                                <i class="fas fa-pen" aria-hidden="true"></i>
                                             </a>
-                                            <form action="{{ route('recipes.destroy', $recipe) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف وصفة التصنيع ({{ $recipe->recipe_code }})؟');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="حذف الوصفة">
-                                                    <i class="fas fa-trash-alt"></i>
-                                                </button>
-                                            </form>
                                         @endcan
                                     </div>
                                 </td>
                             </tr>
                         @empty
-                            <tr>
-                                <td colspan="8" class="text-center py-5 text-muted">
-                                    <i class="fas fa-scroll fs-1 d-block mb-3 opacity-50"></i>
-                                    لا توجد وصفات تصنيع معرفة حالياً matching الفلترة.
+                            <tr class="table-stack-empty">
+                                <td colspan="7" class="empty-state" role="status">
+                                    <i class="fas fa-scroll fs-2 d-block mb-3 opacity-50" aria-hidden="true"></i>
+                                    @if ($activeFilterCount > 0 || request()->filled('search'))
+                                        <p class="mb-0">لا توجد وصفات تطابق البحث أو الفلاتر الحالية.</p>
+                                        <div class="empty-state-cta"><a href="{{ route('recipes.index') }}" class="btn btn-outline-secondary">مسح الفلاتر</a></div>
+                                    @else
+                                        <p class="fw-bold text-dark mb-1">لا توجد وصفات تصنيع بعد</p>
+                                        <p class="mb-0">الوصفة تحدد المواد والكميات لكل منتج، ويستخدم الإنتاج الإصدار المعتمد منها.</p>
+                                        @can('recipes.manage')
+                                            <div class="empty-state-cta">
+                                                <a href="{{ route('recipes.create') }}" class="btn btn-warning fw-bold"><i class="fas fa-plus" aria-hidden="true"></i> إنشاء وصفة</a>
+                                                <a href="{{ route('recipes.templates.index') }}" class="btn btn-outline-secondary">البدء من قالب</a>
+                                            </div>
+                                        @endcan
+                                    @endif
                                 </td>
                             </tr>
                         @endforelse

@@ -202,7 +202,7 @@ class ManufacturingRecipeController extends Controller
             'items.*.unit_id' => 'required|exists:units_of_measure,id',
             'items.*.waste_percentage' => 'nullable|numeric|min:0|max:100',
             'items.*.notes' => 'nullable|string',
-        ]);
+        ], ManufacturingRecipeRequest::billOfMaterialLineMessages());
 
         try {
             $this->recipeService->updateDraftVersion($version, $validated, $validated['items']);

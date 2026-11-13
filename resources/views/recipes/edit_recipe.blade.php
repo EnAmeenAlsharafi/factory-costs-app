@@ -10,68 +10,24 @@
     'hasProductionHistory' => (bool) $hasProductionHistory,
 ]) }})">
 
-    {{-- Breadcrumb Navigation --}}
-    <div class="mb-3">
-        <a href="{{ route('recipes.index') }}" class="text-decoration-none text-muted fs-7">
-            <i class="fas fa-arrow-right me-1"></i> قائمة وصفات التصنيع
-        </a>
-        <span class="text-muted mx-2">/</span>
-        <a href="{{ route('recipes.show', $recipe) }}" class="text-decoration-none text-muted fs-7">
-            {{ $recipe->recipe_code }} ({{ $recipe->name }})
-        </a>
-        <span class="text-muted mx-2">/</span>
-        <span class="text-dark fs-7 fw-semibold">تعديل البيانات الأساسية</span>
-    </div>
+    @include('partials.page-header', [
+        'title' => 'تعديل بيانات الوصفة',
+        'subtitle' => $recipe->name . ' — الاسم والوصف والهدف وحالة التنشيط. بنود المواد تُعدّل من داخل إصدار مسودة.',
+        'icon' => 'fas fa-pen',
+        'breadcrumbs' => [
+            ['title' => 'وصفات التصنيع', 'url' => route('recipes.index')],
+            ['title' => $recipe->recipe_code, 'url' => route('recipes.show', $recipe)],
+            ['title' => 'تعديل البيانات'],
+        ],
+    ])
 
-    {{-- Page Header --}}
-    <div class="page-header-card d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
-        <div>
-            <div class="d-flex align-items-center gap-2 mb-1">
-                <span class="badge bg-dark font-monospace fs-6 px-3 py-1">{{ $recipe->recipe_code }}</span>
-                @if($recipe->target_type === 'PRODUCT_CONFIGURATION')
-                    <span class="badge bg-info text-dark">منتج نهائي</span>
-                @else
-                    <span class="badge bg-purple text-white" style="background-color: #6f42c1;">مكون نصف مصنع</span>
-                @endif
-                @if($recipe->is_active)
-                    <span class="badge bg-success-subtle text-success border border-success-subtle">نشط</span>
-                @else
-                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">معطل</span>
-                @endif
-            </div>
-            <h1 id="page-heading" class="page-header-title fw-bold text-dark mb-1 d-flex align-items-center gap-2">تعديل بيانات وصفة التصنيع</h1>
-            <p class="page-header-subtitle text-muted mb-0 fs-7">تحديث الاسم والوصف والهدف التشغيلي وحالة تنشيط الوصفة في النظام</p>
-        </div>
-        <div>
-            <a href="{{ route('recipes.show', $recipe) }}" class="btn btn-outline-secondary">
-                <i class="fas fa-times me-1"></i> إلغاء والعودة
-            </a>
-        </div>
-    </div>
-
-    {{-- Alert Messages --}}
-    @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4">
-            <i class="fas fa-exclamation-circle me-2"></i> {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-    @if($errors->any())
-        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4">
-            <h6 class="fw-bold mb-2"><i class="fas fa-exclamation-triangle me-2"></i> يرجى تصحيح الأخطاء التالية:</h6>
-            <ul class="mb-0 ps-3">
-                @foreach($errors->all() as $err)
-                    <li>{{ $err }}</li>
-                @endforeach
-            </ul>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
+    {{-- Flash messages and validation errors are rendered once by the layout (partials.flash). --}}
+    <div class="mt-4"></div>
 
     @if($hasProductionHistory)
-        <div class="alert alert-warning border-0 shadow-sm mb-4">
-            <i class="fas fa-lock me-2"></i>
-            <strong>تنبيه ربط إنتاجي:</strong> هذه الوصفة مرتبطة بأوامر تصنيع أو متطلبات صرف أو طلبات عملاء سابقة. لحماية نزاهة وتاريخ التتبع الإنتاجي، تم قفل إمكانية تغيير الهدف المصنعي (الموديل/المكون)، ويمكنك تعديل الاسم والوصف وحالة التنشيط فقط.
+        <div class="alert alert-warning border-0 shadow-sm mb-4 d-flex gap-2 align-items-start" role="status">
+            <i class="fas fa-lock mt-1" aria-hidden="true"></i>
+            <div><strong>الهدف مقفل:</strong> هذه الوصفة استُخدمت في أوامر تصنيع أو طلبات سابقة، لذلك لا يمكن تغيير المنتج أو المكون المرتبط بها حفاظاً على سجل الإنتاج. يمكنك تعديل الاسم والوصف والتنشيط.</div>
         </div>
     @endif
 
@@ -80,18 +36,18 @@
         @method('PUT')
 
         <div class="card border-0 shadow-sm rounded-3 mb-4">
-            <div class="card-header bg-white py-3 border-bottom-0">
-                <h5 class="card-title mb-0 text-dark fw-bold">
-                    <i class="fas fa-edit text-warning me-2"></i> بيانات الوصفة الأساسية
-                </h5>
+            <div class="card-header bg-white py-3 border-bottom">
+                <h2 class="h6 mb-0 text-dark fw-bold">
+                    <i class="fas fa-circle-info text-warning me-2" aria-hidden="true"></i>بيانات الوصفة
+                </h2>
             </div>
-            <div class="card-body pt-0">
+            <div class="card-body">
                 <div class="row g-3">
 
                     {{-- Target Type --}}
                     <div class="col-md-4">
-                        <label class="form-label fw-bold fs-7">نوع الهدف المصنع <span class="text-danger">*</span></label>
-                        <select name="target_type" class="form-select @error('target_type') is-invalid @enderror" x-model="targetType" :disabled="hasProductionHistory">
+                        <label for="edit-target-type" class="form-label fw-bold fs-7">نوع الهدف <span class="text-danger" aria-hidden="true">*</span></label>
+                        <select id="edit-target-type" name="target_type" class="form-select @error('target_type') is-invalid @enderror" x-model="targetType" :disabled="hasProductionHistory">
                             <option value="PRODUCT_CONFIGURATION">تكوين منتج نهائي</option>
                             <option value="SEMI_FINISHED_COMPONENT">مكون نصف مصنع</option>
                         </select>
@@ -106,8 +62,8 @@
 
                     {{-- Product Configuration Selector --}}
                     <div class="col-md-8" x-show="targetType === 'PRODUCT_CONFIGURATION'">
-                        <label class="form-label fw-bold fs-7">تكوين المنتج النهائي المستهدف <span class="text-danger">*</span></label>
-                        <select name="product_configuration_id" class="form-select @error('product_configuration_id') is-invalid @enderror" x-model="productConfigId" :disabled="hasProductionHistory">
+                        <label for="edit-configuration" class="form-label fw-bold fs-7">تكوين المنتج <span class="text-danger" aria-hidden="true">*</span></label>
+                        <select id="edit-configuration" name="product_configuration_id" class="form-select @error('product_configuration_id') is-invalid @enderror" x-model="productConfigId" :disabled="hasProductionHistory">
                             <option value="">-- اختر التكوين المصنعي --</option>
                             @foreach($configurations as $cfg)
                                 <option value="{{ $cfg->id }}">
@@ -125,8 +81,8 @@
 
                     {{-- Semi Finished Component Selector --}}
                     <div class="col-md-8" x-show="targetType === 'SEMI_FINISHED_COMPONENT'">
-                        <label class="form-label fw-bold fs-7">المكون نصف المصنع المستهدف <span class="text-danger">*</span></label>
-                        <select name="semi_finished_component_id" class="form-select @error('semi_finished_component_id') is-invalid @enderror" x-model="componentId" :disabled="hasProductionHistory">
+                        <label for="edit-component" class="form-label fw-bold fs-7">المكون نصف المصنع <span class="text-danger" aria-hidden="true">*</span></label>
+                        <select id="edit-component" name="semi_finished_component_id" class="form-select @error('semi_finished_component_id') is-invalid @enderror" x-model="componentId" :disabled="hasProductionHistory">
                             <option value="">-- اختر المكون نصف المصنع --</option>
                             @foreach($components as $comp)
                                 <option value="{{ $comp->id }}">
@@ -144,8 +100,8 @@
 
                     {{-- Recipe Name --}}
                     <div class="col-md-8">
-                        <label class="form-label fw-bold fs-7">اسم الوصفة <span class="text-danger">*</span></label>
-                        <input type="text" name="name" class="form-control fw-bold @error('name') is-invalid @enderror" value="{{ old('name', $recipe->name) }}" placeholder="اسم الوصفة" required>
+                        <label for="edit-name" class="form-label fw-bold fs-7">اسم الوصفة <span class="text-danger" aria-hidden="true">*</span></label>
+                        <input type="text" id="edit-name" name="name" class="form-control fw-bold @error('name') is-invalid @enderror" value="{{ old('name', $recipe->name) }}" placeholder="اسم الوصفة" required>
                         @error('name')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
@@ -153,7 +109,7 @@
 
                     {{-- Active Status --}}
                     <div class="col-md-4">
-                        <label class="form-label fw-bold fs-7">حالة التنشيط</label>
+                        <span class="form-label fw-bold fs-7 d-block">حالة التنشيط</span>
                         <div class="form-check form-switch pt-2">
                             <input class="form-check-input" type="checkbox" role="switch" id="isActiveSwitch" name="is_active" value="1" {{ old('is_active', $recipe->is_active) ? 'checked' : '' }}>
                             <label class="form-check-label fw-semibold" for="isActiveSwitch">الوصفة نشطة ومتاحة للاستخدام في الإنتاج</label>
@@ -162,8 +118,8 @@
 
                     {{-- Description --}}
                     <div class="col-md-12">
-                        <label class="form-label fw-bold fs-7">وصف وملاحظات فنية إضافية</label>
-                        <textarea name="description" class="form-control @error('description') is-invalid @enderror" rows="3" placeholder="ملاحظات فنية اختيارية حول استخدام هذه الوصفة...">{{ old('description', $recipe->description) }}</textarea>
+                        <label for="edit-description" class="form-label fw-bold fs-7">ملاحظات فنية <span class="text-muted fw-normal">(اختياري)</span></label>
+                        <textarea id="edit-description" name="description" class="form-control @error('description') is-invalid @enderror" rows="3" placeholder="ملاحظات فنية اختيارية حول استخدام هذه الوصفة...">{{ old('description', $recipe->description) }}</textarea>
                         @error('description')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror

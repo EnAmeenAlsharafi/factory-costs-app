@@ -2,10 +2,13 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\DescribesBillOfMaterialLines;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ManufacturingRecipeRequest extends FormRequest
 {
+    use DescribesBillOfMaterialLines;
+
     public function authorize(): bool
     {
         return $this->user()->can('recipes.manage');
