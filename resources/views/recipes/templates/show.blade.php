@@ -8,7 +8,6 @@
     $componentLines = $template->items->count() - $materialLines;
     $wastedLines = $template->items->where('waste_percentage', '>', 0)->count();
     $canCreateRecipe = $template->is_active && $template->items->isNotEmpty();
-    $modelsInConfig = $configurations->pluck('productModel')->filter()->unique('id')->sortBy('name_ar');
 @endphp
 <div class="container-fluid px-4 py-4" x-data="{ showRecipeModal: {{ (request('open_modal') || old('target_type')) && $canCreateRecipe ? 'true' : 'false' }} }">
 
@@ -139,7 +138,7 @@
                 <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down">
                     <div class="modal-content border-0 shadow">
                         <form action="{{ route('recipes.templates.create-recipe', $template) }}" method="POST" class="d-flex flex-column h-100"
-                              x-data="{ targetType: @js(old('target_type', 'PRODUCT_CONFIGURATION')), selectedModelId: '' }">
+                              x-data="{ targetType: @js(old('target_type', 'PRODUCT_CONFIGURATION')) }">
                             @csrf
                             <div class="modal-header">
                                 <div>
@@ -159,28 +158,8 @@
                                     </div>
                                 </fieldset>
 
-                                <div x-show="targetType === 'PRODUCT_CONFIGURATION'">
-                                    <div class="mb-3">
-                                        <label for="recipe-model-filter" class="form-label fw-bold fs-7">الموديل <span class="text-muted fw-normal">(لتضييق القائمة)</span></label>
-                                        <select id="recipe-model-filter" class="form-select" x-model="selectedModelId">
-                                            <option value="">جميع الموديلات</option>
-                                            @foreach($modelsInConfig as $mod)
-                                                <option value="{{ $mod->id }}">{{ $mod->name_ar }} ({{ $mod->model_code }})</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="recipe-configuration" class="form-label fw-bold fs-7">تكوين المنتج <span class="text-danger" aria-hidden="true">*</span></label>
-                                        <select id="recipe-configuration" name="product_configuration_id" class="form-select @error('product_configuration_id') is-invalid @enderror" :required="targetType === 'PRODUCT_CONFIGURATION'">
-                                            <option value="">اختر التكوين</option>
-                                            @foreach($configurations as $cfg)
-                                                <option value="{{ $cfg->id }}" @selected(old('product_configuration_id') == $cfg->id) x-show="!selectedModelId || selectedModelId == '{{ $cfg->product_model_id }}'">
-                                                    {{ $cfg->productModel?->name_ar }} — {{ number_format($cfg->width_cm, 0) }}×{{ number_format($cfg->length_cm, 0) }} سم — {{ $cfg->has_storage ? 'مع تخزين' : 'بدون تخزين' }} ({{ $cfg->configuration_code }})
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                        @error('product_configuration_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                                    </div>
+                                <div class="mb-3" x-show="targetType === 'PRODUCT_CONFIGURATION'">
+                                    <x-configuration-picker :configurations="$configurations" :selected="old('product_configuration_id')" id-prefix="tpl-recipe-cfg" />
                                 </div>
 
                                 <div class="mb-3" x-show="targetType === 'SEMI_FINISHED_COMPONENT'" x-cloak>

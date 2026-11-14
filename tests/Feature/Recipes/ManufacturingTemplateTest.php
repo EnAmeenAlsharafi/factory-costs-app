@@ -242,4 +242,19 @@ class ManufacturingTemplateTest extends TestCase
         ]);
         $this->assertDatabaseMissing('manufacturing_templates', ['name_ar' => 'قالب ببند ناقص']);
     }
+
+    public function test_create_recipe_dialog_offers_searchable_models_with_their_photos(): void
+    {
+        $this->configuration->productModel->update(['reference_image_path' => 'https://images.example.test/tpl-bed.jpg']);
+
+        $response = $this->actingAs($this->adminUser)
+            ->get(route('recipes.templates.show', [$this->template, 'open_modal' => 1]));
+
+        $response->assertOk()
+            ->assertSee('configurationPicker(', false)
+            ->assertSee('نموذج قالب')
+            ->assertSee('MOD-TPL-001')
+            ->assertSee('images.example.test', false)
+            ->assertSee('tpl-bed.jpg', false);
+    }
 }

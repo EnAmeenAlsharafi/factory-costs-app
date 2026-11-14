@@ -49,7 +49,7 @@
         <x-slot:actions>
             <x-mobile-action-bar>
                 <a href="{{ $template ? route('recipes.templates.show', $template) : route('recipes.templates.index') }}" class="btn btn-outline-secondary px-4">إلغاء</a>
-                <button type="submit" class="btn btn-warning px-4 fw-bold" :disabled="items.length === 0">
+                <button type="submit" class="btn btn-warning px-4 fw-bold text-nowrap" :disabled="items.length === 0">
                     <i class="fas fa-save" aria-hidden="true"></i> {{ $template ? 'حفظ' : 'حفظ القالب' }}
                 </button>
             </x-mobile-action-bar>

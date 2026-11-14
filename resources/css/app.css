@@ -1370,3 +1370,25 @@ a.metric-tile:hover { color: var(--factory-text); border-color: #94a3b8; }
     .bom-planned, .bom-cell-index { min-height: 31px; display: flex; align-items: center; }
     .bom-field-label { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }
+
+/* Configuration picker (x-configuration-picker): search a model by name/code with its photo, then pick a size card. */
+.cfg-search { position: relative; }
+.cfg-search .form-control { min-height: 46px; padding-inline-start: 2.4rem; }
+.cfg-search-icon { position: absolute; inset-inline-start: .9rem; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; }
+.cfg-list { max-height: 288px; overflow-y: auto; overscroll-behavior: contain; margin: .35rem 0 0; padding: .3rem; list-style: none; border: 1px solid var(--factory-border); border-radius: .7rem; background: var(--factory-surface); box-shadow: 0 10px 25px rgba(15, 23, 42, .1); }
+.cfg-option { display: flex; align-items: center; gap: .75rem; min-height: 56px; padding: .4rem .55rem; border-inline-start: 3px solid transparent; border-radius: .55rem; cursor: pointer; }
+.cfg-option.is-active { background: #f1f5f9; border-inline-start-color: var(--factory-accent); }
+.cfg-thumb, .cfg-photo { display: grid; flex: 0 0 auto; place-items: center; overflow: hidden; border: 1px solid var(--factory-border); background: #f8fafc; color: #94a3b8; }
+.cfg-thumb { width: 44px; height: 44px; border-radius: .5rem; }
+.cfg-photo { width: 84px; height: 84px; border-radius: .75rem; font-size: 1.6rem; }
+.cfg-thumb img, .cfg-photo img { width: 100%; height: 100%; object-fit: cover; }
+.cfg-empty { padding: 1rem; color: var(--factory-muted); font-size: .875rem; text-align: center; }
+.cfg-selected { display: flex; align-items: center; gap: .9rem; padding: .7rem; border: 1px solid var(--factory-border); border-radius: .85rem; background: #f8fafc; }
+.cfg-sizes { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: .5rem; }
+.cfg-size { position: relative; display: flex; flex-direction: column; gap: .15rem; min-height: 64px; padding: .55rem .75rem; border: 1.5px solid var(--factory-border); border-radius: .7rem; background: var(--factory-surface); cursor: pointer; }
+.cfg-size:hover { border-color: #94a3b8; }
+.cfg-size:has(input:focus-visible) { outline: 3px solid var(--factory-focus); outline-offset: 2px; }
+.cfg-size.is-selected { border-color: var(--tone-primary); background: var(--tone-primary-bg); }
+.cfg-size-dim { font-weight: 700; color: var(--factory-text); }
+.cfg-size-check { position: absolute; top: .45rem; inset-inline-end: .5rem; display: none; width: 20px; height: 20px; place-items: center; border-radius: 999px; background: var(--tone-primary); color: #fff; font-size: .65rem; }
+.cfg-size.is-selected .cfg-size-check { display: grid; }

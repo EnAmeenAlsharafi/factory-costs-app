@@ -6,7 +6,6 @@
 @php
     $initialTarget = [
         'targetType' => old('target_type', request('target_type') === 'SEMI_FINISHED_COMPONENT' ? 'SEMI_FINISHED_COMPONENT' : 'PRODUCT_CONFIGURATION'),
-        'productConfigId' => (string) old('product_configuration_id', ''),
         'componentId' => (string) old('semi_finished_component_id', request('semi_finished_component_id', '')),
         'recipeName' => old('name', ''),
     ];
@@ -57,17 +56,8 @@
                         </div>
                     </div>
 
-                    <div class="col-md-8" x-show="targetType === 'PRODUCT_CONFIGURATION'">
-                        <label for="recipe-configuration" class="form-label fw-bold fs-7">تكوين المنتج <span class="text-danger" aria-hidden="true">*</span></label>
-                        <select id="recipe-configuration" name="product_configuration_id" class="form-select @error('product_configuration_id') is-invalid @enderror" x-model="productConfigId" @change="suggestName($event)">
-                            <option value="">اختر الموديل والمقاس</option>
-                            @foreach($configurations as $cfg)
-                                <option value="{{ $cfg->id }}" data-name="وصفة {{ $cfg->productModel?->name_ar }} {{ (float) $cfg->width_cm }}×{{ (float) $cfg->length_cm }} {{ $cfg->has_storage ? 'مع تخزين' : 'بدون تخزين' }}">
-                                    {{ $cfg->productModel?->name_ar }} — {{ (float) $cfg->width_cm }} × {{ (float) $cfg->length_cm }} سم — {{ $cfg->has_storage ? 'مع تخزين' : 'بدون تخزين' }} ({{ $cfg->configuration_code }})
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('product_configuration_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    <div class="col-md-8" x-show="targetType === 'PRODUCT_CONFIGURATION'" @configuration-selected="applySuggestedName($event.detail.suggestedName)">
+                        <x-configuration-picker :configurations="$configurations" :selected="old('product_configuration_id')" id-prefix="recipe-cfg" />
                     </div>
 
                     <div class="col-md-8" x-show="targetType === 'SEMI_FINISHED_COMPONENT'" x-cloak>
@@ -106,7 +96,7 @@
             <x-slot:actions>
                 <x-mobile-action-bar>
                     <a href="{{ route('recipes.index') }}" class="btn btn-outline-secondary px-4">إلغاء</a>
-                    <button type="submit" class="btn btn-warning px-4 fw-bold" :disabled="items.length === 0">
+                    <button type="submit" class="btn btn-warning px-4 fw-bold text-nowrap" :disabled="items.length === 0">
                         <i class="fas fa-save" aria-hidden="true"></i> حفظ المسودة
                     </button>
                 </x-mobile-action-bar>
@@ -119,10 +109,15 @@
 function recipeTargetForm(initial) {
     return {
         ...initial,
+        lastSuggestedName: '',
         suggestName(event) {
-            const suggested = event.target.selectedOptions[0]?.dataset.name;
-            if (suggested) {
+            this.applySuggestedName(event.target.selectedOptions[0]?.dataset.name);
+        },
+        applySuggestedName(suggested) {
+            // Never overwrite a name the user typed themselves.
+            if (suggested && (! this.recipeName || this.recipeName === this.lastSuggestedName)) {
                 this.recipeName = suggested;
+                this.lastSuggestedName = suggested;
             }
         },
     };
