@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class ProductConfiguration extends Model
 {
@@ -39,6 +40,14 @@ class ProductConfiguration extends Model
     public function standardBedSize(): BelongsTo
     {
         return $this->belongsTo(StandardBedSize::class, 'standard_bed_size_id');
+    }
+
+    /**
+     * The manufacturing recipe for this size. RecipeService allows at most one per configuration.
+     */
+    public function manufacturingRecipe(): HasOne
+    {
+        return $this->hasOne(ManufacturingRecipe::class)->where('target_type', 'PRODUCT_CONFIGURATION');
     }
 
     public function getDisplayNameAttribute(): string

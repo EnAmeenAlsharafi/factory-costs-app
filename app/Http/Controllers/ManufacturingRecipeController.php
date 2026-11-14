@@ -63,7 +63,7 @@ class ManufacturingRecipeController extends Controller
     {
         abort_if(! $request->user()->can('recipes.manage'), 403, 'غير مصرح لك بإنشاء وصفة تصنيع جديدة.');
 
-        $configurations = ProductConfiguration::with('productModel')->where('is_active', true)->get();
+        $configurations = ProductConfiguration::with(['productModel', 'manufacturingRecipe:id,recipe_code,product_configuration_id,target_type'])->where('is_active', true)->get();
         $components = SemiFinishedComponent::where('is_active', true)->get();
         $materials = Material::where('is_active', true)->where('is_sellable_ready_product', false)->orderBy('name_ar')->get();
         $units = UnitOfMeasure::orderBy('name_ar')->get();

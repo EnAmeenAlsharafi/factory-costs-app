@@ -82,7 +82,7 @@ class ManufacturingTemplateController extends Controller
         abort_if(! $request->user()->can('manufacturing_templates.view'), 403, 'غير مصرح لك بعرض القالب.');
 
         $template->load('items.material', 'items.semiFinishedComponent', 'items.unit');
-        $configurations = ProductConfiguration::with('productModel')->where('is_active', true)->get();
+        $configurations = ProductConfiguration::with(['productModel', 'manufacturingRecipe:id,recipe_code,product_configuration_id,target_type'])->where('is_active', true)->get();
         $components = SemiFinishedComponent::where('is_active', true)->get();
 
         return view('recipes.templates.show', compact('template', 'configurations', 'components'));

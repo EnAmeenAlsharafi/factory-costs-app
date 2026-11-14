@@ -257,4 +257,37 @@ class ManufacturingTemplateTest extends TestCase
             ->assertSee('images.example.test', false)
             ->assertSee('tpl-bed.jpg', false);
     }
+
+    public function test_model_picker_marks_sizes_that_already_have_a_recipe(): void
+    {
+        $openSize = ProductConfiguration::create([
+            'configuration_code' => 'CFG-TPL-180',
+            'product_model_id' => $this->configuration->product_model_id,
+            'width_cm' => 180.00,
+            'length_cm' => 200.00,
+            'has_storage' => false,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($this->adminUser)->post(route('recipes.templates.create-recipe', $this->template), [
+            'target_type' => 'PRODUCT_CONFIGURATION',
+            'product_configuration_id' => $this->configuration->id,
+            'name' => 'وصفة المقاس الأول',
+        ]);
+        $recipe = ManufacturingRecipe::where('product_configuration_id', $this->configuration->id)->firstOrFail();
+
+        $pickerSizes = collect($this->actingAs($this->adminUser)
+            ->get(route('recipes.create'))
+            ->assertOk()
+            ->viewData('configurations'))
+            ->keyBy('id');
+
+        $this->assertSame($recipe->recipe_code, $pickerSizes[$this->configuration->id]->manufacturingRecipe?->recipe_code);
+        $this->assertNull($pickerSizes[$openSize->id]->manufacturingRecipe);
+
+        $this->actingAs($this->adminUser)
+            ->get(route('recipes.templates.show', [$this->template, 'open_modal' => 1]))
+            ->assertOk()
+            ->assertSee($recipe->recipe_code);
+    }
 }

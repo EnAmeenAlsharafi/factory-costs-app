@@ -7,7 +7,9 @@
 
 @php
     /*
-     * Models that have at least one active configuration, each with its sizes.
+     * Models that have at least one active configuration, each with its sizes and, per size, the recipe
+     * it already has (a size can have only one). Sizes with a recipe are shown but cannot be picked, and a
+     * model whose sizes all have recipes leaves the list. Callers should eager-load `manufacturingRecipe`.
      * Search is client-side: the list is small and this keeps the picker instant inside a dialog.
      */
     $pickerModels = $configurations
@@ -28,6 +30,10 @@
                         'code' => $configuration->configuration_code,
                         'size' => (float) $configuration->width_cm.' × '.(float) $configuration->length_cm,
                         'hasStorage' => (bool) $configuration->has_storage,
+                        'recipe' => $configuration->manufacturingRecipe ? [
+                            'code' => $configuration->manufacturingRecipe->recipe_code,
+                            'url' => route('recipes.show', $configuration->manufacturingRecipe),
+                        ] : null,
                         'suggestedName' => 'وصفة '.$model->name_ar.' '.(float) $configuration->width_cm.'×'.(float) $configuration->length_cm.' '.($configuration->has_storage ? 'مع تخزين' : 'بدون تخزين'),
                     ])->values()->all(),
             ];
@@ -71,12 +77,22 @@
                         <span class="d-block fw-bold text-dark text-truncate" x-text="item.name"></span>
                         <span class="code-chip fs-8" x-text="item.code"></span>
                     </span>
-                    <span class="text-muted fs-8 flex-shrink-0" x-text="`${item.configurations.length} مقاس`"></span>
+                    <div class="cfg-count flex-shrink-0">
+                        <div class="fw-bold text-dark" x-text="item.openCount === item.configurations.length ? `${item.openCount} مقاس` : `${item.openCount} من ${item.configurations.length} مقاس`"></div>
+                        <div class="text-success fs-8" x-show="item.openCount < item.configurations.length" x-text="`${item.configurations.length - item.openCount} لها وصفة`"></div>
+                    </div>
                 </li>
             </template>
-            <li x-show="filtered.length === 0" class="cfg-empty" role="status">
-                لا يوجد موديل يطابق «<span x-text="query"></span>». جرّب جزءاً من الاسم أو الكود.
+            <li x-show="filtered.length === 0 && completedMatches.length === 0" class="cfg-empty" role="status">
+                <span x-show="query">لا يوجد موديل يطابق «<span x-text="query"></span>». جرّب جزءاً من الاسم أو الكود.</span>
+                <span x-show="!query">كل الموديلات لديها وصفات لجميع مقاساتها.</span>
             </li>
+            <template x-for="item in completedMatches" :key="`done-${item.id}`">
+                <li class="cfg-done" role="presentation">
+                    <i class="fas fa-circle-check text-success" aria-hidden="true"></i>
+                    <span>«<span x-text="item.name"></span>» لديه وصفة لكل مقاساته (<span x-text="item.configurations.length"></span>)، لذلك لا يظهر للاختيار.</span>
+                </li>
+            </template>
         </ul>
     </div>
 
@@ -98,16 +114,25 @@
 
     {{-- Step 2: size --}}
     <fieldset x-show="model" x-cloak class="mt-3">
-        <legend class="form-label fw-bold fs-7 mb-2">المقاس <span class="text-danger" aria-hidden="true">*</span></legend>
+        <legend class="form-label fw-bold fs-7 mb-2 d-flex flex-wrap align-items-baseline gap-2">
+            <span>المقاس <span class="text-danger" aria-hidden="true">*</span></span>
+            <span class="fw-normal text-muted fs-8" x-show="model && model.openCount < model.configurations.length"
+                  x-text="model ? `${model.openCount} متاح للاختيار، والمقاسات المعلّمة لها وصفة بالفعل` : ''"></span>
+        </legend>
         <div class="cfg-sizes">
             <template x-for="configuration in model?.configurations || []" :key="configuration.id">
-                <label class="cfg-size" :class="{ 'is-selected': configurationId === configuration.id }">
-                    <input type="radio" class="visually-hidden" :name="`${idPrefix}-size`" :value="configuration.id"
+                <label class="cfg-size" :class="{ 'is-selected': configurationId === configuration.id, 'is-taken': configuration.recipe }">
+                    <input type="radio" class="visually-hidden" :name="`${idPrefix}-size`" :value="configuration.id" :disabled="!! configuration.recipe"
                            :checked="configurationId === configuration.id" @change="chooseConfiguration(configuration)">
                     <span class="cfg-size-dim"><span class="qty" x-text="configuration.size"></span> <span class="fs-8 fw-normal">سم</span></span>
                     <span class="fs-8" :class="configuration.hasStorage ? 'text-warning-emphasis fw-bold' : 'text-muted'">
                         <i class="fas" :class="configuration.hasStorage ? 'fa-box-archive' : 'fa-minus'" aria-hidden="true"></i>
                         <span x-text="configuration.hasStorage ? 'مع تخزين' : 'بدون تخزين'"></span>
+                    </span>
+                    <span class="cfg-size-recipe" x-show="configuration.recipe">
+                        <i class="fas fa-circle-check" aria-hidden="true"></i> لها وصفة
+                        <a :href="configuration.recipe?.url" target="_blank" rel="noopener" class="ltr-isolate" x-text="configuration.recipe?.code"
+                           :aria-label="`فتح الوصفة ${configuration.recipe?.code} في تبويب جديد`"></a>
                     </span>
                     <span class="cfg-size-check" aria-hidden="true"><i class="fas fa-check"></i></span>
                 </label>
@@ -124,24 +149,37 @@
     @push('scripts')
         <script>
             function configurationPicker(config) {
-                // Arabic-aware matching: ignore diacritics/tatweel and treat أ/إ/آ, ة/ه and ى/ي as the same letter.
+                // Arabic-aware matching: ignore diacritics/tatweel; treat أ/إ/آ as ا, ة as ه, ى as ي, and borrowed letters (ڤ پ گ چ ژ) as ف ب ك ج ز.
                 const normalize = (text) => (text || '').toString().toLowerCase()
                     .replace(/[ً-ْـ]/g, '')
-                    .replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').trim();
-                const models = config.models.map((model) => ({ ...model, haystack: normalize(`${model.name} ${model.code}`) }));
-                const owner = models.find((model) => model.configurations.some((c) => c.id === config.selected));
+                    .replace(/[أإآٱ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي')
+                    .replace(/ڤ/g, 'ف').replace(/پ/g, 'ب').replace(/گ/g, 'ك').replace(/چ/g, 'ج').replace(/ژ/g, 'ز').trim();
+                const allModels = config.models.map((model) => ({
+                    ...model,
+                    haystack: normalize(`${model.name} ${model.code}`),
+                    openCount: model.configurations.filter((c) => ! c.recipe).length,
+                }));
+                const matches = (list, query) => {
+                    const terms = normalize(query).split(/\s+/).filter(Boolean);
+                    return terms.length ? list.filter((model) => terms.every((term) => model.haystack.includes(term))) : list;
+                };
+                const owner = allModels.find((model) => model.configurations.some((c) => c.id === config.selected && ! c.recipe));
 
                 return {
                     idPrefix: config.idPrefix,
-                    models,
+                    // Models with at least one size still without a recipe; fully covered ones only surface as a search hint.
+                    models: allModels.filter((model) => model.openCount > 0),
+                    completedModels: allModels.filter((model) => model.openCount === 0),
                     query: '',
                     open: false,
                     active: 0,
                     model: owner || null,
                     configurationId: owner ? config.selected : '',
                     get filtered() {
-                        const terms = normalize(this.query).split(/\s+/).filter(Boolean);
-                        return terms.length ? this.models.filter((model) => terms.every((term) => model.haystack.includes(term))) : this.models;
+                        return matches(this.models, this.query);
+                    },
+                    get completedMatches() {
+                        return this.query.trim() ? matches(this.completedModels, this.query).slice(0, 3) : [];
                     },
                     move(step) {
                         this.open = true;
@@ -156,9 +194,10 @@
                         this.open = false;
                         this.query = '';
                         this.configurationId = '';
-                        // A model with a single size needs no second decision.
-                        if (model.configurations.length === 1) {
-                            this.chooseConfiguration(model.configurations[0]);
+                        // When only one size is still open, there is no second decision to make.
+                        const open = model.configurations.filter((c) => ! c.recipe);
+                        if (open.length === 1) {
+                            this.chooseConfiguration(open[0]);
                         }
                     },
                     chooseConfiguration(configuration) {

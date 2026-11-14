@@ -1392,3 +1392,10 @@ a.metric-tile:hover { color: var(--factory-text); border-color: #94a3b8; }
 .cfg-size-dim { font-weight: 700; color: var(--factory-text); }
 .cfg-size-check { position: absolute; top: .45rem; inset-inline-end: .5rem; display: none; width: 20px; height: 20px; place-items: center; border-radius: 999px; background: var(--tone-primary); color: #fff; font-size: .65rem; }
 .cfg-size.is-selected .cfg-size-check { display: grid; }
+.cfg-count { font-size: .8rem; line-height: 1.35; text-align: end; }
+.cfg-done { display: flex; align-items: flex-start; gap: .5rem; padding: .55rem .7rem; color: var(--factory-muted); font-size: .82rem; border-top: 1px dashed var(--factory-border); }
+.cfg-size.is-taken { cursor: default; border-style: dashed; background: #f8fafc; }
+.cfg-size.is-taken:hover { border-color: var(--factory-border); }
+.cfg-size.is-taken .cfg-size-dim { color: var(--factory-muted); }
+.cfg-size-recipe { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .3rem; margin-top: .15rem; color: var(--tone-success); font-size: .75rem; font-weight: 700; }
+.cfg-size-recipe a { color: var(--tone-success); font-family: var(--bs-font-monospace); text-decoration: underline; }

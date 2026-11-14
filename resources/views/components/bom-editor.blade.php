@@ -104,7 +104,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="invalid-feedback d-block" x-show="fieldError(index, 'material_id') || fieldError(index, 'semi_finished_component_id')"
+                    <div class="small text-danger mt-1" x-show="fieldError(index, 'material_id') || fieldError(index, 'semi_finished_component_id')"
                          x-text="fieldError(index, 'material_id') || fieldError(index, 'semi_finished_component_id')"></div>
                 </div>
 
