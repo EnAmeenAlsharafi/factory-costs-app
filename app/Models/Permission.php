@@ -40,6 +40,8 @@ class Permission extends Model
         'semi_finished_components' => 'المكونات نصف المصنعة',
         'purchasing' => 'المشتريات',
         'receivables' => 'التحصيل والذمم',
+        'notifications' => 'الإشعارات',
+        'tasks' => 'المهام والملاحظات',
     ];
 
     protected $fillable = [

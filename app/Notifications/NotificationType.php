@@ -86,6 +86,15 @@ enum NotificationType: string
     // Management announcement
     case Announcement = 'ANNOUNCEMENT';
 
+    // Tasks and notes («مهامي»)
+    case TodoAssigned = 'TODO_ASSIGNED';
+    case TodoCompleted = 'TODO_COMPLETED';
+    case TodoReopened = 'TODO_REOPENED';
+    case TodoRequestSubmitted = 'TODO_REQUEST_SUBMITTED';
+    case TodoRequestDecided = 'TODO_REQUEST_DECIDED';
+    case TodoDueToday = 'TODO_DUE_TODAY';
+    case TodoOverdue = 'TODO_OVERDUE';
+
     /**
      * Raised by the scheduled scan rather than by someone's action.
      */
@@ -94,7 +103,7 @@ enum NotificationType: string
         return in_array($this, [
             self::StageDueSoon, self::StageOverdue, self::MaterialBelowMinimum, self::PurchaseOrderLate,
             self::DeliveryToday, self::GoodsWithDriverNotReturned, self::FinishedGoodsIdle,
-            self::PaymentOverdue, self::CreditLimitExceeded,
+            self::PaymentOverdue, self::CreditLimitExceeded, self::TodoDueToday, self::TodoOverdue,
         ], true);
     }
 
@@ -111,7 +120,7 @@ enum NotificationType: string
     {
         return match ($this) {
             self::StageBlocked, self::StageOverdue, self::QualityIncidentOpened, self::DeliveryFailed,
-            self::GoodsWithDriverNotReturned, self::PaymentOverdue, self::CreditLimitExceeded => 'danger',
+            self::GoodsWithDriverNotReturned, self::PaymentOverdue, self::CreditLimitExceeded, self::TodoOverdue => 'danger',
 
             self::OrderChangedAfterApproval, self::OrderCancelled, self::PortalChangesRequested,
             self::StageDueSoon, self::ProductionOrderHeld, self::ProductionOrderCancelled,
@@ -122,7 +131,9 @@ enum NotificationType: string
             self::PortalOfferReady, self::PortalOrderApproved, self::PortalOrderReadyForDelivery,
             self::PortalOrderDelivered, self::PortalOrderInstalled => 'success',
 
-            self::PortalRequestReturned => 'warning',
+            self::PortalRequestReturned, self::TodoReopened, self::TodoRequestSubmitted, self::TodoDueToday => 'warning',
+
+            self::TodoCompleted => 'success',
 
             self::OrderApprovedForProduction, self::PortalOfferConfirmed, self::StageBlockResolved,
             self::ProductionOrderCompleted, self::ReworkCompleted, self::MaterialRequestFulfilled,
@@ -187,6 +198,9 @@ enum NotificationType: string
             self::PortalOrderInstalled => ['customer'],
 
             self::Announcement => ['user', 'department'],
+
+            self::TodoAssigned, self::TodoCompleted, self::TodoReopened, self::TodoRequestSubmitted,
+            self::TodoRequestDecided, self::TodoDueToday, self::TodoOverdue => ['user'],
         };
     }
 
@@ -261,6 +275,14 @@ enum NotificationType: string
             self::PortalOrderInstalled => 'إبلاغ العميل باكتمال التركيب',
 
             self::Announcement => 'إعلان من الإدارة',
+
+            self::TodoAssigned => 'مهمة جديدة أُسندت إليك',
+            self::TodoCompleted => 'موظف أنجز مهمة أسندتها',
+            self::TodoReopened => 'إعادة فتح مهمة منجزة',
+            self::TodoRequestSubmitted => 'طلب اعتذار أو تمديد على مهمة',
+            self::TodoRequestDecided => 'الرد على طلب اعتذار أو تمديد',
+            self::TodoDueToday => 'مهمة مستحقة اليوم',
+            self::TodoOverdue => 'مهمة تجاوزت موعدها',
         };
     }
 
@@ -299,6 +321,9 @@ enum NotificationType: string
             self::PortalOrderInstalled => 'بوابة العملاء',
 
             self::Announcement => 'إعلانات',
+
+            self::TodoAssigned, self::TodoCompleted, self::TodoReopened, self::TodoRequestSubmitted,
+            self::TodoRequestDecided, self::TodoDueToday, self::TodoOverdue => 'المهام',
         };
     }
 
@@ -313,6 +338,7 @@ enum NotificationType: string
             'المنتجات الجاهزة والتوصيل' => 'fa-truck-fast',
             'التحصيل' => 'fa-money-bill-wave',
             'بوابة العملاء' => 'fa-store',
+            'المهام' => 'fa-list-check',
             default => 'fa-bullhorn',
         };
     }

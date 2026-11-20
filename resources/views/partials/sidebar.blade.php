@@ -46,6 +46,18 @@
                             <span class="sidebar-text">لوحة التحكم</span>
                         </a>
                     </li>
+                    @can('tasks.use')
+                        @php $taskAttentionCount = app(\App\Services\TaskService::class)->attentionCount(auth()->user()); @endphp
+                        <li class="nav-item">
+                            <a href="{{ route('tasks.index') }}" class="sidebar-nav-link {{ request()->routeIs('tasks.*') ? 'active' : '' }}" title="مهامي">
+                                <span class="sidebar-icon"><i class="fas fa-list-check"></i></span>
+                                <span class="sidebar-text">مهامي</span>
+                                @if ($taskAttentionCount > 0)
+                                    <span class="badge rounded-pill bg-danger ms-auto" title="{{ $taskAttentionCount }} مهمة مسندة إليك أو طلب بانتظار ردك">{{ $taskAttentionCount }}</span>
+                                @endif
+                            </a>
+                        </li>
+                    @endcan
                 </ul>
             </div>
 

@@ -38,6 +38,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\NotificationSettingController;
 use App\Http\Controllers\PaymentAllocationController;
 use App\Http\Controllers\PaymentControlOverrideController;
+use App\Http\Controllers\PersonalNoteController;
 use App\Http\Controllers\ProcurementPlanningController;
 use App\Http\Controllers\ProductConfigurationController;
 use App\Http\Controllers\ProductionAssignmentController;
@@ -85,6 +86,10 @@ use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\SupplierFabricCatalogColorController;
 use App\Http\Controllers\SupplierFabricCatalogController;
 use App\Http\Controllers\SupplierQuotationController;
+use App\Http\Controllers\TaskAssignmentController;
+use App\Http\Controllers\TaskController;
+use App\Http\Controllers\TaskListController;
+use App\Http\Controllers\TaskRequestController;
 use App\Http\Controllers\UnitOfMeasureController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WebAppController;
@@ -663,6 +668,35 @@ Route::middleware('auth')->group(function () {
     });
     Route::get('/settings/notifications', [NotificationSettingController::class, 'edit'])->name('settings.notifications.edit');
     Route::put('/settings/notifications', [NotificationSettingController::class, 'update'])->name('settings.notifications.update');
+
+    // Tasks and notes («مهامي»): personal to-dos, tasks assigned by permission, decline/extension requests
+    Route::prefix('tasks')->name('tasks.')->group(function () {
+        Route::get('/', [TaskController::class, 'index'])->name('index');
+        Route::get('/create', [TaskController::class, 'create'])->name('create');
+        Route::post('/', [TaskController::class, 'store'])->name('store');
+
+        Route::post('/lists', [TaskListController::class, 'store'])->name('lists.store');
+        Route::put('/lists/{taskList}', [TaskListController::class, 'update'])->name('lists.update');
+        Route::delete('/lists/{taskList}', [TaskListController::class, 'destroy'])->name('lists.destroy');
+
+        Route::post('/notes', [PersonalNoteController::class, 'store'])->name('notes.store');
+        Route::put('/notes/{note}', [PersonalNoteController::class, 'update'])->name('notes.update');
+        Route::patch('/notes/{note}/pin', [PersonalNoteController::class, 'pin'])->name('notes.pin');
+        Route::delete('/notes/{note}', [PersonalNoteController::class, 'destroy'])->name('notes.destroy');
+
+        Route::patch('/assignments/{assignment}/status', [TaskAssignmentController::class, 'status'])->name('assignments.status');
+        Route::patch('/assignments/{assignment}/important', [TaskAssignmentController::class, 'important'])->name('assignments.important');
+        Route::patch('/assignments/{assignment}/my-day', [TaskAssignmentController::class, 'myDay'])->name('assignments.my-day');
+        Route::patch('/assignments/{assignment}/list', [TaskAssignmentController::class, 'moveToList'])->name('assignments.list');
+        Route::post('/assignments/{assignment}/reopen', [TaskAssignmentController::class, 'reopen'])->name('assignments.reopen');
+        Route::post('/assignments/{assignment}/requests', [TaskRequestController::class, 'store'])->name('requests.store');
+        Route::post('/requests/{taskRequest}/decide', [TaskRequestController::class, 'decide'])->name('requests.decide');
+
+        Route::get('/{task}', [TaskController::class, 'show'])->name('show');
+        Route::get('/{task}/edit', [TaskController::class, 'edit'])->name('edit');
+        Route::put('/{task}', [TaskController::class, 'update'])->name('update');
+        Route::delete('/{task}', [TaskController::class, 'destroy'])->name('destroy');
+    });
 
     // Search API Endpoints (Typeahead Selectors)
     Route::prefix('api/search')->name('api.search.')->group(function () {

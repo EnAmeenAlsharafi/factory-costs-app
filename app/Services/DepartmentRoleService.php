@@ -37,6 +37,7 @@ class DepartmentRoleService
                 'recipes.view',
                 'semi_finished_components.view',
                 'notifications.view',
+                'tasks.use',
             ],
         ],
         'supervisor' => [
@@ -59,6 +60,7 @@ class DepartmentRoleService
                 'recipes.view',
                 'semi_finished_components.view',
                 'notifications.view',
+                'tasks.use',
             ],
         ],
     ];

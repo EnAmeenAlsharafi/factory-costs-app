@@ -23,6 +23,10 @@
         @endif
     @endcan
 
+    @if ($myTasks)
+        @include('tasks.partials.dashboard-card', ['myTasks' => $myTasks])
+    @endif
+
     @forelse ($sections as $section)
         <section aria-labelledby="dash-{{ $section['key'] }}">
             <h2 id="dash-{{ $section['key'] }}" class="h6 fw-bold mb-2 d-flex align-items-center gap-2 text-dark">

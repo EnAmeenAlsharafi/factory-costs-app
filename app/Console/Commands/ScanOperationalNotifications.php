@@ -10,6 +10,7 @@ use App\Models\InventoryLot;
 use App\Models\Material;
 use App\Models\ProductionOrderOperation;
 use App\Models\PurchaseOrder;
+use App\Models\TaskAssignee;
 use App\Notifications\NotificationService;
 use App\Notifications\NotificationType;
 use App\Services\CustomerCreditService;
@@ -41,6 +42,7 @@ class ScanOperationalNotifications extends Command
         $this->scanDeliveries($notifications, $today);
         $this->scanIdleFinishedGoods($notifications, $today);
         $this->scanReceivables($notifications, $today);
+        $this->scanTaskDueDates($notifications, $today);
 
         if ($this->option('prune')) {
             $pruned = $notifications->prune();
@@ -219,6 +221,36 @@ class ScanOperationalNotifications extends Command
                     'url' => route('finished-goods.index'),
                     'subject' => $productionOrder,
                     'dedupe_key' => "FINISHED_GOODS_IDLE:{$productionOrderId}:{$today}",
+                ]);
+            });
+    }
+
+    /**
+     * Tasks due today, and tasks that slipped past their date, told to the person working on them.
+     *
+     * Each is announced once per due date: an approved extension moves the date and so allows one
+     * fresh reminder, while a task left late is not repeated every day.
+     */
+    private function scanTaskDueDates(NotificationService $notifications, string $today): void
+    {
+        TaskAssignee::query()
+            ->active()
+            ->whereNotNull('due_date')
+            ->whereDate('due_date', '<=', $today)
+            ->with('task')
+            ->get()
+            ->each(function (TaskAssignee $assignment) use ($notifications) {
+                $isOverdue = $assignment->isOverdue();
+                $type = $isOverdue ? NotificationType::TodoOverdue : NotificationType::TodoDueToday;
+                $dueDate = $assignment->due_date->toDateString();
+
+                $notifications->raise($type, [
+                    'title' => ($isOverdue ? 'مهمة تجاوزت موعدها: ' : 'مهمة مستحقة اليوم: ').$assignment->task->title,
+                    'body' => $isOverdue ? "كان موعدها {$dueDate}. أنجزها أو اطلب تمديداً." : null,
+                    'url' => route('tasks.show', $assignment->task_id),
+                    'subject' => $assignment->task,
+                    'users' => [$assignment->user_id],
+                    'dedupe_key' => "{$type->value}:{$assignment->id}:{$dueDate}",
                 ]);
             });
     }

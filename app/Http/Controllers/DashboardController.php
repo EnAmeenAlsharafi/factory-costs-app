@@ -9,12 +9,16 @@ use App\Models\Supplier;
 use App\Models\UnitOfMeasure;
 use App\Models\User;
 use App\Services\OperationalDashboardService;
+use App\Services\TaskService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function __construct(protected OperationalDashboardService $dashboardService) {}
+    public function __construct(
+        protected OperationalDashboardService $dashboardService,
+        protected TaskService $taskService,
+    ) {}
 
     /**
      * Display the role-oriented operational dashboard ("what do I need to do now?").
@@ -28,6 +32,7 @@ class DashboardController extends Controller
         return view('dashboard', [
             'sections' => $sections,
             'masterDataStats' => $this->masterDataStatsFor($user),
+            'myTasks' => $user->can('tasks.use') ? $this->taskService->todayFor($user) : null,
         ]);
     }
 

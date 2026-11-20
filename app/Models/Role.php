@@ -38,6 +38,10 @@ class Role extends Model
         'semi_finished_components.view',
         // Everyone reads their own notifications; what each one may see is decided when it is raised.
         'notifications.view',
+        // Everyone keeps their own tasks and notes; a department role may assign only inside its department.
+        'tasks.use',
+        'tasks.assign.department',
+        'tasks.assign.multiple',
     ];
 
     protected $fillable = [

@@ -246,6 +246,12 @@ class RoleAndPermissionSeeder extends Seeder
             ['name' => 'notifications.view', 'display_name' => 'عرض الإشعارات الخاصة بالمستخدم', 'module' => 'notifications'],
             ['name' => 'notifications.send', 'display_name' => 'إرسال إعلان لقسم أو لموظفين محددين', 'module' => 'notifications'],
             ['name' => 'notifications.manage', 'display_name' => 'ضبط مصفوفة الإشعارات وعرض إشعارات النظام كاملة', 'module' => 'notifications'],
+
+            // Tasks and notes («مهامي»): who may assign is a permission, never a job title.
+            ['name' => 'tasks.use', 'display_name' => 'استخدام المهام والملاحظات الشخصية', 'module' => 'tasks'],
+            ['name' => 'tasks.assign.department', 'display_name' => 'إسناد مهام لموظفي قسمه', 'module' => 'tasks'],
+            ['name' => 'tasks.assign.all', 'display_name' => 'إسناد مهام لأي موظف في النظام', 'module' => 'tasks'],
+            ['name' => 'tasks.assign.multiple', 'display_name' => 'إسناد مهمة واحدة لعدة موظفين أو لقسم أو دور كامل', 'module' => 'tasks'],
         ];
 
         $permissions = [];
@@ -478,5 +484,14 @@ class RoleAndPermissionSeeder extends Seeder
             ->each(fn (Role $role) => $role->permissions()->syncWithoutDetaching([$permissions['notifications.view']->id]));
 
         $roles['production_manager']->permissions()->syncWithoutDetaching([$permissions['notifications.send']->id]);
+
+        // Everyone who works in the system keeps their own tasks and notes.
+        Role::where('name', '!=', 'customer_portal')->get()
+            ->each(fn (Role $role) => $role->permissions()->syncWithoutDetaching([$permissions['tasks.use']->id]));
+
+        $roles['production_manager']->permissions()->syncWithoutDetaching([
+            $permissions['tasks.assign.department']->id,
+            $permissions['tasks.assign.multiple']->id,
+        ]);
     }
 }
