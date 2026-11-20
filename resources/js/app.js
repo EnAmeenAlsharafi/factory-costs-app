@@ -3,6 +3,7 @@ import Alpine from 'alpinejs';
 import { registerReportFilters } from './report-ui';
 import { isNamed, watchFormLabels } from './form-labels';
 import { stackTables } from './table-stack';
+import { enableSearchableSelects } from './searchable-selects';
 
 window.Alpine = Alpine;
 registerReportFilters(Alpine);
@@ -1087,5 +1088,7 @@ Alpine.data('pushToggle', () => ({
 if (isStandalone()) {
     document.documentElement.classList.add('is-standalone-app');
 }
+
+enableSearchableSelects({ normalizeText: normalizeArabic });
 
 Alpine.start();

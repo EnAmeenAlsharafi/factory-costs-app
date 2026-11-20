@@ -787,6 +787,50 @@ a.metric-tile:hover { color: var(--factory-text); border-color: #94a3b8; }
 .typeahead-status.is-error { color: var(--tone-danger); }
 .typeahead-dropdown.is-above { box-shadow: 0 -10px 25px rgba(15, 23, 42, 0.18); }
 
+/* ---- Search panel for every native <select> (resources/js/searchable-selects.js) ---- */
+.ss-panel {
+    position: fixed;
+    z-index: 2000;
+    display: none;
+    flex-direction: column;
+    background: var(--factory-surface);
+    border: 1px solid var(--factory-border);
+    border-radius: .6rem;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, .18);
+    overflow: hidden;
+    font-family: var(--factory-font);
+}
+.ss-panel.is-open { display: flex; }
+.ss-panel.is-above { box-shadow: 0 -12px 28px rgba(15, 23, 42, .18); }
+.ss-search { position: relative; padding: .5rem; border-bottom: 1px solid var(--factory-border); flex: 0 0 auto; }
+.ss-search > i { position: absolute; inset-inline-start: 1.15rem; top: 50%; transform: translateY(-50%); color: var(--factory-muted); font-size: .8rem; pointer-events: none; }
+.ss-input {
+    width: 100%;
+    min-height: 38px;
+    padding: .35rem .75rem;
+    padding-inline-start: 2.1rem;
+    border: 1px solid var(--factory-border);
+    border-radius: .45rem;
+    font: inherit;
+    font-size: .9rem;
+    color: var(--factory-text);
+    background: #f8fafc;
+}
+.ss-input:focus { outline: none; border-color: #0e7490; box-shadow: 0 0 0 .2rem var(--factory-focus); background: #fff; }
+.ss-list { list-style: none; margin: 0; padding: .3rem 0; overflow-y: auto; flex: 1 1 auto; min-height: 0; overscroll-behavior: contain; }
+.ss-option { padding: .5rem .9rem; font-size: .9rem; color: var(--factory-text); cursor: pointer; line-height: 1.45; }
+.ss-option.is-active { background: #ecfeff; }
+.ss-option[aria-selected="true"] { font-weight: 700; color: #0e7490; }
+.ss-option[aria-selected="true"]::after { content: '¹3'; float: inline-end; }
+.ss-option.is-disabled { color: #94a3b8; cursor: not-allowed; }
+.ss-group { padding: .5rem .9rem .2rem; font-size: .75rem; font-weight: 700; color: var(--factory-muted); }
+.ss-empty { padding: .9rem; text-align: center; font-size: .85rem; color: var(--factory-muted); }
+@media (pointer: coarse) {
+    .ss-option { min-height: 44px; display: flex; align-items: center; justify-content: space-between; }
+    .ss-option[aria-selected="true"]::after { float: none; }
+    .ss-input { min-height: 44px; font-size: 16px; } /* 16px stops iOS zooming into the field */
+}
+
 /* ---- Sticky first column for dense analytical tables (Type B) ---- */
 .table-sticky-first > thead > tr > th:first-child,
 .table-sticky-first > tbody > tr > td:first-child {
