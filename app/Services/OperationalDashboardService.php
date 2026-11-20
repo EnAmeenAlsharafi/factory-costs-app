@@ -124,10 +124,10 @@ class OperationalDashboardService
             'title' => 'مهام قسمي الإنتاجية',
             'icon' => 'fa-list-check',
             'tiles' => [
-                $this->tile('مهام بانتظار البدء', $waiting, 'fa-hourglass-start', 'info', route('production.queue.index', ['tab' => 'waiting'])),
-                $this->tile('مهام قيد التنفيذ', $inProgress, 'fa-gears', 'warning', route('production.queue.index', ['tab' => 'in_progress'])),
-                $this->tile('مهام إعادة عمل', $rework, 'fa-rotate', 'danger', route('production.queue.index', ['tab' => 'rework'])),
-                $this->tile('أُنجزت اليوم', $completedTodayQuery->count(), 'fa-circle-check', 'success', route('production.queue.index', ['tab' => 'completed_today']), false),
+                $this->tile('مهام بانتظار البدء', $waiting, 'fa-hourglass-start', 'info', $this->departmentWorkUrl($user, 'waiting')),
+                $this->tile('مهام قيد التنفيذ', $inProgress, 'fa-gears', 'warning', $this->departmentWorkUrl($user, 'in_progress')),
+                $this->tile('مهام إعادة عمل', $rework, 'fa-rotate', 'danger', $this->departmentWorkUrl($user, 'rework')),
+                $this->tile('أُنجزت اليوم', $completedTodayQuery->count(), 'fa-circle-check', 'success', $this->departmentWorkUrl($user, 'completed_today'), false),
             ],
         ];
     }
@@ -270,6 +270,21 @@ class OperationalDashboardService
             ->get()
             ->filter(fn (ProductionOrderOperation $operation) => $deadlines->status($operation)['state'] === 'overdue')
             ->count();
+    }
+
+    /**
+     * Where a department-work tile leads: the department queue when the user may open it,
+     * otherwise their own task list, so a tile never opens onto «لا تملك صلاحية».
+     */
+    private function departmentWorkUrl(User $user, string $tab): string
+    {
+        if ($user->can('production.view')) {
+            return route('production.queue.index', ['tab' => $tab]);
+        }
+
+        $canOpenMyTasks = $user->can('production.operation.start') || $user->can('production.operation.claim') || $user->can('production.assignment.view');
+
+        return $canOpenMyTasks ? route('production.my-tasks') : route('dashboard');
     }
 
     private function tile(string $label, int $value, string $icon, string $tone, string $url, bool $highlightWhenNonZero = true): array

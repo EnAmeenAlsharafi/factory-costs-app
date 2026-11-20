@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\NotificationRecipient;
 use App\Models\PushSubscription;
 use App\Notifications\WebPushService;
 use Illuminate\Http\JsonResponse;
@@ -71,25 +70,6 @@ class PushSubscriptionController extends Controller
      */
     public function latest(Request $request): JsonResponse
     {
-        $user = $request->user();
-
-        $unread = NotificationRecipient::forUser($user)->unread()
-            ->with('notification')->latest('id')->get();
-
-        $newest = $unread->first()?->notification;
-
-        if (! $newest) {
-            return response()->json(['count' => 0]);
-        }
-
-        return response()->json([
-            'count' => $unread->count(),
-            'title' => $newest->title_ar,
-            'body' => $unread->count() > 1
-                ? $newest->body_ar."\n".'ولديك '.($unread->count() - 1).' إشعاراً آخر بانتظارك.'
-                : $newest->body_ar,
-            'url' => $newest->url ?: ($user->isCustomerAccount() ? route('portal.notifications.index') : route('notifications.index')),
-            'tag' => 'sadir-notifications',
-        ]);
+        return response()->json($this->push->messageFor($request->user()));
     }
 }

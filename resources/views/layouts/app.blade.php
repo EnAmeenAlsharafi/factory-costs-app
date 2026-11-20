@@ -41,7 +41,10 @@
             <main id="main-content" class="app-content-container" tabindex="-1">
                 <!-- Flash Messages & Validation Display -->
                 @include('partials.flash')
-                @include('partials.install-app')
+                {{-- Offered on the home screen only, so work screens open straight onto the work. --}}
+                @if (request()->routeIs('dashboard', 'home'))
+                    @include('partials.install-app')
+                @endif
 
                 <!-- Page Specific Content -->
                 @yield('content')

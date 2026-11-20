@@ -4,6 +4,7 @@ import { registerReportFilters } from './report-ui';
 import { isNamed, watchFormLabels } from './form-labels';
 import { stackTables } from './table-stack';
 import { enableSearchableSelects } from './searchable-selects';
+import { collapseMobileFilters } from './mobile-filters';
 
 window.Alpine = Alpine;
 registerReportFilters(Alpine);
@@ -744,6 +745,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('resize', refreshScrollHints);
 
     document.querySelectorAll('td .d-inline-flex').forEach((actions) => actions.classList.add('table-actions'));
+    collapseMobileFilters();
     // Last-resort names for fields that still have no label: never override a real <label>.
     document.querySelectorAll('input[placeholder]:not([aria-label])').forEach((input) => {
         if (!isNamed(input)) {
@@ -915,6 +917,7 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 Alpine.data('installApp', () => ({
     visible: false,
+    showSteps: false,
     mode: 'manual',
     copied: false,
     canOpenInChrome: isAndroid,

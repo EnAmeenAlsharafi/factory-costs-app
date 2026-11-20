@@ -14,18 +14,25 @@
             ->whereIn('status', ['ASSIGNED', 'IN_PROGRESS', 'PARTIALLY_COMPLETED'])->count();
         $fieldTabs = [
             ['route' => 'dashboard', 'active' => 'dashboard', 'icon' => 'fa-house', 'label' => 'الرئيسية'],
-            ['route' => 'production.my-tasks', 'active' => 'production.my-tasks', 'icon' => 'fa-list-check', 'label' => 'مهامي', 'badge' => $openTasks],
-            ['route' => 'production.queue.index', 'active' => 'production.queue.*', 'icon' => 'fa-people-group', 'label' => 'أعمال قسمي'],
+            ['route' => 'production.my-tasks', 'active' => 'production.my-tasks', 'icon' => 'fa-list-check', 'label' => 'مهام الإنتاج', 'badge' => $openTasks,
+                'can' => ['production.operation.start', 'production.operation.claim', 'production.assignment.view']],
+            ['route' => 'production.queue.index', 'active' => 'production.queue.*', 'icon' => 'fa-people-group', 'label' => 'أعمال قسمي', 'can' => ['production.view']],
         ];
     } elseif ($isDriver) {
         $openDeliveries = \App\Models\DeliveryOrder::where('assigned_user_id', $fieldUser->id)
             ->whereIn('status', ['ASSIGNED', 'OUT_FOR_DELIVERY'])->count();
         $fieldTabs = [
             ['route' => 'dashboard', 'active' => 'dashboard', 'icon' => 'fa-house', 'label' => 'الرئيسية'],
-            ['route' => 'delivery.orders.my-tasks', 'params' => [], 'active' => 'delivery.orders.my-tasks', 'icon' => 'fa-truck-fast', 'label' => 'توصيلاتي', 'badge' => $openDeliveries, 'exactFilter' => null],
-            ['route' => 'delivery.orders.my-tasks', 'params' => ['filter' => 'today'], 'active' => null, 'icon' => 'fa-calendar-day', 'label' => 'اليوم', 'exactFilter' => 'today'],
+            ['route' => 'delivery.orders.my-tasks', 'params' => [], 'active' => 'delivery.orders.my-tasks', 'icon' => 'fa-truck-fast', 'label' => 'توصيلاتي', 'badge' => $openDeliveries, 'exactFilter' => null, 'can' => ['delivery.view']],
+            ['route' => 'delivery.orders.my-tasks', 'params' => ['filter' => 'today'], 'active' => null, 'icon' => 'fa-calendar-day', 'label' => 'اليوم', 'exactFilter' => 'today', 'can' => ['delivery.view']],
         ];
     }
+
+    // A tab is shown only when its screen would open: each lists the permissions its controller accepts (any one is enough).
+    $fieldTabs = array_values(array_filter(
+        $fieldTabs,
+        fn (array $tab) => ! isset($tab['can']) || collect($tab['can'])->contains(fn (string $ability) => $fieldUser->can($ability)),
+    ));
 
     // Field staff live in this bar: their unread notifications belong here too.
     if ($fieldTabs !== [] && $fieldUser->can('notifications.view')) {

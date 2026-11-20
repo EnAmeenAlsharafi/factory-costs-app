@@ -101,7 +101,7 @@
                 $sidebarUser = auth()->user();
                 $quickLinks = [];
                 if ($sidebarUser && ! $sidebarUser->isAdministrator()) {
-                    if ($sidebarUser->can('production.update_progress')) {
+                    if ($sidebarUser->can('production.view')) {
                         $quickLinks[] = ['route' => 'production.queue.index', 'params' => [], 'active' => 'production.queue.*', 'icon' => 'fa-list-check', 'label' => 'مهام قسمي'];
                     }
                     if ($sidebarUser->can('production.operation.start') || $sidebarUser->can('production.operation.claim')) {

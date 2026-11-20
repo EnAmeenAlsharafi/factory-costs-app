@@ -47,47 +47,48 @@
         </div>
     </div>
 
-    {{-- Filters --}}
-    <form method="GET" action="{{ route('notifications.index') }}" class="card border-0 shadow-sm mb-3">
-        <div class="card-body d-flex flex-wrap gap-2 align-items-end">
-            @if ($showAll)<input type="hidden" name="scope" value="all">@endif
-
-            @unless ($showAll)
-                <div>
-                    <label for="filter" class="form-label fs-8 text-muted mb-1">الحالة</label>
-                    <select id="filter" name="filter" class="form-select form-select-sm">
-                        <option value="all" @selected($filter === 'all')>الكل</option>
-                        <option value="unread" @selected($filter === 'unread')>غير المقروء فقط</option>
-                    </select>
+    {{-- Filters: read state stays one tap away; domain and department fold into «تصفية» on phones. --}}
+    @php
+        $activeFilterCount = collect(['group', 'department_id'])->filter(fn ($key) => request()->filled($key))->count();
+        $baseParams = $showAll ? ['scope' => 'all'] : [];
+    @endphp
+    <x-filter-sheet id="notification-filters" :action="route('notifications.index')" :active-count="$activeFilterCount"
+                    :reset-url="route('notifications.index', $baseParams + ($showAll ? [] : ['filter' => $filter]))" title="تصفية الإشعارات">
+        @unless ($showAll)
+            <x-slot:search>
+                <div class="btn-group w-100" role="group" aria-label="حالة القراءة">
+                    <a href="{{ route('notifications.index', array_merge(request()->except(['filter', 'page']), ['filter' => 'all'])) }}"
+                       class="btn {{ $filter === 'all' ? 'btn-primary' : 'btn-outline-primary' }}" @if ($filter === 'all') aria-current="true" @endif>الكل</a>
+                    <a href="{{ route('notifications.index', array_merge(request()->except(['filter', 'page']), ['filter' => 'unread'])) }}"
+                       class="btn {{ $filter === 'unread' ? 'btn-primary' : 'btn-outline-primary' }}" @if ($filter === 'unread') aria-current="true" @endif>
+                        غير المقروء @if ($unreadCount > 0)<span class="badge bg-danger ms-1">{{ $unreadCount }}</span>@endif
+                    </a>
                 </div>
-            @endunless
+            </x-slot:search>
+            <input type="hidden" name="filter" value="{{ $filter }}">
+        @endunless
+        @if ($showAll)<input type="hidden" name="scope" value="all">@endif
 
-            <div>
-                <label for="group" class="form-label fs-8 text-muted mb-1">المجال</label>
-                <select id="group" name="group" class="form-select form-select-sm">
-                    <option value="">كل المجالات</option>
-                    @foreach ($groups as $groupName)
-                        <option value="{{ $groupName }}" @selected($group === $groupName)>{{ $groupName }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div>
-                <label for="department_id" class="form-label fs-8 text-muted mb-1">القسم</label>
-                <select id="department_id" name="department_id" class="form-select form-select-sm">
-                    <option value="">كل الأقسام</option>
-                    @foreach ($departments as $department)
-                        <option value="{{ $department->id }}" @selected(request('department_id') == $department->id)>{{ $department->name_ar }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <button type="submit" class="btn btn-sm btn-primary">تصفية</button>
-            @if (request()->hasAny(['filter', 'group', 'department_id']))
-                <a href="{{ route('notifications.index', $showAll ? ['scope' => 'all'] : []) }}" class="btn btn-sm btn-link text-decoration-none">إلغاء التصفية</a>
-            @endif
+        <div class="col-12 col-md-4">
+            <label for="group" class="form-label fs-7">المجال</label>
+            <select id="group" name="group" class="form-select">
+                <option value="">كل المجالات</option>
+                @foreach ($groups as $groupName)
+                    <option value="{{ $groupName }}" @selected($group === $groupName)>{{ $groupName }}</option>
+                @endforeach
+            </select>
         </div>
-    </form>
+
+        <div class="col-12 col-md-4">
+            <label for="department_id" class="form-label fs-7">القسم</label>
+            <select id="department_id" name="department_id" class="form-select">
+                <option value="">كل الأقسام</option>
+                @foreach ($departments as $department)
+                    <option value="{{ $department->id }}" @selected(request('department_id') == $department->id)>{{ $department->name_ar }}</option>
+                @endforeach
+            </select>
+        </div>
+    </x-filter-sheet>
 
     {{-- List --}}
     <div class="card border-0 shadow-sm">

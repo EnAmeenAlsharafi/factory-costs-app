@@ -5,7 +5,7 @@
  * - Built assets, fonts and icons are cached so the app opens fast and looks right on poor signal.
  * - Nothing is cached for POST requests or for other sites.
  */
-const VERSION = 'sadir-app-v1';
+const VERSION = 'sadir-app-v2';
 const OFFLINE_URL = '/offline';
 
 self.addEventListener('install', (event) => {
@@ -55,33 +55,47 @@ self.addEventListener('fetch', (event) => {
 /*
  * Push notifications.
  *
- * The push itself carries no data: it only wakes this worker, which then asks the application what
- * is waiting. So notification text never travels through the push service, and the app shows what
- * the signed-in person is actually allowed to see.
+ * The push carries the notification itself, encrypted end to end for this browser, so it can be
+ * shown while the app is closed and no one is signed in on this tab. An empty push (from an older
+ * sender, or a browser whose keys could not be used) falls back to asking the application, and if
+ * even that fails a plain notice is still shown: a push the phone receives is never silent.
  */
 const PUSH_ENDPOINT = '/push/latest';
+const FALLBACK_MESSAGE = { count: 1, title: 'لديك إشعارات جديدة', body: 'افتح النظام لعرضها.', url: '/notifications' };
+
+const readPushMessage = (event) => {
+    if (event.data) {
+        try {
+            return Promise.resolve(event.data.json());
+        } catch (error) {
+            // Not JSON: fall through to asking the application.
+        }
+    }
+
+    return fetch(PUSH_ENDPOINT, { credentials: 'include', headers: { Accept: 'application/json' } })
+        .then((response) => (response.ok ? response.json() : FALLBACK_MESSAGE))
+        .catch(() => FALLBACK_MESSAGE);
+};
 
 self.addEventListener('push', (event) => {
     event.waitUntil(
-        fetch(PUSH_ENDPOINT, { credentials: 'include', headers: { Accept: 'application/json' } })
-            .then((response) => (response.ok ? response.json() : null))
+        readPushMessage(event)
             .then((payload) => {
                 if (!payload || !payload.count) {
                     return undefined;
                 }
 
-                return self.registration.showNotification(payload.title, {
+                return self.registration.showNotification(payload.title || FALLBACK_MESSAGE.title, {
                     body: payload.body || '',
                     dir: 'rtl',
                     lang: 'ar',
                     tag: payload.tag || 'sadir-notifications',
                     renotify: true,
-                    badge: '/app-icon/96/maskable',
                     icon: '/app-icon/192/any',
+                    vibrate: [120, 60, 120],
                     data: { url: payload.url || '/' },
                 });
-            })
-            .catch(() => undefined),
+            }),
     );
 });
 

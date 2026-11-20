@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\CustomerOrder;
 use App\Models\DeliveryOrder;
 use App\Models\Department;
+use App\Models\Permission;
 use App\Models\Role;
 use App\Models\SalesChannel;
 use App\Models\User;
@@ -68,6 +69,25 @@ class FieldAppExperienceTest extends TestCase
 
         $this->actingAs($worker)->get(route('production.my-tasks'))->assertOk()->assertSee('field-tabbar', false)->assertSee('أعمال قسمي');
         $this->actingAs(User::where('username', 'admin')->firstOrFail())->get(route('dashboard'))->assertOk()->assertDontSee('field-tabbar', false);
+    }
+
+    public function test_a_worker_without_the_department_queue_permission_gets_no_tab_or_link_to_it(): void
+    {
+        $role = Role::where('name', 'production_worker')->firstOrFail();
+        $role->permissions()->detach(Permission::where('name', 'production.view')->value('id'));
+        $worker = User::factory()->create([
+            'role_id' => $role->id,
+            'department_id' => Department::where('code', 'CARPENTRY')->first()->id,
+            'is_active' => true,
+        ]);
+        $this->assertFalse($worker->fresh()->can('production.view'));
+
+        $this->actingAs($worker)->get(route('production.queue.index'))->assertForbidden();
+        $this->actingAs($worker)->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('field-tabbar', false)
+            ->assertDontSee('أعمال قسمي')
+            ->assertDontSee(route('production.queue.index'), false);
     }
 
     public function test_validation_messages_are_in_arabic(): void
